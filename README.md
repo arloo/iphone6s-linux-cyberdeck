@@ -22,7 +22,7 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 | Hardware buttons | `gpio-keys` exposed as `/dev/input/event0` | Detected |
 | Touchscreen | No touch input device; `CONFIG_INPUT_TOUCHSCREEN` disabled | **Priority 1 — missing** |
 | Wi-Fi | No wireless interface; `CONFIG_WLAN` disabled | **Priority 1 — missing** |
-| Bluetooth | Broadcom `BCM4350C5`, HCI controller `hci0` detected; firmware missing | **Priority 1 — partial** |
+| Bluetooth | Broadcom `BCM4350C5` patchram **build 0825** loaded privately; 25 BLE advertising reports received in a 12-second passive on-device scan | **BLE radio verified; pairing pending** |
 | Internal storage | No block devices enumerated | Not used; avoid NAND writes |
 | Power / battery | No `/sys/class/power_supply` data | Not established |
 
@@ -32,7 +32,7 @@ This matrix reports **observations**, not promises. A detected controller or fra
 
 1. **Touch:** characterize the touchscreen controller and transport, required firmware and calibration, Device Tree nodes, interrupt and power sequencing, and deliver multitouch events through `/dev/input/eventX`.
 2. **Wi-Fi:** identify the WLAN transport on S8000/N71, enable the necessary kernel stack and device tree description, and validate firmware / board-specific calibration without publishing private data.
-3. **Bluetooth:** initialize the BCM4350C5 HCI controller with the **correct board-compatible** firmware; then validate scanning, pairing and reconnects. The driver currently requests `brcm/BCM4350C5.apple,n71.hcd` and `brcm/BCM4350C5.hcd` (among fallbacks).
+3. **Bluetooth:** private board-compatible BCM4350C5 firmware initialization and BLE scanning are now **verified**. Next validate pairing, bonding, reconnection and power management. No Apple firmware is distributed here.
 4. Replace plain Telnet with an authenticated local service; package an independently reproducible test image only after validating hardware.
 
 See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live driver worklog](docs/DRIVER_WORKLOG.md), [driver research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
@@ -41,6 +41,7 @@ See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.
 
 - `tools/cyberprobe.c`: original minimal ARM64 TCP connect, banner, HTTP HEAD and bounded PCAP capture utility (authorization required).
 - `tools/hci-probe.c`: original AArch64 HCI ioctl probe; prints controller capabilities and counters without exposing the device address, with optional volatile up/down operations.
+- `tools/ble-probe.c`: original passive BLE scanner, verified on the iPhone 6s radio, counting advertising reports without logging nearby device identifiers.
 - `tools/deck`: original BusyBox-based diagnostics launcher with a mirrored console mode.
 - `scripts/collect-hardware.sh`: focused, read-only diagnostic collector intended to run in the phone's Linux shell.
 - Documentation and issue templates for the three blocking hardware drivers.
