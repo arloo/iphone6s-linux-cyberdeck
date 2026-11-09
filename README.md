@@ -20,7 +20,7 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 | USB gadget networking | iPhone `172.16.42.1`, host `172.16.42.2`, USB `05ac:4142` | Working |
 | Interactive shell | BusyBox shell via USB Telnet (port 23) | Working, insecure |
 | Hardware buttons | `gpio-keys` exposed as `/dev/input/event0` | Detected |
-| Touchscreen | No touch input device; `CONFIG_INPUT_TOUCHSCREEN` disabled | **Priority 1 — missing** |
+| Touchscreen | On-device SPI2 at 1 MHz, HBPP handshake, IRQ and N1 version `0x434d15c1` verified; experimental Z2 driver reaches calibration DATA but fails on missing ACK; no input device yet | **Priority 1 — protocol blocker** |
 | Wi-Fi | No wireless interface; `CONFIG_WLAN` disabled | **Priority 1 — missing** |
 | Bluetooth | Broadcom `BCM4350C5` patchram **build 0825** loaded privately; 25 BLE advertising reports received in a 12-second passive on-device scan | **BLE radio verified; pairing pending** |
 | Internal storage | No block devices enumerated | Not used; avoid NAND writes |
@@ -30,12 +30,12 @@ This matrix reports **observations**, not promises. A detected controller or fra
 
 ## Immediate goals — contributions wanted
 
-1. **Touch:** characterize the touchscreen controller and transport, required firmware and calibration, Device Tree nodes, interrupt and power sequencing, and deliver multitouch events through `/dev/input/eventX`.
+1. **Touch:** SPI2, reset, IRQ, power, 32 kHz clock, HBPP and N71 firmware/calibration staging are confirmed. **Next:** resolve the HBPP calibration DATA/ACK mismatch (`0x1f01 -> 0x4879` instead of `0x4bc1`), then validate persistent `/dev/input/eventX` and full-resolution coordinates.
 2. **Wi-Fi:** identify the WLAN transport on S8000/N71, enable the necessary kernel stack and device tree description, and validate firmware / board-specific calibration without publishing private data.
 3. **Bluetooth:** private board-compatible BCM4350C5 firmware initialization and BLE scanning are now **verified**. Next validate pairing, bonding, reconnection and power management. No Apple firmware is distributed here.
 4. Replace plain Telnet with an authenticated local service; package an independently reproducible test image only after validating hardware.
 
-See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live driver worklog](docs/DRIVER_WORKLOG.md), [driver research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
+See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live touchscreen test and calibration blocker](docs/TOUCH_LIVE_TEST.md), [driver worklog](docs/DRIVER_WORKLOG.md), [research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
 
 ## What is already here?
 
