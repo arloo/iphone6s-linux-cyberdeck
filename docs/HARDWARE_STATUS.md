@@ -34,14 +34,15 @@ CONFIG_FW_LOADER=y
 
 Enabling a Kconfig switch alone does **not** provide missing pinctrl, regulator, transport, interrupts, calibration or device-specific driver code.
 
-## Touchscreen — not working
+## Touchscreen — no on-device input yet; full offline build ready
 
 - Only the `gpio-keys` input device is currently registered.
 - No touch events, multitouch device or dedicated touch driver proven.
 - Investigate existing Apple touch / Z2 work across HoolockLinux, postmarketOS and other Apple SoC ports.
-- Determine the exact N71 interface and controller; **do not assume** another Apple's touchscreen wiring and firmware apply unchanged.
+- N71/S8000 touch is on SPI2. A private original N71 firmware payload (84,092 bytes) and private calibration (1,024 bytes) were recovered through an official Apple restore image and the running phone's read-only m1n1 runtime ADT.
+- A separate kernel worktree compiled the A9 S5L SPI controller, Z2 touch driver, reference clock and power regulator changes from the Omarchy-iPhone6s touch-next work. The original booted kernel remains unchanged and the touchscreen is **not yet verified on-device**.
 
-## Bluetooth — partial, promising
+## Bluetooth — patchram loaded and passive LE reception verified
 
 Board DTS `s800x-6s.dtsi` contains:
 
@@ -68,15 +69,16 @@ Bluetooth: hci0: BCM: 'brcm/BCM.apple,n71.hcd'
 Bluetooth: hci0: BCM: 'brcm/BCM.hcd'
 ```
 
-`/sys/class/bluetooth/hci0` exists and maps to the serial platform path. **HCI command responses and missing firmware do not yet establish working radio or pairing.** No proprietary HCD is included.
+`/sys/class/bluetooth/hci0` exists and maps to the serial platform path. The logs above are the **initial pre-firmware baseline**. Later in the same RAM-only Linux session, we privately loaded an official, compatible USI/N71 Broadcom HCD patch through a scoped `hci_uart_bcm` serdev reprobe. The controller reported **firmware build 0825**, versus initial **build 0000**. A native ARM64 passive BLE scan received **25 advertising reports in 12 seconds**, with successful scan enable and disable commands. This verifies real BLE radio reception, **not** pairing, bonding, classic Bluetooth or audio. No proprietary HCD, addresses or scan payloads are included.
 
 ## Wi-Fi — not working
 
 - `CONFIG_WLAN` currently disabled.
 - No `wlan0` or other wireless interface, and no PCI device enumerated during the tested boot.
-- Investigate the N71-specific transport (do not assume that Bluetooth UART also serves Wi-Fi), Device Tree node, chip power/clock, firmware and permitted per-device calibration handling.
+- N71 board research identifies the Broadcom BCM4350 Wi-Fi half on **S8000 PCIe port 1**, distinct from the Bluetooth UART.
+- Current Apple PCIe host driver has no explicit S8000 binding and current S8000 Device Tree has no A9 PCIe root-complex node. Work must start with safe PCIe port-1 enablement, clock/reset, interrupts and DART/IOMMU before generic `brcmfmac` can bind. The internal iOS NVMe storage is on PCIe port 0 and must not be written.
 - Separate “bus/device discovered,” “interface created,” “firmware loaded,” “scan completed,” and “association established.”
 
 ## Known limitations
 
-No touchscreen, verified Wi-Fi connection or Bluetooth pairing; no persistent root filesystem, no confirmed battery reporting. Shell uses root Telnet over isolated USB network and must not be exposed to untrusted networks.
+No working touchscreen, no Wi-Fi connection and no Bluetooth pairing yet. Bluetooth **LE passive reception does work**. No persistent root filesystem, no confirmed battery reporting. Shell uses root Telnet over isolated USB network and must not be exposed to untrusted networks.

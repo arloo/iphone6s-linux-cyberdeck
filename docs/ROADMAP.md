@@ -5,8 +5,8 @@ The goal is **touchscreen + Wi-Fi + Bluetooth** on an iPhone 6s (N71/S8000). Gra
 ## Milestone T — touch input
 
 - **T0** (verified): display framebuffer works; only `gpio-keys` appears in input.
-- **T1**: identify N71 touch controller, bus/clock/reset/IRQ and required firmware.
-- **T2**: enable `CONFIG_INPUT_TOUCHSCREEN` and investigate existing `CONFIG_TOUCHSCREEN_APPLE_Z2`; the driver exists in current upstream-derived kernel sources but is not enabled in the tested configuration.
+- **T1** (hardware characterized, pending runtime): Apple N71 multitouch on SPI2, reset GPIO75 and IRQ GPIO142; 84,092-byte vendor touch firmware and 1,024-byte unique calibration recovered *privately*.
+- **T2** (offline build passed): A9 S5L SPI, Apple Z2 touch, reference clock and PMU regulator support compiled in a **separate test kernel**, applying upstream touch and touch-next patch series. The running, known-good kernel is unchanged.
 - **T3**: provide correct N71-specific Device Tree bindings; demonstrate successful probe and firmware initialization.
 - **T4**: demonstrate at least two simultaneous contact points with correct coordinates.
 - **T5**: establish reliability across screen blank/unblank and repeated RAM-only boots.
@@ -14,7 +14,7 @@ The goal is **touchscreen + Wi-Fi + Bluetooth** on an iPhone 6s (N71/S8000). Gra
 ## Milestone W — Wi-Fi
 
 - **W0** (verified): no Wi-Fi interface, `CONFIG_WLAN` disabled; no PCI device enumerated at runtime.
-- **W1**: identify WLAN module and its real bus/transport from reliable board evidence.
+- **W1** (research mapped): Broadcom BCM4350 Wi-Fi behind S8000 Apple PCIe port 1. **Our kernel does not enumerate this PCIe endpoint** and has no S8000-specific PCIe host DT binding; PCIe bring-up is the critical next step.
 - **W2**: enable the required bus and wireless Kconfig options; add board-specific Device Tree resources.
 - **W3**: load correctly licensed and hardware-matched firmware and *private* calibration from a local path.
 - **W4**: network interface appears, scan enumerates APs.
@@ -23,10 +23,10 @@ The goal is **touchscreen + Wi-Fi + Bluetooth** on an iPhone 6s (N71/S8000). Gra
 
 ## Milestone B — Bluetooth
 
-- **B0** (verified): `hci0` registers and responds as BCM4350C5; driver requests a missing HCD patch.
-- **B1**: identify correct N71 BCM4350C5 HCD patch source and module profile without redistributing firmware.
-- **B2**: verify HCD load and HCI controller ready state; separate from “hci0 exists.”
-- **B3**: discover nearby *consenting* test peripheral.
+- **B0** (verified): BCM4350C5 HCI UART registers and responds, initial kernel reports missing HCD patch.
+- **B1** (verified): compatible USI/N71 Apple HCD patch extracted locally from an official restore image; **never distributed**.
+- **B2** (verified): firmware loaded through a scoped HCI UART reprobe; controller reports **build 0825** and comes UP without HCI command errors.
+- **B3** (radio verified, discovery UI pending): a passive on-device scan received **25 BLE advertising reports in 12 seconds**, with no device identifiers logged. Next verify controlled discovery with an owned/consenting peripheral.
 - **B4**: pairing, reconnect and stable data transfer.
 - **B5**: test coexistence with Wi-Fi and radio power behavior.
 
