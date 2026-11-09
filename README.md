@@ -35,11 +35,12 @@ This matrix reports **observations**, not promises. A detected controller or fra
 3. **Bluetooth:** initialize the BCM4350C5 HCI controller with the **correct board-compatible** firmware; then validate scanning, pairing and reconnects. The driver currently requests `brcm/BCM4350C5.apple,n71.hcd` and `brcm/BCM4350C5.hcd` (among fallbacks).
 4. Replace plain Telnet with an authenticated local service; package an independently reproducible test image only after validating hardware.
 
-See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [driver research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
+See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live driver worklog](docs/DRIVER_WORKLOG.md), [driver research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
 
 ## What is already here?
 
 - `tools/cyberprobe.c`: original minimal ARM64 TCP connect, banner, HTTP HEAD and bounded PCAP capture utility (authorization required).
+- `tools/hci-probe.c`: original AArch64 HCI ioctl probe; prints controller capabilities and counters without exposing the device address, with optional volatile up/down operations.
 - `tools/deck`: original BusyBox-based diagnostics launcher with a mirrored console mode.
 - `scripts/collect-hardware.sh`: focused, read-only diagnostic collector intended to run in the phone's Linux shell.
 - Documentation and issue templates for the three blocking hardware drivers.
