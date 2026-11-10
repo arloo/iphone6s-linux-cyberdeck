@@ -104,3 +104,13 @@ Expected success is one or more `advertising reports`; zero reports is inconclus
 - The touchscreen device-tree node remains **disabled by default**. The touch boot path requires safe power sequencing, clock, firmware and private calibration injection. No speculative firmware-command fuzzing has been attempted.
 
 **Safety note:** `/dev/mtd1ro` is the m1n1 read-only memory-backed runtime Apple Device Tree, not an instruction to read or write the iPhone NAND. No `/dev/mtd*` write, NFC, SEP or internal storage operation was performed. Only sanitized findings belong in this public worklog.
+
+## 6. November 10: second native Linux session and BLE retest
+
+After the confirmed palen1x/PongoOS RAM-only boot, the host enumerated the Apple HoolockLinux USB gadget at `05ac:4142`, brought up `172.16.42.2/24`, and opened the BusyBox shell at `172.16.42.1:23`. Runtime `uname -r` matched `7.3.0-rc1-g6831bc701a6c`.
+
+The known-good board-matched Broadcom USI patchram and compatible Apple PMIC GPIO module were copied privately over isolated USB to the phone's volatile filesystem. On-disk SHA-256 verification matched the previously validated artifacts. Loading `gpio-apple-pmic.ko` caused `hci0` to enumerate and the firmware load reported BCM4350C5 **build 0825**.
+
+A new **10-second passive BLE scan** returned **17 advertising reports**, with HCI command statuses `0`, and zero recorded HCI RX/TX errors. Addresses and advertising payloads were suppressed. Scanning was then disabled. This independently reconfirms BLE receive functionality after a fresh Linux boot. Pairing, identity management, Bluetooth Classic and audio remain untested.
+
+The Linux USB shell stayed connected, and **no persistent phone storage was written**. The temporary HTTP transfer server was bound only to the isolated USB interface and terminated after use. See [USB boot recovery](BOOT_USB_RECOVERY.md), [ADT/PCIe mapping](N71_PCIE_ADT_MAPPING.md) and [touch ACK review](TOUCH_ACK_REVIEW.md).
