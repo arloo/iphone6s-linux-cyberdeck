@@ -1,26 +1,26 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
-**Community-driven, hardware-first Linux bring-up for the Apple iPhone 6s (Samsung A9 / S8000 / N71).**
+**Community-driven, hardware-first Linux bring-up for the Apple iPhone 6s.** Our physical test device is **N71 / S8000 (Samsung A9)**; **N71m / S8003 (TSMC A9) remains untested**.
 
 We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-Fi and Bluetooth are the top priorities**. A custom framebuffer interface and an ARM64 diagnostic shell already run on the device, but a usable phone-side input and wireless stack are not yet available.
 
 > [!WARNING]
 > **Experimental hardware research, not a supported phone OS.** Booting custom kernels through checkm8/PongoOS can leave the device in DFU/Recovery or require manual recovery. This project's current tests are RAM-only and deliberately avoid writes to internal storage. Do not assume this eliminates all risks. Back up your device and proceed at your own risk.
 
-## Verified hardware, November 9, 2026
+## Verified hardware, November 10, 2026 — S8000/N71 only
 
 | Component | Observed result | Status |
 |---|---|---|
 | Device | iPhone 6s, Apple A9 Samsung `apple,n71`, `apple,s8000` | Verified |
 | Boot | `checkm8 -> PongoOS 2.6.3 -> m1n1 -> Linux` | Verified |
-| Kernel | `7.3.0-rc1-g6831bc701a6c`, `aarch64` | Booted |
+| Kernel | `7.3.0-rc1-g68aadac820d0-dirty` **build #5**, `aarch64` RAM boot | **LIVE PASS** |
 | CPU | 2 logical CPUs, Apple A9 | Detected |
 | Memory | 2,023,104 kB (`/proc/meminfo`) | Detected |
 | LCD framebuffer | `/dev/fb0`, 750 × 1334, 32-bpp | Working |
 | USB gadget networking | iPhone `172.16.42.1`, host `172.16.42.2`, USB `05ac:4142` | Working |
 | Interactive shell | BusyBox shell via USB Telnet (port 23) | Working, insecure |
 | Hardware buttons | `gpio-keys` exposed as `/dev/input/event0` | Detected |
-| Touchscreen | On-device SPI2 at 1 MHz, HBPP handshake, IRQ and N1 version `0x434d15c1` verified; experimental Z2 driver reaches calibration DATA but fails on missing ACK; no input device yet | **Priority 1 — protocol blocker** |
+| Touchscreen | Integrated guarded SPI2/clock/analog/reset test; two strict HBPP `READ_DATA` responses and checksums verified; controller version `0x434d15c1`. No `ACK_DATA`, touch EVDEV or usable multitouch yet. | **Priority 1 — calibration blocker** |
 | Wi-Fi | No wireless interface; `CONFIG_WLAN` disabled | **Priority 1 — missing** |
 | Bluetooth | Broadcom `BCM4350C5` patchram **build 0825** loaded privately; 25 BLE advertising reports received in a 12-second passive on-device scan | **BLE radio verified; pairing pending** |
 | Internal storage | No block devices enumerated | Not used; avoid NAND writes |
@@ -30,12 +30,26 @@ This matrix reports **observations**, not promises. A detected controller or fra
 
 ## Immediate goals — contributions wanted
 
-1. **Touch:** SPI2, reset, IRQ, power, 32 kHz clock, HBPP and N71 firmware/calibration staging are confirmed. **Next:** resolve the HBPP calibration DATA/ACK mismatch (`0x1f01 -> 0x4879` instead of `0x4bc1`), then validate persistent `/dev/input/eventX` and full-resolution coordinates.
+1. **Touch:** live clock/analog rollback and checksum-validated HBPP controller reads now pass. **Next:** obtain real `ACK_DATA=0x4bc1`, bring up a touchscreen-specific EVDEV device, and prove one full tap with coordinates and release (then simultaneous multitouch). The physical 32 kHz waveform and aftermarket calibration compatibility remain unverified.
 2. **Wi-Fi:** identify the WLAN transport on S8000/N71, enable the necessary kernel stack and device tree description, and validate firmware / board-specific calibration without publishing private data.
 3. **Bluetooth:** private board-compatible BCM4350C5 firmware initialization and BLE scanning are now **verified**. Next validate pairing, bonding, reconnection and power management. No Apple firmware is distributed here.
-4. Replace plain Telnet with an authenticated local service; package an independently reproducible test image only after validating hardware.
+4. **Security gate:** replace plain Telnet with authenticated USB-bound SSH before connecting Linux to additional networks. A RAM-only source-based packaging process is available offline; boot remains separately hardware-qualified.
 
 See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live touchscreen test and calibration blocker](docs/TOUCH_LIVE_TEST.md), [driver worklog](docs/DRIVER_WORKLOG.md), [research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
+
+## Reproducible engineering workflow
+
+The repository now distinguishes **OFFLINE** protocol/logic tests, **BUILD** cross-compilation checks, and **HARDWARE** evidence requiring a real iPhone. See [CI and source pinning](docs/CI_REPRODUCIBILITY.md), the [machine-readable S8000/S8003 test matrix](manifests/test-matrix.json), [sanitized hardware results](results/), the [minimum EVDEV touch acceptance milestone](docs/TOUCH_EVDEV_ACCEPTANCE.md), and the [mandatory Telnet-to-SSH security gate](docs/REMOTE_SHELL_HARDENING.md).
+
+```sh
+# Public-source-only checks; do not require an iPhone or firmware:
+make test
+python3 scripts/validate_project.py
+# Requires the AArch64 cross-compiler and independent BlueZ API headers:
+make all BLUEZ_HEADERS=/path/to/isolated/bluez-include
+```
+
+**CI cannot mark a physical peripheral as working**. Only manually reviewed, foundry-specific evidence can change hardware status. S8003/N71m has **no qualified hardware results** yet. Do not confuse a buildable kernel driver or a detected SPI controller with a working touch panel.
 
 ## What is already here?
 
@@ -77,6 +91,6 @@ We welcome testers, kernel engineers, Apple device-tree contributors, Broadcom w
 
 ## License and credits
 
-Original material in this repository is MIT licensed. External kernel and bootloader projects retain **their own licenses**. Please see [LICENSE](LICENSE) and [firmware policy](docs/FIRMWARE_POLICY.md).
+Original userspace toolkit material is MIT licensed; original experimental kernel-driver/diagnostic sources carry their own SPDX identifiers (including **GPL-2.0-only**) and must retain those terms. External kernel and bootloader projects retain **their own licenses**. Please see [LICENSE](LICENSE), individual source SPDX headers and [firmware policy](docs/FIRMWARE_POLICY.md).
 
 Credits to HoolockLinux, Asahi Linux, Linux kernel contributors, checkra1n/PongoOS contributors and the broader open-source iPhone Linux community.

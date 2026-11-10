@@ -1,0 +1,32 @@
+{
+  "schema_version":1,
+  "last_reviewed":"2026-11-10",
+  "upstream_kernel_commit":"68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "status_legend":{"live_pass":"Observed on physical hardware with sanitized evidence","partial":"Real-device evidence exists, but acceptance criteria are incomplete","blocked":"Not functionally operational or missing a prerequisite","not_tested":"No qualifying result on this foundry/board profile"},
+  "profiles":[
+    {
+      "id":"s8000-n71","board":"iPhone 6s N71 (Samsung A9)","dtb":"s8000-n71.dtb",
+      "hardware_results":{
+        "ram_boot":"live_pass","framebuffer_750x1334":"live_pass",
+        "spi2_host_lifecycle":"live_pass","touch_clock_rollback":"live_pass",
+        "touch_analog_rollback":"live_pass","hbpp_strict_read":"live_pass",
+        "calibration_ack_data":"blocked","touch_evdev_multitouch":"blocked",
+        "wifi_network":"blocked","bluetooth_scan":"partial",
+        "bluetooth_pairing":"blocked","authenticated_remote_shell":"blocked"
+      },
+      "evidence":["docs/N71_Z2_HBPP_SAFE_KERNEL_LIVE_BOOT.md","docs/N71_TOUCH_CLOCK_AND_ANALOG_LIVE_VALIDATION.md","docs/N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md"]
+    },
+    {
+      "id":"s8003-n71m","board":"iPhone 6s N71m (TSMC A9)","dtb":"s8003-n71m.dtb",
+      "hardware_results":{
+        "ram_boot":"not_tested","framebuffer_750x1334":"not_tested",
+        "spi2_host_lifecycle":"not_tested","touch_clock_rollback":"not_tested",
+        "touch_analog_rollback":"not_tested","hbpp_strict_read":"not_tested",
+        "calibration_ack_data":"not_tested","touch_evdev_multitouch":"not_tested",
+        "wifi_network":"not_tested","bluetooth_scan":"not_tested",
+        "bluetooth_pairing":"not_tested","authenticated_remote_shell":"not_tested"
+      },
+      "evidence":[]
+    }
+  ]
+}

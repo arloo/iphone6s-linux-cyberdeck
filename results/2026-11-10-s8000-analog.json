@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "chestnut_analog_exact_restore",
+  "observed_on": "2026-11-10",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_TOUCH_CLOCK_AND_ANALOG_LIVE_VALIDATION.md",
+  "summary": "Guarded analog register 05 transition 0f to 1f to 0f, follow-up read-only snapshots unchanged; core regulator and reset not cycled, firmware not loaded."
+}

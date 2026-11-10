@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "touch_ref_exact_rollback",
+  "observed_on": "2026-11-10",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_TOUCH_CLOCK_AND_ANALOG_LIVE_VALIDATION.md",
+  "summary": "Single guarded CCF touch_ref pulse on RAM kernel build #5: PMGR 800002ee to 000802dc to 800002ee, counts returned to zero, no rollback warning; physical clock waveform unmeasured."
+}

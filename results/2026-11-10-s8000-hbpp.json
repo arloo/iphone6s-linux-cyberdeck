@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "hbpp_two_strict_controller_reads",
+  "observed_on": "2026-11-10",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md",
+  "summary": "Live SPI mode-3 status-only diagnostic: two READ_DATA=4c39 responses with valid checksums, controller-version register 434d15c1; guarded reset/power/clock restored. Calibration ACK and evdev touch remain blocked."
+}

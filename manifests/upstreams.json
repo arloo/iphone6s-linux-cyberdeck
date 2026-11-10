@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "description": "Source-only reproducibility pins for N71/S8000 and N71m/S8003; no proprietary assets",
+  "sources": {
+    "linux": {"url":"https://github.com/HoolockLinux/linux.git","commit":"68aadac820d01d0cd4efbd1fefd4c45f23be0a51","purpose":"A9 Linux kernel base for four public RFC patches"},
+    "m1n1": {"url":"https://github.com/HoolockLinux/m1n1.git","commit":"d5a10ac52a6468484854419a6c5130f1d62073eb","purpose":"A9 m1n1 source, locally compiled"},
+    "boot_kit": {"url":"https://github.com/modpunk/Omarchy-iPhone6s.git","commit":"ed2a4584caa8bcf908d1958d791242932da8e26c","purpose":"RAM payload format and reference boot scripts"},
+    "documentation": {"url":"https://github.com/HoolockLinux/docs.git","commit":"23ebe1fbc375599221553a7e1815e5de182a6b42","purpose":"Upstream recovery and setup docs"}
+  },
+  "profiles": {
+    "s8000-n71":{"foundry":"Samsung","dtb":"s8000-n71.dtb","hardware_evidence":"live-tested"},
+    "s8003-n71m":{"foundry":"TSMC","dtb":"s8003-n71m.dtb","hardware_evidence":"not-tested"}
+  },
+  "policy": {
+    "fetch_source_only":true,
+    "proprietary_assets_in_repository":false,
+    "ram_payload_inputs_supplied_locally":true,
+    "do_not_flash_internal_storage":true
+  }
+}

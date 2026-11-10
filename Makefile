@@ -5,6 +5,8 @@ CC := $(CROSS_COMPILE)gcc
 CFLAGS ?= -O2 -Wall -Wextra -static -s
 
 .PHONY: all clean test
+# Override BLUEZ_HEADERS with an isolated directory containing bluetooth/*.h
+# for reproducible cross-compilation (avoid host glibc include pollution).
 BLUEZ_HEADERS ?= /usr/include
 all: build/cyberprobe-aarch64 build/hci-probe-aarch64 build/le-passive-scan-aarch64 build/ble-probe-aarch64
 build/cyberprobe-aarch64: tools/cyberprobe.c
@@ -26,3 +28,4 @@ clean:
 test:
 	python3 -m unittest discover -s tests -v
 	python3 tools/touch/hbpp_cal_audit.py
+	python3 scripts/validate_project.py
