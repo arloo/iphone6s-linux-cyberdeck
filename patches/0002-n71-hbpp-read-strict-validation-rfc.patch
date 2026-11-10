@@ -1,0 +1,21 @@
+diff --git a/drivers/input/touchscreen/apple_z2.c b/drivers/input/touchscreen/apple_z2.c
+index ac4f35d16..95989d5e4 100644
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -500,9 +500,14 @@ static int apple_z2_hbpp_read_reg(struct apple_z2 *z2, u32 addr, u32 *val)
+ 
+ 	status = get_unaligned_be16(rx);
+ 	sum = get_unaligned_be16(rx + 6);
++	if (status != APPLE_Z2_HBPP_READ_DATA ||
++	    sum != apple_z2_sum8(rx + 2, 4)) {
++		/* Never treat an invalid HBPP reply as a valid silicon version. */
++		dev_warn(dev, "HBPP read 0x%08x: invalid status 0x%04x or checksum\n",
++			 addr, status);
++		return -EBADMSG;
++	}
+ 	*val = get_unaligned_be16(rx + 2) | (get_unaligned_be16(rx + 4) << 16);
+-	if (status != APPLE_Z2_HBPP_READ_DATA || sum != apple_z2_sum8(rx + 2, 4))
+-		dev_warn(dev, "read 0x%08x: unexpected reply %*ph\n", addr, 8, rx);
+ 	return 0;
+ }
+ 
