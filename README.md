@@ -1,6 +1,6 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
-**Community-driven, hardware-first Linux bring-up for the Apple iPhone 6s.** Our physical test device is **N71 / S8000 (Samsung A9)**; **N71m / S8003 (TSMC A9) remains untested**.
+**Community-driven, hardware-first Linux bring-up for the Apple iPhone 6s.** Active experimental target: **N71 / S8000 (Samsung A9)**. **N71m / S8003 (TSMC A9) experiments are deferred until compatible hardware becomes available**; all its hardware statuses remain NOT TESTED.
 
 We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-Fi and Bluetooth are the top priorities**. A custom framebuffer interface and an ARM64 diagnostic shell already run on the device, but a usable phone-side input and wireless stack are not yet available.
 

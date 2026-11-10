@@ -1,42 +1,37 @@
-# Hardware-first roadmap
+# Hardware-first roadmap — S8000 active, S8003 deferred
 
-The goal is **touchscreen + Wi-Fi + Bluetooth** on an iPhone 6s (N71/S8000). Graphics, UI, apps, wireless security tooling, battery optimization and standalone deployment follow hardware bring-up.
+**Target for current experiments: N71 / Samsung A9 / S8000 only.** The N71m/TSMC A9/S8003 variant is expressly **out of active experimental scope** until a compatible physical device is available. Its test matrix remains entirely `not_tested`. Upstream source compatibility and references may remain in the build manifest; this is not authorization to run S8003-specific hardware tests or claim working peripherals.
 
-## Milestone T — touch input
+## Milestone T — first complete Linux touch contact
 
-- **T0** (verified): display framebuffer works; only `gpio-keys` appears in input.
-- **T1** (hardware characterized, pending runtime): Apple N71 multitouch on SPI2, reset GPIO75 and IRQ GPIO142; 84,092-byte vendor touch firmware and 1,024-byte unique calibration recovered *privately*.
-- **T2** (offline build passed): A9 S5L SPI, Apple Z2 touch, reference clock and PMU regulator support compiled in a **separate test kernel**, applying upstream touch and touch-next patch series. The running, known-good kernel is unchanged.
-- **T3**: provide correct N71-specific Device Tree bindings; demonstrate successful probe and firmware initialization.
-- **T4**: demonstrate at least two simultaneous contact points with correct coordinates.
-- **T5**: establish reliability across screen blank/unblank and repeated RAM-only boots.
+- **T0 — LIVE PASS:** S8000 framebuffer and SPI2 host, reference clock and Chestnut analog rail independently verified with exact rollback.
+- **T1 — LIVE PARTIAL:** Integrated power + reset + SPI2 HBPP at 1 MHz produced two verified `READ_DATA=0x4c39` register replies with valid checksums, including controller version `0x434d15c1`. The aftermarket panel worked as a touch display in iOS, but Linux calibration is **not accepted yet**.
+- **T2 — NEXT / BLOCKED:** Receive genuine calibration `ACK_DATA=0x4bc1`, start matched touch firmware, and register a real touchscreen EVDEV node. Current controller returns `REQ_CAL`/`IDLE` after earlier calibration attempts. A public NOP-prefix *offline-only* framing RFC is available as an opt-in hypothesis, **not** a validated hardware solution.
+- **T3 — FIRST VERTICAL RELEASE GATE:** Independently capture one real 750×1334 touch contact with bounded X/Y coordinates, SYN_REPORT, and tracking ID release. No synthetic input counts.
+- **T4:** Stable two-finger simultaneous contacts, tracked drag, edge/corner accuracy, and no stuck touches.
+- **T5:** Stability across repeated RAM-only boots, idle and blank/unblank cycles.
 
-## Milestone W — Wi-Fi
+See [touch acceptance criteria](TOUCH_EVDEV_ACCEPTANCE.md) and [sanitized live HBPP result](N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md).
 
-- **W0** (verified): no Wi-Fi interface, `CONFIG_WLAN` disabled; no PCI device enumerated at runtime.
-- **W1** (research mapped): Broadcom BCM4350 Wi-Fi behind S8000 Apple PCIe port 1. **Our kernel does not enumerate this PCIe endpoint** and has no S8000-specific PCIe host DT binding; PCIe bring-up is the critical next step.
-- **W2**: enable the required bus and wireless Kconfig options; add board-specific Device Tree resources.
-- **W3**: load correctly licensed and hardware-matched firmware and *private* calibration from a local path.
-- **W4**: network interface appears, scan enumerates APs.
-- **W5**: associate to an owned test WLAN, obtain IP, demonstrate stable bidirectional traffic.
-- **W6**: assess suspend/resume, thermal state and repeated boots.
+## Milestone W — connected S8000 Wi-Fi
 
-## Milestone B — Bluetooth
+- Existing BCM4350 Wi-Fi device remains blocked by absent S8000-specific Apple PCIe host enumeration and a working Wi-Fi driver stack.
+- Bring up **only PCIe port 1** for Wi-Fi; never experiment with the storage or baseband ports.
+- Confirm the actual WLAN interface and bounded scan; then join an owned test network, obtain a valid IP address and sustain traffic. Firmware and calibration stay private.
 
-- **B0** (verified): BCM4350C5 HCI UART registers and responds, initial kernel reports missing HCD patch.
-- **B1** (verified): compatible USI/N71 Apple HCD patch extracted locally from an official restore image; **never distributed**.
-- **B2** (verified): firmware loaded through a scoped HCI UART reprobe; controller reports **build 0825** and comes UP without HCI command errors.
-- **B3** (radio verified, discovery UI pending): a passive on-device scan received **25 BLE advertising reports in 12 seconds**, with no device identifiers logged. Next verify controlled discovery with an owned/consenting peripheral.
-- **B4**: pairing, reconnect and stable data transfer.
-- **B5**: test coexistence with Wi-Fi and radio power behavior.
+## Milestone B — usable Bluetooth
 
-## Later milestones
+- Passive BLE RF reception and vendor firmware loading were observed in earlier S8000 experiments (25 advertising reports in 12 seconds); they do **not** prove pairing on the current kernel.
+- Bring up board-matched PMIC GPIO/UART and then demonstrate controlled discovery, pairing, reconnection and stable transfer with an authorized peripheral.
 
-- **S**: replace root Telnet with secure authenticated USB access.
-- **P**: battery/power sensing, charging limits and safe suspend.
-- **U**: a native on-device UI/terminal with working touch and software keyboard.
-- **R**: reproducible, signed build instructions and optional removable/volatile boot workflows.
+## Security gate — before use outside the lab
 
-## Baseline / versions
+- Replace unauthenticated root Telnet with a USB-bound, key-authenticated SSH service. Demonstrate password refusal and TCP/23 closure before exposing or bridging new network interfaces. See [remote shell hardening](REMOTE_SHELL_HARDENING.md).
 
-Observed iPhone 6s N71 Samsung `apple,s8000`, HoolockLinux Linux `7.3.0-rc1-g6831bc701a6c`, tested kernel source commit prefix `154668a0c30e`. User-specific serials and firmware blobs are deliberately excluded. Revalidate all findings for N71m/S8003.
+## Reproducibility and CI
+
+- Keep pinned source manifests, local RAM-only image packaging, offline protocol regression, cross-compiled ARM64 modules, and **human-reviewed** hardware evidence separate.
+- GitHub Actions [workflow template](../ci/verify.yml) is published but not activated remotely until GitHub grants workflow-write permission; do not label local tests as completed cloud CI runs.
+- Current S8000 live kernel is RAM-booted `7.3.0-rc1-g68aadac820d0-dirty` build #5. No iOS NAND writes. The touch firmware and per-device calibration never enter Git.
+
+**S8003 resumption trigger:** an actual compatible S8003/N71m device becomes available. At that point begin with read-only identification and separate supervised RAM-boot gates; never transfer S8000 test results to S8003.

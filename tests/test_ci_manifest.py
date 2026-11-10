@@ -79,6 +79,8 @@ class SourcePinAndCiTests(unittest.TestCase):
         variant = next(p for p in matrix["profiles"] if p["id"] == "s8003-n71m")
         self.assertFalse(variant["evidence"])
         self.assertEqual(set(variant["hardware_results"].values()), {"not_tested"})
+        self.assertEqual(variant["experiment_policy"],
+                         "deferred_until_compatible_device_available")
 
     def test_live_touch_status_cannot_derive_from_hbpp(self):
         matrix = json.loads((ROOT / "manifests/test-matrix.json").read_text())

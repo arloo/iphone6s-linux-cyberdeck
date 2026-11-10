@@ -20,7 +20,7 @@ The [versioned GitHub Actions workflow template](../ci/verify.yml) has been test
 
 1. `OFFLINE`: Python synthetic models, input-validation tests, [test-matrix schema](../manifests/test-matrix.json), and Git identity/PII checks.
 2. `BUILD`: cross-compile all four independent public-source userspace tools as static **AArch64** ELF images and verify the ELF machine field. BlueZ headers are copied into an isolated include directory; host-system glibc headers are not added to the AArch64 include path. Only these original userspace diagnostics are retained as CI build artifacts.
-3. `BUILD - opt-in`: manual `workflow_dispatch` with `compile_kernel_rfc=true` fetches the pinned public Linux source and compiles the four RFC-patched Z2 and touch-clock ARM64 driver objects. It deliberately does **not** upload boot images, proprietary firmware or kernel artifacts.
+3. `BUILD - opt-in`: manual `workflow_dispatch` with `compile_kernel_rfc=true` fetches the pinned public Linux source and compiles the five RFC-patched Z2 and touch-clock ARM64 driver objects. It deliberately does **not** upload boot images, proprietary firmware or kernel artifacts.
 4. `HARDWARE`: not runnable on GitHub-hosted runners. An engineer must execute the documented gate on a real device, sanitize the evidence, and commit a manually reviewed entry in `results/` and the foundry-specific matrix.
 
 GitHub Actions produces **software check statuses**, never a fictional hardware-success badge. Until activated, the results in this document are **local manual validations**, not green GitHub-hosted CI checks.

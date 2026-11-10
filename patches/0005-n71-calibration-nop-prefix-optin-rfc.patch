@@ -1,0 +1,59 @@
+diff --git a/drivers/input/touchscreen/apple_z2.c b/drivers/input/touchscreen/apple_z2.c
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -70,12 +70,22 @@
+  * the word e59ff018), so the calibration bytes are byte swapped per 16-bit
+  * word to land in memory in ADT order. Clear this to send them unswapped.
+  */
+ static bool hbpp_cal_swap = true;
+ module_param(hbpp_cal_swap, bool, 0644);
+ MODULE_PARM_DESC(hbpp_cal_swap, "Swap calibration bytes per 16-bit word (default on)");
++
++/* Single-variable HBPP framing hypothesis, intentionally DISABLED by default.
++ * The original N71 firmware DATA images begin with one NOP word; the
++ * synthesized calibration DATA packet currently does not. This option
++ * adds that word outside the payload/length/checksums for one controlled
++ * experiment. It is NOT evidence of an accepted calibration or working touch.
++ */
++static bool hbpp_cal_nop;
++module_param(hbpp_cal_nop, bool, 0444);
++MODULE_PARM_DESC(hbpp_cal_nop, "Experimental N71 calibration DATA NOP prefix (default off)");
+ 
+ struct apple_z2_reg {
+ 	u32 addr;
+ 	u32 val;
+ };
+ 
+@@ -620,12 +630,32 @@
+ 	apple_z2_put_hbpp32(pkt + APPLE_Z2_HBPP_DATA_HDR_LEN + padded, sum);
+ 
+ 	snprintf(what, sizeof(what), "calibration %zu bytes to 0x%08x", pkt_len,
+ 		 address);
+ 	dev_dbg(dev, "%s: payload %zu, sum 0x%08x, swap %d\n", what, len, sum,
+ 		hbpp_cal_swap);
++	if (hbpp_cal_nop) {
++		struct device_node *root = of_find_node_by_path("/");
++		bool is_s8000 = false;
++
++		if (root) {
++			is_s8000 = of_device_is_compatible(root, "apple,s8000");
++			of_node_put(root);
++		}
++		/* Fail closed outside the live-tested S8000 board/profile/size.
++		 * Buffer reserves a second padded payload; a 2-byte NOP fits.
++		 */
++		if (!is_s8000 || !z2->variant || !z2->variant->hbpp ||
++		    len != 1024 || padded != 1024 || pkt_len != 1038 ||
++		    address != 0x10009000)
++			return -EINVAL;
++		memmove(pkt + 2, pkt, pkt_len);
++		put_unaligned_be16(APPLE_Z2_HBPP_NOP, pkt);
++		pkt_len += 2;
++		dev_info(dev, "N71 calibration NOP frame: 1040 bytes; payload redacted\n");
++	}
+ 	error = apple_z2_hbpp_xfer(z2, pkt, NULL, pkt_len, what);
+ 	if (error)
+ 		return error;
+ 
+ 	error = apple_z2_hbpp_wait_ack(z2, APPLE_Z2_HBPP_ACK_DATA, what);
+ 	if (!error)

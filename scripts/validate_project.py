@@ -49,6 +49,8 @@ def check() -> None:
             path = ROOT / evidence
             assert path.is_file() and path.resolve().is_relative_to(ROOT.resolve())
     assert all(s == "not_tested" for s in profiles["s8003-n71m"]["hardware_results"].values())
+    assert profiles["s8003-n71m"]["experiment_policy"] == "deferred_until_compatible_device_available"
+    assert not profiles["s8003-n71m"]["evidence"]
     s8000 = profiles["s8000-n71"]["hardware_results"]
     assert s8000["hbpp_strict_read"] == "live_pass"
     assert s8000["touch_evdev_multitouch"] != "live_pass"
