@@ -30,3 +30,17 @@ Local reference: private out-of-tree `apple_z2_v2.c`; exact source is kept in th
 5. A successful ACK is not enough to declare a usable touchscreen: firmware initialization and verified, calibrated multitouch `evdev` coordinates must follow.
 
 **No proprietary Apple firmware, per-device calibration, MAC or raw ADT is in this report. No iOS NAND writes or speculative vendor-command fuzzing are permitted.**
+
+## November 10: synthetic encoder audit and isolated transport diagnostic
+
+The repository now includes a standard-library-only synthetic test harness:
+
+- `tools/touch/hbpp_cal_audit.py` reconstructs the experimental 8-bit-wire calibration frame and compares it byte-for-byte against a separate legacy-struct / 16-bit-word SPI serialization reference. **No private calibration is needed.**
+- The 1,024-byte synthetic case produces a 1,038-byte frame, including 10-byte header and 4-byte trailer. The target is `0x10009000`; header checksum, payload sum and declared length validate.
+- The swapped and unswapped payload variants have the same header and additive checksum; therefore an unchanged ACK under both settings cannot distinguish their wire payload byte order.
+- The software model treats `REQ_CAL` and `IDLE` as *pending*, not successful `ACK_DATA`. Nine repository-wide tests pass offline.
+- These tests prove **internal consistency only**, not that Apple's controller accepted a physical SPI transfer. They do not account for CS voltage/timing, clock edges, FIFO behavior, IRQ state or the exact N1 firmware state machine.
+
+A **private**, separately named ARM64 diagnostic module was also built offline against the exact running kernel `7.3.0-rc1-g6831bc701a6c` using LLVM 21, with matching vermagic. Its default calibration transfer remains the original 8-bit transport; an opt-in 16-bit-word test mode would preserve the same on-wire bytes by adjusting host memory word order, while guarding target address and frame length. Binary, vendor firmware and private calibration remain on the local host. **The diagnostic module has not been loaded or bound on the phone, and no new SPI/PMIC writes have been performed.**
+
+Before any live experiment, verify that a new word-width test can be reversed reliably, capture a status-only trace of the existing 8-bit transport and retain a known-good USB shell. Do not interpret an offline module build as proof of controller operation. The reported iPhone 6s upstream touch-next port has demonstrated only coarse/quadrant touch despite reaching a later runtime stage; genuine full-resolution X/Y remains an unsolved requirement.
