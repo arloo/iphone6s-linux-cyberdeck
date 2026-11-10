@@ -89,7 +89,7 @@ class SourcePinAndCiTests(unittest.TestCase):
         self.assertNotEqual(state["calibration_ack_data"], "live_pass")
 
     def test_workflow_separates_three_levels(self):
-        content = (ROOT / ".github/workflows/verify.yml").read_text()
+        content = (ROOT / "ci/verify.yml").read_text()
         self.assertIn('"on":', content)
         self.assertIn("OFFLINE |", content)
         self.assertIn("BUILD |", content)
@@ -98,7 +98,7 @@ class SourcePinAndCiTests(unittest.TestCase):
         self.assertNotIn("hardware-live-pass", content)
 
     def test_no_proprietary_files_in_public_source_workflow(self):
-        content = (ROOT / ".github/workflows/verify.yml").read_text()
+        content = (ROOT / "ci/verify.yml").read_text()
         self.assertNotIn("curl -L", content)
         self.assertNotIn("IPSW", content)
         self.assertNotIn("firmware-private/", content)

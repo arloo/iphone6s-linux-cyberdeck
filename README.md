@@ -49,6 +49,8 @@ python3 scripts/validate_project.py
 make all BLUEZ_HEADERS=/path/to/isolated/bluez-include
 ```
 
+The GitHub Actions workflow is versioned at [ci/verify.yml](ci/verify.yml), but **is not yet activated on GitHub**: the currently authorized GitHub connection lacks workflow-write permission. Local tests and builds are already operational. See [the activation gate](docs/CI_REPRODUCIBILITY.md).
+
 **CI cannot mark a physical peripheral as working**. Only manually reviewed, foundry-specific evidence can change hardware status. S8003/N71m has **no qualified hardware results** yet. Do not confuse a buildable kernel driver or a detected SPI controller with a working touch panel.
 
 ## What is already here?

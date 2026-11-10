@@ -72,12 +72,19 @@ def check() -> None:
         }
         assert item["kernel_source_commit"] == upstream["sources"]["linux"]["commit"]
 
-    workflow = (ROOT / ".github/workflows/verify.yml").read_text()
+    # The workflow is source-controlled even before GitHub grants the
+    # separate workflow-write permission needed to activate Actions.
+    workflow = (ROOT / "ci/verify.yml").read_text()
+    active = ROOT / ".github/workflows/verify.yml"
+    if active.exists():
+        assert active.read_text() == workflow, "active workflow differs from versioned template"
     for marker in ("OFFLINE |", "BUILD |", "workflow_dispatch:",
                    "make test", "make all", "scripts/check_kernel_rfc.sh"):
         assert marker in workflow, marker
     assert not SECRET_PATTERN.search(workflow)
     print("MANIFEST_AND_EVIDENCE_PASS: 2 A9 variants, no S8003 hardware claims")
+    print("GITHUB_ACTIONS=" + ("WORKFLOW_FILE_PRESENT_LOCAL_ONLY" if active.exists()
+                               else "TEMPLATE_PREPARED_NOT_ACTIVATED"))
 
 
 if __name__ == "__main__":
