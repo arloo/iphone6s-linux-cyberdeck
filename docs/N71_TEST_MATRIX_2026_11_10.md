@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-10
 **Board:** iPhone 6s, Samsung Apple A9, N71/S8000; **user-confirmed non-original replacement display** (controller revision unknown)
-**Working runtime:** ARM64 Linux 7.3.0-rc1-g68aadac820d0, BusyBox RAM root shell, USB gadget.
+**Working runtime:** ARM64 Linux 7.3.0-rc1-g68aadac820d0-dirty (safe Z2 patches built in), BusyBox RAM root shell, USB gadget.
 
 This matrix separates **live hardware results**, **offline results**, and **still-blocked functionality**. Tests on another device or an earlier kernel release are not treated as successes on the current runtime.
 
@@ -10,9 +10,10 @@ This matrix separates **live hardware results**, **offline results**, and **stil
 | --- | --- | --- |
 | Boot to native Linux | **LIVE PASS** | Current kernel is running on the phone without persistent iOS NAND modifications |
 | USB network and root shell | **LIVE PASS** | `05ac:4142`, `172.16.42.1`, **100/100 ping replies** (0% loss, average 2.559 ms) |
+| Safe Z2-patched kernel RAM boot | **LIVE PASS: Z2 DISABLED** | `7.3.0-rc1-g68aadac820d0-dirty`, confirmed directly after DFU/PongoOS boot; 25/25 post-stress USB pings, no kernel fault signatures. [Live evidence](N71_Z2_HBPP_SAFE_KERNEL_LIVE_BOOT.md) |
 | SPI2 controller probe | **LIVE PASS** | `apple-s5l-spi`, `spi0`, 48 MHz controller reference |
 | SPI2 domain baseline | **LIVE PASS** | `off-0` in SPI2-OFF test, `on` in host-only test |
-| SPI2 binding-cycle stress | **LIVE PASS** | **100/100** guarded sysfs platform unbind/rebind cycles, clock count `1 → 0 → 1`; Z2 clock stayed disabled |
+| SPI2 binding-cycle stress | **LIVE PASS** | **100/100** guarded sysfs platform unbind/rebind cycles on the **new patched kernel**, power `on → off-0 → on`, clock count `1 → 0 → 1`; Z2 clock stayed disabled |
 | Touch reference-clock provider-only | **LIVE PASS: PROVIDER REGISTRATION** | `touch_ref` present, Linux clock framework reports 32,000 Hz with enable/prepare counts `0/0`, PMGR candidate baseline `0x800002ee`; no electrical waveform verification or Z2 probe. Separate RAM-only ISO: 12/12 checksums |
 | Touch reference physical clock | **BLOCKED** | PMGR register mappings and signal characteristics require on-device readbacks, with exact state restoration |
 | Touch analog/core suppliers | **BLOCKED** | Board-matched PMU/Chestnut and GPIO reset need baseline and restore acceptance before Z2 boot |
@@ -22,7 +23,7 @@ This matrix separates **live hardware results**, **offline results**, and **stil
 | Bluetooth BCM4350C5 | **EARLIER KERNEL PASS, CURRENT PENDING** | Old RAM Linux validated loaded N71-matched firmware and passive BLE advertisements; current kernel has Bluetooth stack but **no `hci0`** until matching PMIC GPIO / serdev setup is validated |
 | Wi-Fi BCM4350 PCIe | **BLOCKED** | Private ADT metadata maps WLAN to PCIe **port 1**, while current kernel enumerates **zero PCIe devices**. Host controller/DART link and board-matched firmware are not yet initialized |
 | Isolation of storage and baseband PCIe | **REQUIRED SAFETY GATE** | Never use port 0 (storage) or port 2 (baseband) for experimentation; prototype WLAN on port 1 separately |
-| Kernel Z2 cleanup and clock rollback | **OFFLINE PASS** | Patch applies to current N71 source, changed ARM64 objects compile, baseline restoration has readback checks |
+| Kernel Z2 cleanup and clock rollback | **OFFLINE PASS** | Three safe Z2/clock corrections compiled and linked in the **live-booted** kernel; their Z2-specific runtime error paths remain UNTESTED while touch child is disabled |
 | Regression suite and privacy gate | **PASS** | **61/61** tests, 100k synthetic ACK sequences, 10k DATA frames plus HBPP packet audit, GitHub noreply pre-push guard |
 
 ## Experimental sequence

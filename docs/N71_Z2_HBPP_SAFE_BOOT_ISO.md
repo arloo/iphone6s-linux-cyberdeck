@@ -1,7 +1,9 @@
 # N71/S8000 — Z2 HBPP safe-patched RAM boot ISO
 
 **Date:** 2026-11-10
-**Status:** **BUILT AND VERIFIED OFFLINE; NOT YET BOOT-TESTED ON THE PHONE.**
+**Status:** **OFFLINE VERIFIED; SUBSEQUENT LIVE BOOT AND 100-CYCLE SPI2 HOST STRESS PASSED.** Z2 touch activation still untested.
+
+See [the verified physical boot and SPI2 stress report](N71_Z2_HBPP_SAFE_KERNEL_LIVE_BOOT.md) for the subsequent on-device results.
 
 ## Why this image exists
 
