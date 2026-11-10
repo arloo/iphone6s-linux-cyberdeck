@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-10
 **Hardware:** Samsung Apple A9 iPhone 6s, user-confirmed aftermarket touchscreen (previously fully functional under iOS).
-**State:** Clock-register activation and eventual baseline restoration observed **on real hardware**; **driver rollback acceptance failed on immediate readback**. An amended kernel/ISO has been built offline, but **not yet booted on the phone**.
+**State:** This report records the initial **build #4 rollback warning** and its bounded-settling correction. **Subsequent build #5 live hardware testing PASSED without the warning**; see [the clock and analog rail live validation](N71_TOUCH_CLOCK_AND_ANALOG_LIVE_VALIDATION.md).
 
 ## Physical evidence: read-only baseline
 
