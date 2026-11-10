@@ -1,0 +1,29 @@
+diff --git a/drivers/input/touchscreen/apple_z2.c b/drivers/input/touchscreen/apple_z2.c
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -46,16 +46,23 @@
+ #define APPLE_Z2_HBPP_ACK_DATA           0x4bc1
+ #define APPLE_Z2_HBPP_ACK_REG            0x4ad1
+ #define APPLE_Z2_HBPP_IDLE               0x4879
+ #define APPLE_Z2_HBPP_READ_DATA          0x4c39
+ #define APPLE_Z2_HBPP_PKT_LEN            16
+ /* 0x3001, len/4, addr (two words), header sum: 10 bytes, no padding */
+ #define APPLE_Z2_HBPP_DATA_HDR_LEN       10
+-/* Largest single SPI transfer; longer packets are split with CS held */
+-#define APPLE_Z2_HBPP_CHUNK              4096
++/* Experimental S8000 polled-PIO safety bound. Preserve a single SPI
++ * message and deassert CS only AFTER the last segment. A 1040-byte frame
++ * becomes 256+256+256+256+16 bytes on the A9 S5L controller.
++ *
++ * DO NOT infer that the 2026-11-10 USB loss was caused by large transfers;
++ * this is a bounded, not-yet-hardware-tested candidate. The previous
++ * kernel remains the recovery image.
++ */
++#define APPLE_Z2_HBPP_CHUNK              256
+ #define APPLE_Z2_HBPP_ACK_POLLS          50
+ 
+ /*
+  * Bootloader phase SPI clock. The HBPP handshake is known to work at 1 MHz
+  * (touch_diag_d2 on N71); the DT spi-max-frequency (8 MHz, the ADT value) is
+  * used once the firmware runs. 0 means "use the DT speed for the bootloader
+  * too".

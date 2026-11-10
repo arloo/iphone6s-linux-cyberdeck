@@ -2,6 +2,8 @@
 
 **Target for current experiments: N71 / Samsung A9 / S8000 only.** The N71m/TSMC A9/S8003 variant is expressly **out of active experimental scope** until a compatible physical device is available. Its test matrix remains entirely `not_tested`. Upstream source compatibility and references may remain in the build manifest; this is not authorization to run S8003-specific hardware tests or claim working peripherals.
 
+**Recovery prerequisite (2026-11-10):** The S8000 lost its USB gadget during the first 1040-byte NOP-prefixed calibration attempt. Its current power/reset and kernel state are unknown. **No additional live SPI/calibration tests until attended physical recovery** and renewed baseline verification. See [incident report](N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md). The 256-byte SPI segmentation is an unverified RFC, not a solved issue.
+
 ## Milestone T — first complete Linux touch contact
 
 - **T0 — LIVE PASS:** S8000 framebuffer and SPI2 host, reference clock and Chestnut analog rail independently verified with exact rollback.

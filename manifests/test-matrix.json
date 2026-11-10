@@ -30,7 +30,8 @@
       "evidence": [
         "docs/N71_Z2_HBPP_SAFE_KERNEL_LIVE_BOOT.md",
         "docs/N71_TOUCH_CLOCK_AND_ANALOG_LIVE_VALIDATION.md",
-        "docs/N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md"
+        "docs/N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md",
+        "docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md"
       ]
     },
     {

@@ -37,6 +37,10 @@ This matrix reports **observations**, not promises. A detected controller or fra
 
 See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live touchscreen test and calibration blocker](docs/TOUCH_LIVE_TEST.md), [driver worklog](docs/DRIVER_WORKLOG.md), [research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
 
+## Current physical-device recovery gate
+
+**Hardware incident, 2026-11-10:** The S8000 iPhone disappeared from USB during a one-shot 1040-byte private HBPP calibration-NOP experiment, before any calibration ACK or cleanup log was received. The root cause has not been established. **Physical recovery is required**; no further on-device testing is authorized by the existing session until the phone is identified and the baseline is independently verified. The previously successful status-only controller checks remain historical evidence, **not** proof that the current device is running. See [the sanitized failure report](docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md). A bounded-256-byte SPI source RFC is offline-only and has not been tested physically.
+
 ## Reproducible engineering workflow
 
 The repository now distinguishes **OFFLINE** protocol/logic tests, **BUILD** cross-compilation checks, and **HARDWARE** evidence requiring a real iPhone. See [CI and source pinning](docs/CI_REPRODUCIBILITY.md), the [machine-readable S8000/S8003 test matrix](manifests/test-matrix.json), [sanitized hardware results](results/), the [minimum EVDEV touch acceptance milestone](docs/TOUCH_EVDEV_ACCEPTANCE.md), and the [mandatory Telnet-to-SSH security gate](docs/REMOTE_SHELL_HARDENING.md).

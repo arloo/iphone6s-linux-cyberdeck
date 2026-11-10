@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "blocked",
+  "test_id": "calibration_nop_single_attempt_usb_disconnected",
+  "observed_on": "2026-11-10",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md",
+  "summary": "One 1040-byte private calibration-NOP experiment began on the RAM kernel. The Dell recorded a USB gadget disconnect before any ACK or final cleanup log; phone not remotely reachable. No ACK_DATA success or recovery claim. Operator presence required before further physical tests."
+}
