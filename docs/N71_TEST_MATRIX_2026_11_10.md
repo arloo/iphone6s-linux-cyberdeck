@@ -12,18 +12,18 @@ This matrix separates **live hardware results**, **offline results**, and **stil
 | USB network and root shell | **LIVE PASS** | `05ac:4142`, `172.16.42.1`, **100/100 ping replies** (0% loss, average 2.559 ms) |
 | SPI2 controller probe | **LIVE PASS** | `apple-s5l-spi`, `spi0`, 48 MHz controller reference |
 | SPI2 domain baseline | **LIVE PASS** | `off-0` in SPI2-OFF test, `on` in host-only test |
-| SPI2 binding-cycle stress | **LIVE PASS** | **10/10** guarded sysfs platform unbind/rebind cycles, clock count `1 → 0 → 1` |
+| SPI2 binding-cycle stress | **LIVE PASS** | **100/100** guarded sysfs platform unbind/rebind cycles, clock count `1 → 0 → 1`; Z2 clock stayed disabled |
 | Touch reference-clock provider-only | **LIVE PASS: PROVIDER REGISTRATION** | `touch_ref` present, Linux clock framework reports 32,000 Hz with enable/prepare counts `0/0`, PMGR candidate baseline `0x800002ee`; no electrical waveform verification or Z2 probe. Separate RAM-only ISO: 12/12 checksums |
 | Touch reference physical clock | **BLOCKED** | PMGR register mappings and signal characteristics require on-device readbacks, with exact state restoration |
 | Touch analog/core suppliers | **BLOCKED** | Board-matched PMU/Chestnut and GPIO reset need baseline and restore acceptance before Z2 boot |
 | HBPP/Z2 bootloader communication | **PARTIAL, PRIOR SESSION** | Short status/register handshake observed in earlier experiments; current host-only kernel intentionally does not enable the touch child |
-| HBPP calibration DATA acknowledgment | **NOT PASSED** | Prior N71 runs returned `REQ_CAL=0x1f01` or `IDLE=0x4879`; required `ACK_DATA=0x4bc1` absent. Replacement-panel firmware/calibration compatibility is unknown |
+| HBPP calibration DATA acknowledgment | **NOT PASSED** | Prior N71 runs returned `REQ_CAL=0x1f01` or `IDLE=0x4879`; required `ACK_DATA=0x4bc1` absent. Source poller incorrectly stopped at first `REQ_CAL`; bounded correction compiled offline but not yet tested on phone. Replacement-panel firmware/calibration compatibility is unknown |
 | Full-resolution multitouch | **NOT PASSED** | Actual aftermarket panel worked normally under iOS (user-confirmed), but Linux controller ID/firmware compatibility remain unknown. Prior separate N71 research reached only coarse/quadrant reports; acceptance requires real 750 × 1334 multitouch evdev data |
 | Bluetooth BCM4350C5 | **EARLIER KERNEL PASS, CURRENT PENDING** | Old RAM Linux validated loaded N71-matched firmware and passive BLE advertisements; current kernel has Bluetooth stack but **no `hci0`** until matching PMIC GPIO / serdev setup is validated |
 | Wi-Fi BCM4350 PCIe | **BLOCKED** | Private ADT metadata maps WLAN to PCIe **port 1**, while current kernel enumerates **zero PCIe devices**. Host controller/DART link and board-matched firmware are not yet initialized |
 | Isolation of storage and baseband PCIe | **REQUIRED SAFETY GATE** | Never use port 0 (storage) or port 2 (baseband) for experimentation; prototype WLAN on port 1 separately |
 | Kernel Z2 cleanup and clock rollback | **OFFLINE PASS** | Patch applies to current N71 source, changed ARM64 objects compile, baseline restoration has readback checks |
-| Regression suite and privacy gate | **PASS** | **36/36** tests plus synthetic HBPP packet audit, GitHub noreply pre-push guard |
+| Regression suite and privacy gate | **PASS** | **61/61** tests, 100k synthetic ACK sequences, 10k DATA frames plus HBPP packet audit, GitHub noreply pre-push guard |
 
 ## Experimental sequence
 

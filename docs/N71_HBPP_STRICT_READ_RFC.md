@@ -29,6 +29,8 @@ This patch is deliberately independent of the prior touch-power rollback RFC. It
 - The tests reject wrong status, bad checksum, truncated or overlong packets, and malformed synthetic version values; they also check the kernel source contract.
 - This proves only parsing and error-handling behavior in the test model. It does **not** prove that Linux can initialize this aftermarket screen.
 
+The separate [bounded calibration ACK polling correction](N71_HBPP_ACK_POLL_STRESS_RFC.md) covers an additional, independently identified source defect: the initial \`REQ_CAL\` status was incorrectly terminal in the DATA ACK poller. Neither correction has yet produced a physical Z2 calibration success.
+
 ## Next hardware experiment
 
 Maintain the currently booted `touch_ref` provider-only Linux session with the Z2 child disabled. Once the clock, Chestnut analog and core-supply snapshots, reset GPIO and one-variable recovery procedure are reviewed, obtain a bounded **status-only** HBPP controller-identification trace. Compare valid version/status/ACK sequences from this installed panel with the firmware/calibration requirements before attempting another full calibration upload.

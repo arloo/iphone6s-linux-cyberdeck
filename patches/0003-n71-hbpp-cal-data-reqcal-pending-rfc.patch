@@ -1,0 +1,20 @@
+diff --git a/drivers/input/touchscreen/apple_z2.c b/drivers/input/touchscreen/apple_z2.c
+index ac4f35d16..620b0686f 100644
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -418,8 +418,14 @@ static int apple_z2_hbpp_wait_ack(struct apple_z2 *z2, u16 expected,
+ 			status, apple_z2_hbpp_name(status), i);
+ 		if (status == expected)
+ 			return 0;
++		/* Calibration may remain in REQ_CAL while a DATA packet is checked.
++		 * Keep polling for ACK_DATA, but never accept REQ_CAL as success.
++		 * Other unexpected states remain terminal.
++		 */
+ 		if (status != APPLE_Z2_HBPP_IDLE && status != APPLE_Z2_HBPP_NOP &&
+-		    status != 0x0000 && status != 0xffff) {
++		    status != 0x0000 && status != 0xffff &&
++		    !(expected == APPLE_Z2_HBPP_ACK_DATA &&
++		      status == APPLE_Z2_HBPP_REQ_CAL)) {
+ 			i++;
+ 			break;
+ 		}

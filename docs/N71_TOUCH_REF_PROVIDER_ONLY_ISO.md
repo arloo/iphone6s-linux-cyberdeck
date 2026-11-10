@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-10
 
-**Status:** **OFFLINE PASS ONLY**. The candidate has **not** been booted on the physical phone.
+**Status:** **LIVE PASS for clock-provider registration.** The candidate was subsequently booted successfully on the physical iPhone 6s. Clock output signaling and Z2 are still unverified.
 
 ## Objective
 
@@ -44,7 +44,19 @@ Scripts available once PongoOS is confirmed at USB `05ac:4141`:
 - `./04-known-good.sh` — original known-good baseline
 - `./05-host-only.sh` — previously verified SPI2-HOST-ONLY baseline
 
-## Physical test gates (NOT YET PERFORMED)
+## Subsequent live-device result (2026-11-10)
+
+The operator booted this exact RAM-only ISO through PongoOS on the N71 phone. It reached the BusyBox root shell and USB gadget interface; the Dell regained direct read-only root-shell access after returning to Kubuntu. Live evidence:
+
+- Device Tree \`clock-controller@78000/status\` reported \`okay\`, while \`touchscreen@0/status\` remained \`disabled\`.
+- \`/sys/kernel/debug/clk/touch_ref\` existed with a calculated, **disabled** reference rate of \`32000 Hz\` (not an observed electrical waveform).
+- Touch clock enable and prepare counts were both **0**; SPI2 generic power domain \`on\` and the SPI master \`spi0\` remained registered.
+- No touch child input or \`spi0.0\` peripheral was registered. The filtered kernel log showed no panic or Oops.
+- Afterward, **100 guarded SPI2 driver detach/rebind cycles** completed with domain \`on → off-0 → on\`, clock count \`1 → 0 → 1\` and the touch clock remaining disabled; the USB shell stayed reachable.
+
+**The recorded 32,000 Hz is a software calculation from the inactive divider, not a measurement of the required active 32,768 Hz signal.** No on-device Z2 calibration was attempted during this stage.
+
+## Physical test protocol (as originally designed, now completed for registration only)
 
 1. Preserve the currently running SPI2-HOST-ONLY session until the human operator intentionally moves from Lightning to the SanDisk Ventoy USB. Only an existing SanDisk VID 0781 Ventoy partition may receive the new ISO; no disk formatting or overwrites.
 2. Boot the new ISO through the existing F12/Ventoy/palen1x path. Check all 12 SHA-256 entries and confirm the Ventoy filesystem is unmounted before exchanging the USB cable.
