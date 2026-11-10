@@ -19,6 +19,8 @@
 
 These are local GPL-derived private diagnostics, not deployed Linux drivers or verified hardware fixes. The 16-bit transport hypothesis differs from the NOP framing hypothesis: **never combine changes in the same comparison**.
 
+**Installed-display qualification:** The actual screen is a user-confirmed **aftermarket replacement**. Exact controller revision and firmware/calibration compatibility are unknown. Prior N71 HBPP responses still prove the installed assembly answered some documented commands, but the failed DATA acknowledgment cannot yet be attributed to a particular cause. Add the [aftermarket panel compatibility gate](N71_AFTERMARKET_DISPLAY_COMPATIBILITY.md) before staging a full firmware/calibration attempt; do not assume original Apple display provenance.
+
 ## Required sequence before any on-device experiment
 
 1. Confirm host USB `05ac:4142`, isolated gadget network `172.16.42.1`, and root shell. Take a read-only snapshot of the running input devices, loaded modules, clock state, SPI bindings and original Chestnut analog register.
