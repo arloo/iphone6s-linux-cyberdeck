@@ -1,6 +1,6 @@
 # N71/S8000 touch calibration: experiment gates
 
-**2026-11-10** — Current production baseline: iPhone 6s Samsung A9, HoolockLinux ARM64 `7.3.0-rc1-g6831bc701a6c`, USB gadget accessible. Full-resolution touchscreen remains **not working**.
+**2026-11-10** — Current production baseline: iPhone 6s Samsung A9, HoolockLinux ARM64 `7.3.0-rc1-g6831bc701a6c`, USB gadget accessible. Full-resolution touchscreen remains **not working**. See the [read-only live baseline](N71_LIVE_BASELINE_2026-11-10.md): the kernel reports SPI2 power domain `off-0`, and no touch input node or SPI module is loaded. Analog rail and 32 kHz reference clock were **not** independently read back on this boot.
 
 ## Concrete evidence
 
