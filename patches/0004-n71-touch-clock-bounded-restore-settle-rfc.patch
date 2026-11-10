@@ -1,0 +1,52 @@
+diff --git a/drivers/clk/clk-apple-touch.c b/drivers/clk/clk-apple-touch.c
+--- a/drivers/clk/clk-apple-touch.c
++++ b/drivers/clk/clk-apple-touch.c
+@@ -94,15 +94,17 @@
+ 	if (!ret)
+ 		return 0;
+ 
+ rollback:
+ 	restore_ret = regmap_write(tc->map, tc->reg, tc->saved_reg);
+ 	if (!restore_ret)
+-		restore_ret = regmap_read(tc->map, tc->reg, &readback);
+-	if (!restore_ret && readback != tc->saved_reg)
+-		restore_ret = -EIO;
++		restore_ret = regmap_read_poll_timeout_atomic(tc->map, tc->reg,
++						readback,
++						readback == tc->saved_reg &&
++						!(readback & TOUCH_CLK_BUSY),
++						10, 50000);
+ 	if (restore_ret) {
+ 		dev_err(tc->dev, "touch clock enable rollback failed: %d\n",
+ 			restore_ret);
+ 		return restore_ret;
+ 	}
+ 	tc->saved_valid = false;
+@@ -123,16 +125,23 @@
+ 	ret = regmap_write(tc->map, tc->reg, tc->saved_reg);
+ 	if (ret) {
+ 		dev_err(tc->dev, "touch clock baseline restore write failed: %d\n",
+ 			ret);
+ 		return;
+ 	}
+-	ret = regmap_read(tc->map, tc->reg, &readback);
+-	if (ret || readback != tc->saved_reg) {
+-		dev_err(tc->dev, "touch clock baseline readback mismatch: %d\n",
+-			ret ?: -EIO);
++	/* PMGR writes can settle after an immediate readback. Require exact
++	 * baseline and BUSY clear within a strict 50 ms deadline, rather
++	 * than latching saved_valid on a transient value.
++	 */
++	ret = regmap_read_poll_timeout_atomic(tc->map, tc->reg, readback,
++					      readback == tc->saved_reg &&
++					      !(readback & TOUCH_CLK_BUSY),
++					      10, 50000);
++	if (ret) {
++		dev_err(tc->dev, "touch clock baseline restore did not settle: %d\n",
++			ret);
+ 		return;
+ 	}
+ 	tc->saved_valid = false;
+ }
+ 
+ static int apple_touch_clk_is_enabled(struct clk_hw *hw)
