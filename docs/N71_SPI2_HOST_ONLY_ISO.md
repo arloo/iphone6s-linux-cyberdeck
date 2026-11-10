@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-10
 
-**Status:** ISO assembled and verified offline. **Not yet boot-tested on the iPhone.**
+**Status:** ISO verified offline and subsequently **boot-tested on the physical iPhone 6s**. See [on-device validation](N71_SPI2_HOST_ONLY_LIVE_VALIDATION.md) for measured hardware results.
 
 ## Why this candidate exists
 
@@ -50,6 +50,6 @@ Only use these loaders after PongoOS appears on the phone and enumerates as `05a
 
 ## Current staging state
 
-The ISO is verified on the Dell, **not yet copied to Ventoy** because the Lightning cable currently occupies the physical USB connection. The local copy script validates SanDisk USB vendor ID, the source and destination hashes, rejects overwriting any ISO, and safely unmounts Ventoy. It has been checked to fail safely when the SanDisk drive is absent.
+The ISO was later copied to SanDisk Ventoy and reverified on the destination. The physical host-only Linux boot subsequently reached the BusyBox shell and registered SPI controller `spi0` with the SPI2 generic power domain `on`. The local copy script validates the SanDisk USB vendor ID, source and destination hashes, rejects overwriting any ISO, and safely unmounts Ventoy.
 
-No successful SPI2-HOST-ONLY boot, SPI transfer, Z2 ACK, multitouch or Wi-Fi operation is claimed.
+A successful SPI2-HOST-ONLY boot and SPI master registration **are now confirmed** in the [live validation report](N71_SPI2_HOST_ONLY_LIVE_VALIDATION.md). No SPI peripheral transfer, Z2 ACK, multitouch or Wi-Fi operation is claimed.
