@@ -21,7 +21,7 @@ The isolated patch routes the error to a shared teardown label. The cleanup asse
 
 `apple_touch_clk_enable()` reprogrammed the PMGR touch reference clock using the expected A10-like register layout. `disable()` only cleared the enable bit and set the disable bit, without restoring the original divider or full register value. The actual A9 PMGR offset/register semantics remain **unverified**.
 
-The isolated patch records the register before enabling, rejects an unknown/busy initial state, checks write operations, attempts rollback on enable failure, restores the captured baseline at disable and validates readback. Hardware testing of this clock path is explicitly blocked until the A9 register mapping has been confirmed independently.
+The isolated patch records the register before enabling, rejects an unknown/busy initial state, checks write operations, attempts an exact baseline restore **with readback validation** on enable failure, restores the captured baseline at disable and checks readback again. Hardware testing of this clock path is explicitly blocked until the A9 register mapping has been confirmed independently.
 
 ## Device Tree dependencies
 

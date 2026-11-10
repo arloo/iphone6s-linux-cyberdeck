@@ -49,7 +49,11 @@ class N71RollbackPatchContract(unittest.TestCase):
             self.assertIn(item, self.additions)
 
     def test_clock_restore_checks_readback(self):
-        self.assertIn("readback != tc->saved_reg", self.additions)
+        self.assertGreaterEqual(self.additions.count("readback != tc->saved_reg"), 2)
+
+    def test_clock_enable_failed_rollback_is_fail_closed(self):
+        self.assertIn("if (restore_ret) {", self.additions)
+        self.assertIn("return restore_ret;", self.additions)
 
     def test_clock_unknown_bits_fail_closed(self):
         self.assertIn("(val & ~TOUCH_CLK_KNOWN)", self.additions)

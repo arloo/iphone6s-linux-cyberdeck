@@ -1,5 +1,5 @@
 diff --git a/drivers/clk/clk-apple-touch.c b/drivers/clk/clk-apple-touch.c
-index d0406c1f5..18e84215f 100644
+index d0406c1f5..1d0c3c350 100644
 --- a/drivers/clk/clk-apple-touch.c
 +++ b/drivers/clk/clk-apple-touch.c
 @@ -41,6 +41,9 @@ struct apple_touch_clk {
@@ -12,7 +12,18 @@ index d0406c1f5..18e84215f 100644
  };
  
  #define to_apple_touch_clk(_hw) container_of(_hw, struct apple_touch_clk, hw)
-@@ -64,27 +67,65 @@ static int apple_touch_clk_enable(struct clk_hw *hw)
+@@ -55,8 +58,8 @@ static int apple_touch_clk_enable(struct clk_hw *hw)
+ {
+ 	struct apple_touch_clk *tc = to_apple_touch_clk(hw);
+ 	unsigned long parent = clk_hw_get_rate(clk_hw_get_parent(hw));
+-	u32 val;
+-	int ret;
++	u32 val, readback;
++	int ret, restore_ret;
+ 
+ 	if (DIV_ROUND_CLOSEST(parent, tc->rate) > FIELD_MAX(TOUCH_CLK_DIV))
+ 		return -EINVAL;
+@@ -64,27 +67,72 @@ static int apple_touch_clk_enable(struct clk_hw *hw)
  	ret = regmap_read(tc->map, tc->reg, &val);
  	if (ret)
  		return ret;
@@ -47,10 +58,17 @@ index d0406c1f5..18e84215f 100644
 +		return 0;
 +
 +rollback:
-+	if (regmap_write(tc->map, tc->reg, tc->saved_reg))
-+		dev_err(tc->dev, "touch clock enable rollback write failed\n");
-+	else
-+		tc->saved_valid = false;
++	restore_ret = regmap_write(tc->map, tc->reg, tc->saved_reg);
++	if (!restore_ret)
++		restore_ret = regmap_read(tc->map, tc->reg, &readback);
++	if (!restore_ret && readback != tc->saved_reg)
++		restore_ret = -EIO;
++	if (restore_ret) {
++		dev_err(tc->dev, "touch clock enable rollback failed: %d\n",
++			restore_ret);
++		return restore_ret;
++	}
++	tc->saved_valid = false;
 +	return ret;
  }
  
@@ -86,7 +104,7 @@ index d0406c1f5..18e84215f 100644
  }
  
  static int apple_touch_clk_is_enabled(struct clk_hw *hw)
-@@ -131,6 +172,7 @@ static int apple_touch_clk_probe(struct platform_device *pdev)
+@@ -131,6 +179,7 @@ static int apple_touch_clk_probe(struct platform_device *pdev)
  	tc = devm_kzalloc(dev, sizeof(*tc), GFP_KERNEL);
  	if (!tc)
  		return -ENOMEM;
