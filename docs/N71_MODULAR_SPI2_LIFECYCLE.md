@@ -14,7 +14,7 @@ The locally patched S8000 kernel offers an alternative that uses the standard dr
 4. `drivers/base/dd.c::device_unbind_cleanup` calls `devres_release_all()` and then `dev_pm_domain_detach(dev, dev->power.detach_power_off)`.
 5. Both driver Kconfig entries are `tristate`. A separate local kernel configuration therefore sets `CONFIG_SPI_APPLE_S5L=m` and `CONFIG_TOUCHSCREEN_APPLE_Z2=m`, leaving the N71 touch child disabled by default.
 
-The code suggests a more maintainable power lifecycle. **It does not prove that the physical domain will turn off correctly after unbind on this phone.** It also does not guarantee that unloading a controller is safe while child devices or transfers are active.
+The original document described an offline-only hypothesis. A subsequent **physical guarded sysfs platform unbind/rebind test** on the host-only kernel confirmed the SPI2 generic domain transitioned `on → off-0 → on`, and its reference clock enable count `1 → 0 → 1` while the Z2 child remained disabled. See [live power-cycle validation](N71_SPI2_POWER_CYCLE_LIVE_VALIDATION.md). This does **not** guarantee safety while child devices or transfers are active.
 
 ## Experimental gates
 

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Abort pushes if a personal Git identity or email appears in reachable history.
+set -eu
+REPO="$(git rev-parse --show-toplevel)"
+exec python3 "$REPO/tools/security/check_git_privacy.py"

@@ -46,7 +46,7 @@ Only use these loaders after PongoOS appears on the phone and enumerates as `05a
 5. Inspect `/proc/bus/input/devices` to confirm the Z2 touch device was **not** activated and no calibration attempted.
 6. Stop at any unexpected panic, USB disconnect without re-enumeration, or PM-domain error. Recover physically using the alternative boot scripts if necessary.
 
-**Important limitation:** This host-only candidate has the S5L SPI driver compiled **into the kernel**. It can establish whether SPI2 successfully initializes and whether the PM domain is active, but it **cannot** establish an unload/rebind power-domain lifecycle. That later test requires a separately built, matching *modular* kernel and an appropriate hardware rollback protocol. The earlier experimental `.ko` files must not be inserted into an incompatible kernel.
+**Lifecycle follow-up:** This candidate has the S5L host driver compiled **into the kernel**, so `rmmod` is not possible. However, **platform driver sysfs unbind/rebind was subsequently validated on the physical phone** with an independent timed rebind watchdog: domain `on → off-0 → on`, SPI reference-clock count `1 → 0 → 1`, controller `spi0` restored. See [live power-cycle validation](N71_SPI2_POWER_CYCLE_LIVE_VALIDATION.md). A matching modular kernel is only needed to test the distinct `rmmod`/`insmod` lifecycle. Earlier experimental `.ko` files must not be loaded into an incompatible kernel.
 
 ## Current staging state
 

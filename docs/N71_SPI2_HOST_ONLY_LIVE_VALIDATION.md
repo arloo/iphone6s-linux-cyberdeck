@@ -42,9 +42,9 @@ The filtered dmesg contains a prior `g_multi` gadget probe failure (`-22`), foll
 
 The real-device transition from SPI2-OFF to SPI2-HOST-ONLY demonstrates that the SPI master driver can bind and keep the dedicated generic power domain active, without registering the Z2 touchscreen child.
 
-These observations **do not establish safe power-down/rebind behavior**, because the host driver is built into the running kernel, runtime PM reports `unsupported`, and no driver unbind/rebind was attempted. They also do not prove that the bus can transmit or receive useful bytes. The original bootloader ACK problem remains unresolved.
+This **initial** boot-only observation did not include an unbind/rebind cycle. A **separate subsequent physical test** confirmed the Linux platform driver can unbind and rebind under a timed watchdog, with SPI2 PM domain `on → off-0 → on` and SPI reference clock enable count `1 → 0 → 1`: see [SPI2 power-cycle live validation](N71_SPI2_POWER_CYCLE_LIVE_VALIDATION.md). That result does **not** prove successful SPI transfers or a Z2 calibration ACK.
 
-Next gated work: produce a matching modular host variant with explicit power-domain cleanup review and safe power-down recovery; validate the stage offline before any live unbind or touch power action. Only then move to a controlled Z2 presence/protocol test with a preserved known-good RAM boot image.
+Next gated work: review N71 touch power and pin dependencies, then develop a tightly bounded Z2 presence/protocol probe with rollback and the preserved SPI2-OFF recovery image. A modular host build is optional for module-unload testing, not necessary for platform binding-cycle testing.
 
 ## Integrity and privacy
 
