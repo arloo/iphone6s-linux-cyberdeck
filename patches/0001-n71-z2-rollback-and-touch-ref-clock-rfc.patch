@@ -1,0 +1,130 @@
+diff --git a/drivers/clk/clk-apple-touch.c b/drivers/clk/clk-apple-touch.c
+index d0406c1f5..18e84215f 100644
+--- a/drivers/clk/clk-apple-touch.c
++++ b/drivers/clk/clk-apple-touch.c
+@@ -41,6 +41,9 @@ struct apple_touch_clk {
+ 	struct regmap *map;
+ 	u32 reg;
+ 	u32 rate;
++	u32 saved_reg;
++	bool saved_valid;
++	struct device *dev;
+ };
+ 
+ #define to_apple_touch_clk(_hw) container_of(_hw, struct apple_touch_clk, hw)
+@@ -64,27 +67,65 @@ static int apple_touch_clk_enable(struct clk_hw *hw)
+ 	ret = regmap_read(tc->map, tc->reg, &val);
+ 	if (ret)
+ 		return ret;
++	/*
++	 * CCF serializes enable/disable for this clock. Save the complete
++	 * original A9 register, not just the enable bit or new divider.
++	 */
++	if (tc->saved_valid || (val & TOUCH_CLK_BUSY) ||
++	    (val & ~TOUCH_CLK_KNOWN))
++		return -EBUSY;
++	tc->saved_reg = val;
++	tc->saved_valid = true;
++
+ 	val &= ~TOUCH_CLK_DISABLE;
+-	regmap_write(tc->map, tc->reg, val);
++	ret = regmap_write(tc->map, tc->reg, val);
++	if (ret)
++		goto rollback;
+ 
+ 	val &= ~TOUCH_CLK_DIV;
+ 	val |= TOUCH_CLK_ENABLE |
+ 	       FIELD_PREP(TOUCH_CLK_DIV, apple_touch_clk_div(tc, parent));
+-	regmap_write(tc->map, tc->reg, val);
++	ret = regmap_write(tc->map, tc->reg, val);
++	if (ret)
++		goto rollback;
+ 
+-	return regmap_read_poll_timeout_atomic(tc->map, tc->reg, val,
++	ret = regmap_read_poll_timeout_atomic(tc->map, tc->reg, val,
+ 					       !(val & TOUCH_CLK_BUSY), 10, 50000);
++	if (!ret)
++		return 0;
++
++rollback:
++	if (regmap_write(tc->map, tc->reg, tc->saved_reg))
++		dev_err(tc->dev, "touch clock enable rollback write failed\n");
++	else
++		tc->saved_valid = false;
++	return ret;
+ }
+ 
+ static void apple_touch_clk_disable(struct clk_hw *hw)
+ {
+ 	struct apple_touch_clk *tc = to_apple_touch_clk(hw);
+-	u32 val;
++	u32 readback;
++	int ret;
+ 
+-	regmap_clear_bits(tc->map, tc->reg, TOUCH_CLK_ENABLE);
+-	regmap_read_poll_timeout_atomic(tc->map, tc->reg, val,
+-					!(val & TOUCH_CLK_BUSY), 10, 50000);
+-	regmap_set_bits(tc->map, tc->reg, TOUCH_CLK_DISABLE);
++	if (!tc->saved_valid) {
++		dev_warn(tc->dev, "touch clock disable without saved baseline\n");
++		return;
++	}
++
++	ret = regmap_write(tc->map, tc->reg, tc->saved_reg);
++	if (ret) {
++		dev_err(tc->dev, "touch clock baseline restore write failed: %d\n",
++			ret);
++		return;
++	}
++	ret = regmap_read(tc->map, tc->reg, &readback);
++	if (ret || readback != tc->saved_reg) {
++		dev_err(tc->dev, "touch clock baseline readback mismatch: %d\n",
++			ret ?: -EIO);
++		return;
++	}
++	tc->saved_valid = false;
+ }
+ 
+ static int apple_touch_clk_is_enabled(struct clk_hw *hw)
+@@ -131,6 +172,7 @@ static int apple_touch_clk_probe(struct platform_device *pdev)
+ 	tc = devm_kzalloc(dev, sizeof(*tc), GFP_KERNEL);
+ 	if (!tc)
+ 		return -ENOMEM;
++	tc->dev = dev;
+ 
+ 	tc->map = syscon_node_to_regmap(dev->of_node->parent);
+ 	if (IS_ERR(tc->map))
+diff --git a/drivers/input/touchscreen/apple_z2.c b/drivers/input/touchscreen/apple_z2.c
+index ac4f35d16..a97bec9e0 100644
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -881,7 +881,7 @@ static int apple_z2_boot_hbpp(struct apple_z2 *z2)
+ 	/* Clock out ATN/NOPs while in reset so SCK idles high (mode 3) */
+ 	error = apple_z2_hbpp_probe(z2, NULL);
+ 	if (error)
+-		return error;
++		goto err_power_off;
+ 
+ 	gpiod_set_value(z2->reset_gpio, 0);
+ 	msleep(z2->variant->reset_delay_ms);
+@@ -891,12 +891,14 @@ static int apple_z2_boot_hbpp(struct apple_z2 *z2)
+ 		error = -ENODEV;
+ 	if (!error)
+ 		error = apple_z2_upload_firmware(z2);
+-	if (error) {
+-		if (z2->booted)
+-			disable_irq(z2->spidev->irq);
+-		z2->booted = false;
+-		apple_z2_power_off(z2);
+-	}
++	if (!error)
++		return 0;
++
++err_power_off:
++	if (z2->booted)
++		disable_irq(z2->spidev->irq);
++	z2->booted = false;
++	apple_z2_power_off(z2);
+ 	return error;
+ }
+ 
