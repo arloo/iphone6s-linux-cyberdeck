@@ -57,6 +57,19 @@ class TestHBPP(unittest.TestCase):
                          "ACK_DATA")
         self.assertEqual(audit.evaluate_ack([0x4F81]), "UNEXPECTED")
 
+    def test_optional_documented_nop_prefix(self):
+        source = bytes(range(256)) * 4
+        frame = audit.encode_n71_cal(source)
+        prefixed = audit.optional_nop_prefix(frame, enable=True)
+        self.assertEqual(len(prefixed), 1040)
+        self.assertEqual(prefixed[:4], b"\x18\xe1\x30\x01")
+        self.assertEqual(prefixed[2:], frame)
+        self.assertEqual(audit.inspect_frame(prefixed[2:])["address"],
+                         audit.TARGET_CAL)
+        self.assertEqual(audit.optional_nop_prefix(frame), frame)
+        with self.assertRaises(ValueError):
+            audit.optional_nop_prefix(frame[:-1], enable=True)
+
     def test_length_guards(self):
         for n in (0, 4097):
             with self.assertRaises(ValueError):

@@ -62,6 +62,16 @@ def independent_spi16_reference(calibration: bytes,
                     for i in range(0, len(little_frame), 2))
 
 
+def optional_nop_prefix(frame: bytes, enable: bool = False) -> bytes:
+    """Compare a framed DATA packet with the documented NOP+DATA sequence.
+
+    This is an *offline hypothesis*. It does not assert the N71 calibration
+    handshake requires a prefix, and never interacts with hardware.
+    """
+    inspect_frame(frame)  # Reject malformed DATA packets before wrapping.
+    return struct.pack(">H", NOP) + frame if enable else frame
+
+
 def inspect_frame(frame: bytes) -> dict[str, int]:
     if len(frame) < 18 or len(frame) % 2:
         raise ValueError("invalid frame size")
