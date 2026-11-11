@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "observed_on": "2026-11-11",
+  "test_id": "n71_type1_d9_16_byte_descriptor",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_INVERTED_Y_TYPE1_TOUCH_REPORT_RFC_2026_11_11.md",
+  "summary": "Physical N71 kernel #4 verified EE then two E3/D9 handshakes and one Type-1 E7 D9 descriptor fetch. SPI rc=0, E7 reply, checksum matched. Signed axis endpoints showed inverse Y direction and spans approximately 5.8k x 10.4k raw units, aspect ratio within 0.1% of physical 750x1334 screen. Prior RFC9 erroneously rejected reversed Y; AF not sent. GPIO142 IRQ remained 1, no EVDEV events; new RFC10 remains offline-only. Device-specific exact bounds and firmware never published."
+}
