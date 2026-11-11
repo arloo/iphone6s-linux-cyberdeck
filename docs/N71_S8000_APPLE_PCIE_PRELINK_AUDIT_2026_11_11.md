@@ -45,7 +45,7 @@ https://github.com/apple/darwin-xnu/blob/main/osfmk/arm64/arm_vm_init.c
 
 Nine entirely synthetic Mach-O/prelink tests were added under tests/test_n71_kernelcache_pcie_kext_map.py, covering expected four-module mapping, missing/duplicate modules, incorrect prelink size, wrong executable range, invalid ARM64 header, corrupted prelink XML and no private-value echo or binary export.
 
-## Current engineering boundary
+**Later analysis:** The [S8000 call-routing audit](N71_S8000_PCIE_GOT_CALL_ROUTING_AUDIT_2026_11_11.md) reconstructs 46 trampoline destinations and 9 direct local calls; this improves the verified dependency map but does not prove a safe PCIe controller initialization sequence.\n\n## Current engineering boundary
 
 The hardware Device Tree reference BCM4350-to-DART1 mapper-apcie1 has already been resolved and published separately. RFC 0011 is a tested, **default-off and deliberately non-probing** S8000 kernel guard. The remaining challenge is a reviewable S8000 PCIe host initialization profile extracted from validated open or clean-room research, with explicit protection of storage port 0 and baseband port 2 and proven DART DMA isolation. The original Apple binary metadata is evidence of component identity, not a Linux driver implementation.
 
