@@ -20,6 +20,12 @@ The kernel registered **iPhone 6s Touchscreen** at `/dev/input/event0`, with ABS
 
 An attended `evtest /dev/input/event0` capture ran while the operator tapped center, corners, swiped and attempted two simultaneous fingers. It printed device capabilities but **no touch event lines**. At and after the test, `/proc/interrupts` showed the touch interrupt `Apple-GPIO 142 Edge apple-z2-irq` counter still at **1**, without increasing. The debug GPIO listing showed GPIO142 as an **input, high, IRQ**; GPIO75 was an output high (active-low reset semantics). This read-only observation does not prove a specific root cause. USB remained reachable and the phone stayed booted.
 
+## Follow-up supervised GPIO142 sampling, same live boot
+
+After a second attended center/corner/swipe/two-finger test, a read-only 64-second sampler requested 320 samples of the Linux GPIO debug view at 200-ms intervals. **All 320/320 samples reported GPIO142 as `in hi IRQ`**. **No sampled high-to-low or low-to-high transition** was captured. The Linux IRQ count for `Apple-GPIO 142 Edge apple-z2-irq` remained **1**. The phone's USB network remained reachable.
+
+This is a **negative input-delivery result**, not proof of a defective screen, a wrong GPIO number, or a permanently stable electrical line: 200-ms polling can miss narrow pulses, although the unchanged IRQ counter additionally indicates Linux did not count new configured edges. Do not claim multitouch is functional. Future tests should prioritize independent validation of physical IRQ routing/edge polarity, firmware scanning state and report protocol, without altering hardware state before evidence is obtained.
+
 ## Next bounded diagnostic gate
 
 1. Do **not** repeat DFU, firmware uploads or GPIO/IRQ polarity changes just to gather equivalent evidence.
