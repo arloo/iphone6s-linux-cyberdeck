@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "observed_on": "2026-11-11",
+  "test_id": "n71_linux_fbdev_evdev_four_edge_targets",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_LIVE_FBDEV_CYBERDECK_POC_2026_11_11.md",
+  "summary": "Native static ARM64 fbdev+evdev GUI started in RAM on actual N71 Linux: 750x1334 32bpp fb0 and touchscreen event0. Initial four near-edge hit target framebuffer center pixels were amber; after real evdev input all four center pixels read cyan. USB Linux remained connected. Functional input-to-framebuffer update PASS; optical panel scanout and calibrated physical coordinates are not yet independently confirmed."
+}

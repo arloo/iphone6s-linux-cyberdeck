@@ -26,6 +26,14 @@ It drew a cyberpunk-like dashboard with status text, cyan live finger crosshairs
 
 **Important:** this proves framebuffer device writes/readback and native evdev access, but there has not yet been a separately observed picture of the lit LCD or a human-verified UI target hit. These validations will be recorded only when physically performed.
 
+## Read-back edge target acceptance after real evdev interaction
+
+A follow-up **read-only** framebuffer inspection of the same still-running ARM64 native GUI showed all four target center pixels had changed from the initial **amber** value to the program's **cyan** confirmation value. Pixel center positions used for the comparison are the top-left, top-right, lower-left and lower-right target centers, each close to a horizontal screen edge. These four color transitions are driven by the application's evdev Type-B finger-down hit-testing logic; the program does not automatically mark targets as successful.
+
+Thus the functional path from the real touch input device, through the on-device app, to the framebuffer's rendered indicator has passed for **4 of 4 targets**. This does **not** measure absolute coordinate error against a certified physical test fixture. A human-reported observation of the visible LCD image has not yet been explicitly recorded; framebuffer readback is strong software-side evidence but cannot substitute for an optical observation of scanout.
+
+No redraw commands, raw proprietary data capture or per-device physical identifier were needed for this validation.
+
 ## Public source and reproducibility
 
 The C source and build rules are under examples/fb-cyberdeck/. The local static font header is generated via tools/gen_cyberdeck_font.py using a *locally installed* TrueType font and is gitignored; neither a raw font file nor the generated glyph bitmap header is shipped. The public repository also does not include the ARM64 executable, Apple firmware, private calibration, per-device geometry tuple, unique identifiers, or personal logs.
