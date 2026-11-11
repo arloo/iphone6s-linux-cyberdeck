@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "observed_on": "2026-11-11",
+  "test_id": "n71_operator_photograph_optical_lcd_scanout",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_LIVE_FBDEV_CYBERDECK_POC_2026_11_11.md",
+  "summary": "Operator-provided physical device photograph confirms native Linux CYBERDECK / A9 fbdev UI visibly rendered on illuminated iPhone 6s screen. Four cyan near-edge targets and EDGES: 4/4 visible, along with system status and RESET/EXIT controls. Source photograph deliberately not published. This passes optical display scanout, not pixel precision, performance or persistence."
+}
