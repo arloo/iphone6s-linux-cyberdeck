@@ -30,3 +30,9 @@ python3 -m unittest discover -s tests -p 'test_n71_port1_bounded_poll_model.py' 
 ```
 
 See [original N71 port-method sequence evidence](../../docs/N71_S8000_ORIGINAL_PORT1_INHERITED_SEQUENCE_2026_11_11.md).
+
+## Standalone RMW policy emulator (no hardware access)
+
+`port1_rmw_policy_model.c` models the four verified Apple A9/S800x port1 register-bit transitions on **synthetic integer inputs only**. It rejects all other ports, unknown operations and global/shared register writes; the status/shared-register meaning is NOT assumed. It has NO MMIO or PCIe driver registration functions.
+
+The model was actually executed through 65,536 synthetic random-vector bit-preservation tests and built as a genuine AArch64 relocatable object. Tests are in `tests/test_n71_port1_rmw_policy_model.py`. Background: [original private-code RMW static audit](../../docs/N71_S8000_PORT1_RMW_GLOBAL_STATUS_2026_11_11.md).
