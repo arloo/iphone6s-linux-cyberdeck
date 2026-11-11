@@ -12,6 +12,11 @@ esac
 [ -d "/sys/class/net/$IFACE" ] || fail "wlan_interface_absent"
 [ -e "/sys/class/net/$IFACE/phy80211" ] || fail "wireless_phy_absent"
 [ -d /sys/class/ieee80211 ] || fail "wireless_class_absent"
+# The PHY must belong to the actual ONBOARD PCIe BCM4350, not a USB Wi-Fi
+# adapter relabeled wlan0 or an unrelated native chip.
+HERE=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
+"$HERE/n71_onboard_bcm4350_identity.sh" "$IFACE" /sys ||
+  fail "not_n71_onboard_bcm4350_pcie"
 command -v iw >/dev/null 2>&1 || fail "missing_iw"
 command -v ip >/dev/null 2>&1 || fail "missing_ip"
 command -v ping >/dev/null 2>&1 || fail "missing_ping"
