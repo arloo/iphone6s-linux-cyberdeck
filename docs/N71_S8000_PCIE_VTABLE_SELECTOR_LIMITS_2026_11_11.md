@@ -1,4 +1,6 @@
-# A9/S8000 PCIe — original constructor-vtable selector audit
+# A9/S8000 PCIe — MetaClass vtable selector audit (corrected)
+
+**IMPORTANT CORRECTION:** [The later actual instance-constructor audit](N71_S8000_CONSTRUCTOR_CHAIN_PORT3_OVERRIDE_2026_11_11.md) proves that the zero/unsupported return values below came from the **MetaClass constructor's vtable**, NOT from the constructed S8000 PCIe instance. The two instance selector slots are instead inherited from S800x. Never use the historical MetaClass table to infer a hardware resource index.
 
 **Date:** 2026-11-11. Offline static study of a locally held iOS 15.8.8/19H422 N71 ARM64 prelinked kernelcache. No live PCIe/MMIO, DMA, PHY, reset, Wi-Fi or NAND operation.
 
@@ -6,9 +8,9 @@
 
 In the original AppleEmbeddedPCIE startup, two indirect calls use virtual slots at offsets 1856 and 1880 and feed their results into provider memory-resource mapping calls. The prior audit correctly detected two **dynamic selectors** but did NOT establish the runtime receiver object or those selectors' numerical resource indices.
 
-The AppleS8000PCIe constructor assigns a class-specific vtable using a bounded AArch64 ADRP/ADD/STR sequence. The shared AppleS800xPCIe constructor assigns a different vtable. Resolving the two virtual slots through original prelinked constant data and the allowlisted original executable module ranges yields:
+The AppleS8000PCIe **MetaClass** constructor assigns a class-metadata vtable using a bounded AArch64 ADRP/ADD/STR sequence. The shared AppleS800xPCIe **MetaClass** constructor assigns a different metadata vtable. Resolving the two virtual slots through original prelinked constant data and the allowlisted original executable module ranges yields:
 
-| Original constructor class | Virtual slot 1856 | Virtual slot 1880 |
+| Original **MetaClass** constructor | Virtual slot 1856 | Virtual slot 1880 |
 |---|---|---|
 | AppleS8000PCIe | Returns zero | Returns 0xE00002C7 |
 | AppleS800xPCIe | Nontrivial method | Nontrivial method |
@@ -17,7 +19,7 @@ The AppleS8000PCIe constructor assigns a class-specific vtable using a bounded A
 https://developer.apple.com/documentation/iokit/kioreturnunsupported
 https://leopard-adc.pepas.com/documentation/Darwin/Reference/IOKit/IOReturn_h/index.html
 
-The two S8000 slot targets are in original IOPCIFamily executable code. These are verified static constructor-vtable observations, **not proof of the receiver's actual vtable during AppleEmbeddedPCIE startup**. An unsupported return cannot safely be used as a physical resource index. The correct runtime dispatch chain and any subclass overrides must be established before identifying either common MMIO window.
+The two S8000 **MetaClass** slot targets are in original IOPCIFamily executable code. These are not the constructed instance's virtual-method slots and are **not proof of the receiver's actual vtable during AppleEmbeddedPCIE startup**. An unsupported return cannot safely be used as a physical resource index. The correct runtime dispatch chain and any subclass overrides must be established before identifying either common MMIO window.
 
 This means the ADT common ranges at 0x600000000/0x8000 and 0x600008000/0x4000 remain unassigned to these virtual selectors. The earlier port1-relative offsets (0x180,0x194,0x1a4,0x1ac) may NOT be added to either base. The index-zero PHY path remains a separate observation; ADT reg[0]=0x610000000/0x1000000 is still a candidate only because provider IODeviceMemory ordering is unproven.
 
@@ -25,7 +27,7 @@ This means the ADT common ranges at 0x600000000/0x8000 and 0x600008000/0x4000 re
 
 Tool: tools/n71_s8000_vtable_selector_audit.py
 
-It decodes only the generic ARM64 constructor-vtable address computation (ADRP/ADD/STR), validates two original private vtable slots, bounds-checks all pointers against prelinked data/executable sections, and classifies only exact constant-return patterns. It never outputs executable code, original pointers, disassembly or per-device data. Twelve entirely synthetic tests verify signed address arithmetic, modified register/store rejection, zero and unsupported status classification, malformed input and zero hardware effects.
+It decodes only the generic ARM64 MetaClass-vtable address computation (ADRP/ADD/STR), separately verifies instance-constructor pointers, validates original private vtable slots, bounds-checks all pointers against prelinked data/executable sections, and classifies only exact constant-return patterns. It never outputs executable code, original pointers, disassembly or per-device data. Twelve entirely synthetic tests verify signed address arithmetic, modified register/store rejection, zero and unsupported status classification, malformed input and zero hardware effects.
 
 Local invocation on privately obtained and already decompressed firmware:
 

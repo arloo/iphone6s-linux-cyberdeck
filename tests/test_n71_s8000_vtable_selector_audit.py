@@ -89,7 +89,7 @@ class TestS8000VtableGate(unittest.TestCase):
         for item in ("RUNTIME_DISPATCH_OBJECT_PROVEN=NO",
                      "COMMON_MMIO_RESOURCE_INDEX_RESOLVED=NO",
                      "HARDWARE_BLOCKED",
-                     "S8000_CTOR_SLOT_1880"):
+                     "S8000_META_CLASS_SLOT_1880"):
             self.assertIn(item,text)
 
     def test_no_original_apple_code_export_or_mmio(self):

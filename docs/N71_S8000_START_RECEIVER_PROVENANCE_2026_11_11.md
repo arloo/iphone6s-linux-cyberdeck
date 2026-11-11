@@ -2,9 +2,11 @@
 
 Date: 2026-11-11. **Offline-only study of the original iOS 15.8.8 N71 ARM64 kernelcache.** No hardware PCIe, MMIO, DMA or radio activity.
 
-## Verified original startup call flow
+## Verified argument flow within a separate AppleEmbeddedPCIE method
 
-The AppleEmbeddedPCIE startup method saves its first argument (X0: controller object / self) to X19 and its second argument (X1: hardware provider) to X20. Both resource-selector virtual calls load the vtable through X19 and invoke the selector with X19 as receiver. In each case the returned value becomes the memory resource index passed to a distinct virtual mapping call on the provider X20. This distinction is verified from the original ARM64 instruction path.
+**Later correction:** [The three-constructor S8000/S800x/Embedded audit](N71_S8000_CONSTRUCTOR_CHAIN_PORT3_OVERRIDE_2026_11_11.md) establishes that the method below is not shown to execute as the constructed S8000 instance's startup. Its data-flow observations remain valid *within that method*; the method must NOT be used as evidence of the physical S8000 resource indices.
+
+The AppleEmbeddedPCIE method saves its first argument (X0: controller object / self) to X19 and its second argument (X1: hardware provider) to X20. Both resource-selector virtual calls load the vtable through X19 and invoke the selector with X19 as receiver. In each case the returned value becomes the memory resource index passed to a distinct virtual mapping call on the provider X20. This distinction is verified from the original ARM64 instruction path.
 
 Independent original Apple prelink metadata includes a single IOKit matching personality for the A9 root PCIe controller:
 - Bundle: com.apple.driver.AppleS8000PCIe
@@ -14,7 +16,7 @@ Independent original Apple prelink metadata includes a single IOKit matching per
 
 The private N71 Apple ADT has the matching apcie,s8000 device node. This is evidence of the intended class/provider match, not a live iOS runtime trace.
 
-The earlier constructor-vtable audit found an immediate zero and kIOReturnUnsupported (0xE00002C7) at constructed S8000 slots 1856 and 1880. This does **not** establish the vtable actually installed during the analyzed inherited-start path. A separate static scan did not locate a direct pointer to this inherited-start entry in the selected constructed root vtables; compiler thunks, inheritance, overrides or alternative paths remain possible. Thus neither numeric common-resource index nor physical common MMIO base can yet be concluded.
+The earlier constructor-vtable audit found an immediate zero and kIOReturnUnsupported (0xE00002C7) at **MetaClass** slots 1856 and 1880, not at constructed instance slots. This does **not** establish the vtable actually installed during the analyzed inherited-start path. A separate static scan did not locate a direct pointer to this inherited-start entry in the selected constructed root vtables; compiler thunks, inheritance, overrides or alternative paths remain possible. Thus neither numeric common-resource index nor physical common MMIO base can yet be concluded.
 
 ## Public reproducibility
 

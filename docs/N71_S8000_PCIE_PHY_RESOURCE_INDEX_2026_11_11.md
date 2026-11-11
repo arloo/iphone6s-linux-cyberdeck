@@ -4,6 +4,8 @@ Date: 2026-11-11. **OFFLINE research; hardware MMIO, DMA, PCIe resets and Wi-Fi 
 
 ## New original Apple A9 evidence
 
+**Later path-qualification correction:** [Static constructor-chain research](N71_S8000_CONSTRUCTOR_CHAIN_PORT3_OVERRIDE_2026_11_11.md) shows that the original AppleEmbeddedPCIE method containing the two dynamic common selectors is **not proved to be the startup method of the constructed S8000 class**. The mappings below are real code paths but cannot be attributed directly to S8000's physical root-complex initialization. No MMIO resource index or physical base is licensed by them.
+
 The privately preserved, checksum-verified iOS 15.8.8 ARM64 kernelcache contains original AppleS800xPCIe, AppleS8000PCIe and AppleEmbeddedPCIE drivers. A bounded read-only source analysis demonstrates:
 
 - Both AppleS800xPCIe and AppleS8000PCIe request device-memory **resource index 0**, call a virtual provider memory-map function, reject a null map, and store its map and address metadata in matching private object fields.
@@ -43,7 +45,7 @@ Successful output contains A9_PHY_RESOURCE0_MAPPING_INSTRUCTIONS_PASS together w
 
 The tool uses a small collection of generic ARM64 instruction-pattern signatures, not a redistributed original kernel function. Seventeen synthetic tests in tests/test_n71_s8000_phy_resource_gate.py check positive and negative paths, invalid indices, changed virtual dispatch, null guards, state stores, dynamic resource selector changes, input bounds and absence of hardware-effect APIs.
 
-**Important follow-up:** The [original S8000 constructor-vtable audit](N71_S8000_PCIE_VTABLE_SELECTOR_LIMITS_2026_11_11.md) shows one zero-return and one unsupported-status method at slots 1856/1880. The actual dynamic receiver used during startup is NOT yet proven, so the two mapped common resource indices remain unresolved. This supersedes any assumption that static constructor vtable values can be directly used as physical register-range indices.
+**Historical MetaClass observation:** The [original S8000 MetaClass-vtable audit](N71_S8000_PCIE_VTABLE_SELECTOR_LIMITS_2026_11_11.md) showed one zero-return and one unsupported-status method in the MetaClass slots 1856/1880. The constructed S8000 instance inherits different methods from S800x. The actual dynamic receiver used during startup is NOT yet proven, so the two mapped common resource indices remain unresolved. This supersedes any assumption that static constructor vtable values can be directly used as physical register-range indices.
 
 ## Physical bring-up remains gated
 

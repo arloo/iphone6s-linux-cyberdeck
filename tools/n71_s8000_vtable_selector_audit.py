@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Static vtable-return classifier for the original N71/S8000 Apple PCIe code.
+"""Static MetaClass-versus-instance vtable audit for original A9 PCIe.
 
-This READ-ONLY auditor is pinned to the operator's already-decompressed
-iOS 15.8.8 N71 arm64 kernelcache. It never executes a method, maps device
-memory, prints internal pointers, or exports proprietary executable bytes.
-A vtable entry found in a constructor does not prove that the constructed
-object reaches a particular runtime dispatch site.
+IMPORTANT CORRECTION (2026-11-11): the original audit used the vptr
+assigned by the KEXT MetaClass constructor, NOT by the instance
+constructor. A zero/unsupported method in a MetaClass vtable does not
+qualify a controller instance resource selector.
+All analysis is offline; no original executable is exported.
 """
 from __future__ import annotations
 import argparse
@@ -80,6 +80,7 @@ def inspect(macho:bytes)->dict[str,object]:
     exe=main["__PLK_TEXT_EXEC"]
     data=main["__PLK_DATA_CONST"]
     groups={}
+    instance_ptrs={}
     for mod,expected in ((SPECIAL,2928),(SHARED,18552)):
         load,sz=metadata[mod]
         require(load>=pre["vm"] and
@@ -92,8 +93,23 @@ def inspect(macho:bytes)->dict[str,object]:
                 sec["vm"]-exe["vm"]+expected<=exe["filesize"],
                 "Original KEXT body outside executable region")
         begin=exe["offset"]+sec["vm"]-exe["vm"]
+        # Earlier observations apply ONLY to the MetaClass vptr (offset 0x20).
         adrp,add,store=struct.unpack_from("<3I",macho,begin+0x20)
         vt=calculate_vtable(sec["vm"]+0x20,adrp,add,store)
+        # Object instances use different constructors and vtables:
+        # AppleS8000PCIe uses offset 0x44; AppleS800xPCIe 0x8DC.
+        inst_at=0x44 if mod==SPECIAL else 0x8DC
+        a,b,c=struct.unpack_from("<3I",macho,begin+inst_at)
+        instance=calculate_vtable(sec["vm"]+inst_at,a,b,c)
+        require(instance!=vt and
+                data["vm"]<=instance and
+                instance+max(SLOTS)+8<=data["vm"]+data["filesize"],
+                "MetaClass vs instance vtable distinction not verified")
+        instance_ptrs[mod]={
+            slot:struct.unpack_from(
+                "<Q",macho,data["offset"]+instance-data["vm"]+slot)[0]
+            for slot in SLOTS
+        }
         require(vt>=data["vm"] and vt+max(SLOTS)+8<=data["vm"]+data["filesize"],
                 "Constructed vtable outside the private read-only data")
         categories={}
@@ -123,11 +139,14 @@ def inspect(macho:bytes)->dict[str,object]:
             "Unexpected shared root slot1856 classification")
     require(shared[1880][1]!="iokit_unsupported_status",
             "Shared root slot1880 unexpectedly matches S8000 default error")
+    require(instance_ptrs[SPECIAL]==instance_ptrs[SHARED],
+            "S8000 instance selector slots differ from inherited S800x")
     return {
-      "s8000_root_slot_1856":special[1856][1],
-      "s8000_root_slot_1880":special[1880][1],
-      "shared_root_slot_1856":shared[1856][1],
-      "shared_root_slot_1880":shared[1880][1],
+      "s8000_meta_slot_1856":special[1856][1],
+      "s8000_meta_slot_1880":special[1880][1],
+      "shared_meta_slot_1856":shared[1856][1],
+      "shared_meta_slot_1880":shared[1880][1],
+      "instance_slots_equal_inherited":True,
       "unsupported_status":UNSUPPORTED,
       "dispatch_site_bound_to_constructor":False,
       "root_common_mmio_indices":None,
@@ -146,11 +165,12 @@ def main()->int:
         print("S8000_VTABLE_SELECTOR_FAIL_CLOSED:",str(exc),file=sys.stderr)
         return 1
     print("S8000_VTABLE_SELECTOR_STATIC_AUDIT_PASS")
-    print("S8000_CTOR_SLOT_1856",result["s8000_root_slot_1856"])
-    print("S8000_CTOR_SLOT_1880",result["s8000_root_slot_1880"])
-    print("S800X_CTOR_SLOT_1856",result["shared_root_slot_1856"])
-    print("S800X_CTOR_SLOT_1880",result["shared_root_slot_1880"])
-    print("SLOT_1880_CONSTANT_EQUALS_kIOReturnUnsupported",hex(UNSUPPORTED))
+    print("S8000_META_CLASS_SLOT_1856",result["s8000_meta_slot_1856"])
+    print("S8000_META_CLASS_SLOT_1880",result["s8000_meta_slot_1880"])
+    print("S800X_META_CLASS_SLOT_1856",result["shared_meta_slot_1856"])
+    print("S800X_META_CLASS_SLOT_1880",result["shared_meta_slot_1880"])
+    print("S8000_INSTANCE_SLOT_1856_1880_INHERITED_FROM_S800X=YES")
+    print("META_CLASS_SLOT_1880_EQUALS_kIOReturnUnsupported",hex(UNSUPPORTED))
     print("RUNTIME_DISPATCH_OBJECT_PROVEN=NO")
     print("COMMON_MMIO_RESOURCE_INDEX_RESOLVED=NO")
     print("HARDWARE_BLOCKED: no physical PCIe MMIO, DMA, reset or link activity")
