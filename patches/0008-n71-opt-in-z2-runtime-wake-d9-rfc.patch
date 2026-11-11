@@ -1,0 +1,199 @@
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -16,6 +16,7 @@
+ #include <linux/mutex.h>
+ #include <linux/of.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/string.h>
+ #include <linux/spi/spi.h>
+ #include <linux/unaligned.h>
+ 
+@@ -25,6 +26,9 @@
+ #define APPLE_Z2_TOUCH_MOVED             4
+ #define APPLE_Z2_CMD_READ_INTERRUPT_DATA 0xEB
+ #define APPLE_Z2_REPLY_INTERRUPT_DATA    0xE1
++#define APPLE_Z2_CMD_RUNTIME_REPORT_INFO  0xE3
++#define APPLE_Z2_CMD_RUNTIME_WAKE         0xEE
++#define APPLE_Z2_REPORT_SURFACE           0xD9
+ #define APPLE_Z2_HBPP_CMD_BLOB           0x3001
+ #define APPLE_Z2_FW_MAGIC                0x5746325A
+ #define LOAD_COMMAND_INIT_PAYLOAD        0
+@@ -135,6 +139,17 @@
+ 	struct clk *clk;
+ 	bool powered;
+ 	struct mutex report_lock;
++	/* N71-only manual runtime diagnostics, never issued by probe/IRQ. */
++	bool n71_wake_attempted;
++	int n71_wake_rc;
++	u8 n71_wake_reply;
++	bool n71_wake_checksum_ok;
++	u8 n71_d9_attempts;
++	int n71_d9_rc;
++	u8 n71_d9_reply;
++	u8 n71_d9_status;
++	u16 n71_d9_size;
++	bool n71_d9_checksum_ok;
+ 	u8 *tx_buf;
+ 	u8 *rx_buf;
+ };
+@@ -315,9 +330,151 @@
+ 			sample.fingers);
+ }
+ 
++/*
++ * N71/S8000 experimental runtime bring-up.
++ *
++ * Corellium hx-touchd uses 16-byte commands whose LE checksum sums the
++ * first 14 bytes. Its sequence is 0xEE wake, then E3/D9 report discovery.
++ * These controls are NOT called from probe: a single root-only sysfs write
++ * triggers exactly one 16-byte SPI transaction. There is no retry.
++ *
++ * The source precedent is for other Z2 devices and is NOT an N71 validation.
++ */
++static bool apple_z2_n71_runtime_ready(struct apple_z2 *z2)
++{
++	return z2 && z2->variant && z2->variant->hbpp &&
++	       of_machine_is_compatible("apple,n71") &&
++	       READ_ONCE(z2->booted);
++}
++
++/* Must hold report_lock: tx/rx buffers are shared with the IRQ handler. */
++static int apple_z2_n71_runtime_cmd(struct apple_z2 *z2,
++				   u8 opcode, u8 report,
++				   u8 *response, bool *checksum_ok)
++{
++	struct spi_transfer transfer = {
++		.tx_buf = z2->tx_buf,
++		.rx_buf = z2->rx_buf,
++		.len = 16,
++	};
++	unsigned int sum = opcode + report;
++	unsigned int reply_sum = 0;
++	unsigned int i;
++	int err;
++
++	memset(z2->tx_buf, 0, 16);
++	memset(z2->rx_buf, 0, 16);
++	z2->tx_buf[0] = opcode;
++	z2->tx_buf[1] = report;
++	put_unaligned_le16(sum, z2->tx_buf + 14);
++	err = spi_sync_transfer(z2->spidev, &transfer, 1);
++	if (err)
++		return err;
++	for (i = 0; i < 14; i++)
++		reply_sum += z2->rx_buf[i];
++	*checksum_ok = (u16)reply_sum ==
++		get_unaligned_le16(z2->rx_buf + 14);
++	*response = z2->rx_buf[0];
++	return 0;
++}
++
++static ssize_t runtime_wake_store(struct device *dev,
++				  struct device_attribute *attr,
++				  const char *buf, size_t count)
++{
++	struct apple_z2 *z2 = dev_get_drvdata(dev);
++	int err;
++
++	if (!sysfs_streq(buf, "1"))
++		return -EINVAL;
++	if (!apple_z2_n71_runtime_ready(z2))
++		return -EOPNOTSUPP;
++	mutex_lock(&z2->report_lock);
++	if (z2->n71_wake_attempted) {
++		err = -EALREADY;
++		goto unlock;
++	}
++	/* Arm the one-shot gate before sending, even if transport errors. */
++	z2->n71_wake_attempted = true;
++	z2->n71_wake_rc = apple_z2_n71_runtime_cmd(z2,
++		APPLE_Z2_CMD_RUNTIME_WAKE, 0,
++		&z2->n71_wake_reply, &z2->n71_wake_checksum_ok);
++	err = z2->n71_wake_rc;
++unlock:
++	mutex_unlock(&z2->report_lock);
++	return err ? err : count;
++}
++
++static ssize_t runtime_d9_store(struct device *dev,
++				struct device_attribute *attr,
++				const char *buf, size_t count)
++{
++	struct apple_z2 *z2 = dev_get_drvdata(dev);
++	int err;
++
++	if (!sysfs_streq(buf, "1"))
++		return -EINVAL;
++	if (!apple_z2_n71_runtime_ready(z2))
++		return -EOPNOTSUPP;
++	mutex_lock(&z2->report_lock);
++	if (!z2->n71_wake_attempted || z2->n71_wake_rc) {
++		err = -EAGAIN;
++		goto unlock;
++	}
++	if (z2->n71_d9_attempts >= 2) {
++		err = -EALREADY;
++		goto unlock;
++	}
++	/* hx-touchd issues two E3/D9 commands; expose them one at a time. */
++	z2->n71_d9_attempts++;
++	z2->n71_d9_rc = apple_z2_n71_runtime_cmd(z2,
++		APPLE_Z2_CMD_RUNTIME_REPORT_INFO, APPLE_Z2_REPORT_SURFACE,
++		&z2->n71_d9_reply, &z2->n71_d9_checksum_ok);
++	err = z2->n71_d9_rc;
++	if (!err) {
++		z2->n71_d9_status = z2->rx_buf[2];
++		z2->n71_d9_size = get_unaligned_le16(z2->rx_buf + 3);
++	}
++unlock:
++	mutex_unlock(&z2->report_lock);
++	return err ? err : count;
++}
++
++/* State query has NO SPI side effects. No raw firmware/report bytes. */
++static ssize_t runtime_state_show(struct device *dev,
++				  struct device_attribute *attr, char *buf)
++{
++	struct apple_z2 *z2 = dev_get_drvdata(dev);
++	ssize_t len;
++
++	if (!z2 || !z2->variant || !z2->variant->hbpp ||
++	    !of_machine_is_compatible("apple,n71"))
++		return -EOPNOTSUPP;
++	mutex_lock(&z2->report_lock);
++	len = sysfs_emit(buf,
++		"booted=%u wake_attempted=%u wake_rc=%d wake_reply=0x%02x "
++		"wake_checksum_ok=%u d9_attempts=%u d9_rc=%d "
++		"d9_reply=0x%02x d9_status=%u d9_size=%u d9_checksum_ok=%u\n",
++		z2->booted, z2->n71_wake_attempted,
++		z2->n71_wake_rc, z2->n71_wake_reply,
++		z2->n71_wake_checksum_ok, z2->n71_d9_attempts,
++		z2->n71_d9_rc, z2->n71_d9_reply,
++		z2->n71_d9_status, z2->n71_d9_size,
++		z2->n71_d9_checksum_ok);
++	mutex_unlock(&z2->report_lock);
++	return len;
++}
++
++static DEVICE_ATTR_WO(runtime_wake);
++static DEVICE_ATTR_WO(runtime_d9);
++static DEVICE_ATTR_RO(runtime_state);
++
+ static DEVICE_ATTR_RO(runtime_probe);
+ static struct attribute *apple_z2_diag_attrs[] = {
+ 	&dev_attr_runtime_probe.attr,
++	&dev_attr_runtime_state.attr,
++	&dev_attr_runtime_wake.attr,
++	&dev_attr_runtime_d9.attr,
+ 	NULL,
+ };
+ static const struct attribute_group apple_z2_diag_group = {
+@@ -1062,6 +1219,8 @@
+ 
+ 	z2->spidev = spi;
+ 	mutex_init(&z2->report_lock);
++	z2->n71_wake_rc = -EAGAIN;
++	z2->n71_d9_rc = -EAGAIN;
+ 	z2->variant = device_get_match_data(dev);
+ 	init_completion(&z2->boot_irq);
+ 	spi_set_drvdata(spi, z2);

@@ -22,7 +22,7 @@ cleanup() {
 }
 trap cleanup EXIT
 git -C "$INPUT" worktree add --detach "$worktree" "$EXPECTED" >/dev/null
-for patch in "$ROOT"/patches/000{1,2,3,4,5,6,7}-*.patch; do
+for patch in "$ROOT"/patches/000{1,2,3,4,5,6,7,8}-*.patch; do
   [[ -f "$patch" ]] || { echo "Missing RFC patch" >&2; exit 7; }
   git -C "$worktree" apply --check "$patch"
   git -C "$worktree" apply "$patch"
