@@ -30,14 +30,14 @@ def example(at=gate.SHARED_AT, length=18552):
 class TestN71PhyResourceGate(unittest.TestCase):
     def reject(self,b,at):
         with self.assertRaises(gate.MappingNotVerified):
-            gate.validated_resource_zero_sequence(bytes(b),at)
+            gate.validated_selector_argument_zero_sequence(bytes(b),at)
 
     def test_shared_s800x_fixture_passes(self):
-        self.assertTrue(gate.validated_resource_zero_sequence(
+        self.assertTrue(gate.validated_selector_argument_zero_sequence(
             bytes(example()),gate.SHARED_AT))
 
     def test_specialized_s8000_fixture_passes(self):
-        self.assertTrue(gate.validated_resource_zero_sequence(
+        self.assertTrue(gate.validated_selector_argument_zero_sequence(
             bytes(example(gate.SPECIAL_AT,2928)),gate.SPECIAL_AT))
 
     def test_missing_index_zero_rejected(self):

@@ -59,7 +59,7 @@ EXPECTED={
     0x40:0xf900ea80, # Store helper-derived value at object +464
 }
 
-def validated_resource_zero_sequence(blob:bytes, at:int) -> bool:
+def validated_selector_argument_zero_sequence(blob:bytes, at:int) -> bool:
     require(at>=0 and at+0x44<=len(blob),"Pinned ARM64 sequence truncated")
     for rel,wanted in EXPECTED.items():
         actual=struct.unpack_from("<I",blob,at+rel)[0]
@@ -151,15 +151,15 @@ def audit(macho:bytes, private_adt:bytes)->dict[str,object]:
             b"_phyRegistersMemoryMap" in slabels and
             b"PCIe PHY\0" in alabels,
             "Original A9 PHY resource labels are missing")
-    validated_resource_zero_sequence(common,SHARED_AT)
-    validated_resource_zero_sequence(a9,SPECIAL_AT)
+    validated_selector_argument_zero_sequence(common,SHARED_AT)
+    validated_selector_argument_zero_sequence(a9,SPECIAL_AT)
     dynamic_count=validated_dynamic_common_sequences(embedded)
     first=ADT_GATE.HOST_LAYOUT[0]
     require(first==(0x610000000,0x1000000),
             "Unexpected ADT first PCIe physical window")
     # The discovered resource index is not a proof that the driver's
     # IODeviceMemory array has the *same order* as the raw ADT reg array.
-    return {"mapped_index":0,
+    return {"selector_argument":0,
             "source_modules":3,
             "common_dynamic_selectors":dynamic_count,
             "adt_first_base":first[0],
@@ -182,8 +182,8 @@ def main()->int:
             OSError,KeyError,UnicodeError,struct.error) as exc:
         print("A9_PHY_RESOURCE_GATE_FAIL_CLOSED:",str(exc),file=sys.stderr)
         return 1
-    print("A9_PHY_RESOURCE0_MAPPING_INSTRUCTIONS_PASS: both original A9 PCIe modules")
-    print("VIRTUAL_SELECTOR_ARGUMENT",report["mapped_index"])
+    print("A9_PHY_SELECTOR_ARGUMENT0_MAPPING_PATTERN_PASS: both original A9 PCIe modules")
+    print("VIRTUAL_SELECTOR_ARGUMENT",report["selector_argument"])
     print("MAPPED_PROVIDER_RESOURCE_INDEX_NOT_DERIVED_BY_THIS_TOOL")
     print("SEE_N71_S8000_ROOT_RESOURCE_GATE_FOR_VERIFIED_INDEX_10")
     print("ADT_REG0_ECAM_WINDOW_NOT_PHY",hex(report["adt_first_base"]),
