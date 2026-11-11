@@ -1,0 +1,60 @@
+/dts-v1/;
+
+/*
+ * NONBOOTABLE and OFFLINE-ONLY S8000/N71 port isolation scaffold.
+ *
+ * This is NOT the hardware Device Tree. It intentionally contains NO PCIe
+ * controller MMIO registers, clocks, resets, interrupts, DMA ranges or IOMMU
+ * mappings. No safe S8000 PCIe/DART profile is validated yet.
+ *
+ * Port 0: storage (DO NOT EXPERIMENT)
+ * Port 1: BCM4350 Wi-Fi candidate (STILL DISABLED)
+ * Port 2: baseband (DO NOT EXPERIMENT)
+ * Port 3: unknown (DO NOT ENABLE)
+ *
+ * Never concatenate into a boot DTB: only use with the offline gate tool.
+ */
+
+/ {
+    compatible = "apple,n71", "apple,s8000", "apple,arm-platform";
+    model = "NONBOOTABLE N71 PCIe port isolation test fixture";
+    #address-cells = <2>;
+    #size-cells = <2>;
+
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        pcie {
+            compatible = "apple,s8000-pcie-unimplemented";
+            status = "disabled";
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            port@0 {
+                reg = <0x0000>;
+                status = "disabled";
+            };
+
+            port@800 {
+                reg = <0x0800>;
+                status = "disabled";
+            };
+
+            port@1000 {
+                reg = <0x1000>;
+                status = "disabled";
+            };
+
+            port@1800 {
+                reg = <0x1800>;
+                status = "disabled";
+            };
+        };
+
+        dart-apcie1 {
+            compatible = "apple,s8000-dart-unimplemented";
+            status = "disabled";
+        };
+    };
+};
