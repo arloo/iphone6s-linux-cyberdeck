@@ -33,6 +33,8 @@ Local invocation on privately obtained and already decompressed firmware:
 
 The output deliberately includes RUNTIME_DISPATCH_OBJECT_PROVEN=NO, COMMON_MMIO_RESOURCE_INDEX_RESOLVED=NO, and HARDWARE_BLOCKED.
 
+**Later source-flow verification:** [The A9 startup receiver provenance audit](N71_S8000_START_RECEIVER_PROVENANCE_2026_11_11.md) verifies X19=controller/self versus X20=separate provider at both mapping callsites, and the intended S8000 class/personality. It does NOT prove the active runtime vtable or numerical common-register indices.
+
 ## Hardware-blocking prerequisites
 
 1. Identify the **actual runtime receiver** for each AppleEmbeddedPCIE virtual-selector call, including inheritance, constructor chaining and overrides.
