@@ -13,8 +13,7 @@
 | `/device-tree/arm-io/apcie/pci-bridge1/wlan` | `wlan-pcie,bcm4350` | Port 1 Broadcom BCM4350 WLAN candidate |
 | `/device-tree/arm-io/apcie/pci-bridge2/baseband-pcie` | — | Port 2 baseband |
 | `/device-tree/arm-io/dart-apcie0` | `dart,s8000` | DART/IOMMU for port 0 |
-| `/device-tree/arm-io/dart-apcie1` | `dart,s8000` | DART/IOMMU for WLAN port 1 |
-| `/device-tree/arm-io/dart-apcie2` | `dart,s8000` | DART/IOMMU for baseband port 2 |
+| /device-tree/arm-io/dart-apcie1 | dart,s8000, dart,s5l8960x | DART for WLAN port 1 (fallback is a metadata clue only) |\n| `/device-tree/arm-io/dart-apcie2` | `dart,s8000` | DART/IOMMU for baseband port 2 |
 | `/device-tree/arm-io/uart4/wlan` | `wlan-pcie-uart,bcm4350` | Ancillary WLAN UART described by ADT; not proof of WLAN-over-UART |
 
 Additional PCIe host descriptors (as decoded by the read-only parser): `#ports=4`, `bus-range=[0,8]`, interrupts `0xf4,0xf7,0xfa,0xfd`, clock gates `0x39..0x3e`, power gate `0x38`, MSI vector offset `0x100`. The host MMIO windows are rooted at `0x600000000`, `0x601000000`–`0x604004000`, and `0x610000000`. These are **hardware metadata**, not safe register-writing instructions.
@@ -28,7 +27,7 @@ The private ADT source was 163,840 bytes; 150,900 bytes were consumed by the str
 - The currently booted HoolockLinux kernel enumerates **zero PCIe devices**; `CONFIG_PCIE_APPLE=y` does not by itself add S8000 support. It also lacks the WLAN stack.
 - This is **Samsung S8000/N71 evidence**, not a claim about the TSMC A9/S8003 board.
 
-## Controlled driver development plan
+**2026-11-11 follow-up:** [strict S8000 PCIe/DART register-window audit](N71_S8000_PCIE_DART_ADT_WINDOW_AUDIT_2026_11_11.md) verified host, WLAN and legacy DART family metadata from two identical private ADT snapshots. It does NOT authorize DMA or any PCIe register writes.\n\n## Controlled driver development plan
 
 1. Diff the S8000 ADT PCIe/DART topology against existing Linux PCIe controller and Apple DART drivers. Document all binding differences before coding.
 2. Implement an **offline-only**, separately reviewable DTS and controller-driver prototype for S8000. Preserve the known-good RAM boot bundle.
