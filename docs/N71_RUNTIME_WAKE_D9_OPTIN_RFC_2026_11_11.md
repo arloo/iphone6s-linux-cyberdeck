@@ -46,3 +46,26 @@ The complete patch series 0001-0008 was replayed, in order, on an independent cl
 6. Only if report and interrupt delivery respond, proceed to actual EVDEV finger tap, coordinate, release, simultaneous two-finger and drag acceptance.
 
 Fallback is the already hardware-booted Z2 runtime-read-once image, kept immutable alongside an older known-good RAM image. S8003/N71m experiments remain deferred. The full N71 touchscreen is NOT yet functional.
+
+
+## First physical N71 runtime handshake, kernel #3
+
+A supervised PongoOS RAM boot of the staged RFC #8 payload completed on the physical iPhone 6s S8000/N71. Kernel release was 7.3.0-rc1-g68aadac820d0-dirty **#3**; HoolockLinux USB 05ac:4142 appeared and USB network checks returned 3/3 pings. The device-specific calibration and both private firmware transfers were acknowledged; touch reference clock stayed enabled at 32kHz; EVDEV touchscreen remained registered. Before any runtime commands the diagnostic sysfs reported booted=1 wake_attempted=0 d9_attempts=0.
+
+Single operator-initiated 16-byte wake 0xEE:
+- wake_attempted=1, wake_rc=0 (SPI transport completed)
+- wake_reply=0xea, wake_checksum_ok=0 (not a validated wake acknowledgment, source reference does not expect/verify one)
+- GPIO142 still input high, Apple-GPIO142 IRQ count still 1, USB 3/3.
+
+First operator-initiated report-info request 0xE3 report 0xD9:
+- d9_attempts=1, d9_rc=0, d9_reply=0xe1, d9_status=0, d9_size=0, d9_checksum_ok=1.
+- This matches a plausible pipelined prior-command reply; no conclusion about screen geometry yet.
+
+Second, final allowed report-info request 0xE3 report 0xD9:
+- d9_attempts=2, d9_rc=0, **d9_reply=0xe3, d9_status=0, d9_size=16, d9_checksum_ok=1**.
+- This is strong **real-hardware evidence that the runtime protocol accepts the D9 metadata query** and exposes an apparent 16-byte report length; it is NOT proof that the actual D9 report content is readable or that touch scanning is working.
+- IRQ remained 1, GPIO142 high, USB 3/3 ping after the query. No EVDEV contact observed or claimed.
+
+**Safety:** all three manual transactions were bounded and completed as designed: one EE, two E3/D9, no other SPI runtime write or GPIO change. No additional commands can be issued through these one-shot controls on this boot. No firmware or NAND write was performed outside the already proven RAM startup path.
+
+**Next offline engineering gate:** implement an N71-only, explicitly manual, single-use read of the exact 16-byte D9 descriptor using the documented Z2 E7 long-report protocol and a size-bounded 21-byte SPI exchange; verify whether the controller's firmware metadata selects Type 1 or Type 2 framing before applying type-specific payload bytes. Validate buffer bounds, checksum semantics, synchronization, error behavior and rollback on a clean pinned kernel source. Only after that should any physical runtime experiment proceed. Do not assume the original protocol or touch mode from iPhone7 is identical to N71.

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "test_id": "z2_n71_runtime_wake_d9_16byte_descriptor_2026_11_11",
+  "observed_on": "2026-11-11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_RUNTIME_WAKE_D9_OPTIN_RFC_2026_11_11.md",
+  "summary": "Physical S8000 kernel #3 RAM boot and USB Linux gadget succeeded. HBPP calibration and two firmware blocks ACKed. One bounded EE wake SPI transfer rc0 reply EA with nonmatching checksum (reply semantics unknown), first E3/D9 returned E1 size0 checksum OK, second E3/D9 returned E3 status0 size16 checksum OK. GPIO142 IRQ count remains 1, no functional EVDEV touch. Firmware and calibration private."
+}
