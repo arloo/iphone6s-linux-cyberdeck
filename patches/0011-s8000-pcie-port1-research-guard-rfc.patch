@@ -1,0 +1,155 @@
+diff --git a/drivers/pci/controller/Kconfig b/drivers/pci/controller/Kconfig
+index d246bbe37..43076fbe6 100644
+--- a/drivers/pci/controller/Kconfig
++++ b/drivers/pci/controller/Kconfig
+@@ -54,6 +54,18 @@ config PCIE_APPLE
+ 
+ 	  If unsure, say Y if you have an Apple Silicon system.
+ 
++config PCIE_APPLE_S8000_RESEARCH_GUARD
++	tristate "Offline-only Apple A9 S8000 PCIe isolation guard"
++	depends on ARCH_APPLE && OF
++	default n
++	help
++	  Build an explicit fail-closed research guard for the Samsung A9
++	  S8000/N71 board. This is NOT a PCIe host controller implementation.
++	  It does not map MMIO, access clocks or reset lines, create a DMA
++	  mapping, register a PCI host, or enumerate the Wi-Fi controller.
++	  Even an explicitly matching synthetic DT node returns -EOPNOTSUPP.
++	  Leave disabled for all production and RAM boot images.
++
+ config PCI_VERSATILE
+ 	bool "ARM Versatile PB PCI controller"
+ 	depends on ARCH_VERSATILE || COMPILE_TEST
+diff --git a/drivers/pci/controller/Makefile b/drivers/pci/controller/Makefile
+index d478743b5..b56568892 100644
+--- a/drivers/pci/controller/Makefile
++++ b/drivers/pci/controller/Makefile
+@@ -40,6 +40,7 @@ obj-$(CONFIG_PCIE_BRCMSTB) += pcie-brcmstb.o
+ obj-$(CONFIG_PCI_LOONGSON) += pci-loongson.o
+ obj-$(CONFIG_PCIE_HISI_ERR) += pcie-hisi-error.o
+ obj-$(CONFIG_PCIE_APPLE) += pcie-apple.o
++obj-$(CONFIG_PCIE_APPLE_S8000_RESEARCH_GUARD) += pcie-apple-s8000-guard.o
+ obj-$(CONFIG_PCIE_MT7621) += pcie-mt7621.o
+ obj-$(CONFIG_PCIE_ASPEED) += pcie-aspeed.o
+ 
+diff --git a/drivers/pci/controller/pcie-apple-s8000-guard.c b/drivers/pci/controller/pcie-apple-s8000-guard.c
+new file mode 100644
+index 000000000000..9cda161eccaa
+--- /dev/null
++++ b/drivers/pci/controller/pcie-apple-s8000-guard.c
+@@ -0,0 +1,114 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * S8000/N71 PCIe port-1 research guard (NOT a functional PCIe host driver).
++ *
++ * The only permitted effect is returning -EOPNOTSUPP on an explicitly named,
++ * synthetic opt-in OF node. The A9 controller's register layout, global-port
++ * reset/clock ownership and DART stream IDs are NOT verified. Deliberately
++ * never map physical memory, change registers, request IRQs, enable power or
++ * clock, perform PCI enumeration, create a DMA mapping, or touch NAND.
++ *
++ * DO NOT use an upstream apple,pcie compatible with S8000.
++ */
++#include <linux/errno.h>
++#include <linux/ioport.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++
++struct apple_s8000_guard_range {
++	resource_size_t start;
++	resource_size_t size;
++};
++
++/* Fixed SoC metadata, not device-unique calibration or firmware. */
++static const struct apple_s8000_guard_range wlan_candidate[] = {
++	{ 0x602000000ULL, 0x4000 }, /* port-1 register window A */
++	{ 0x602004000ULL, 0x4000 }, /* port-1 register window B */
++	{ 0x602008000ULL, 0x4000 }, /* port-1 DART window */
++};
++
++/*
++ * Protected areas are not to be mapped or modified by a port-1 experiment.
++ * The shared core windows are also forbidden until their register semantics
++ * and any cross-port side effects have been independently reviewed.
++ */
++static const struct apple_s8000_guard_range protected[] = {
++	{ 0x600000000ULL, 0x8000 }, /* shared root-complex A */
++	{ 0x600008000ULL, 0x4000 }, /* shared root-complex B */
++	{ 0x601000000ULL, 0xc000 }, /* port-0 storage incl. DART0 */
++	{ 0x603000000ULL, 0xc000 }, /* port-2 baseband incl. DART2 */
++	{ 0x604000000ULL, 0x8000 }, /* unknown port-3 */
++	{ 0x610000000ULL, 0x1000000 }, /* shared config aperture */
++};
++
++static bool apple_s8000_regions_overlap(const struct apple_s8000_guard_range *a,
++					const struct apple_s8000_guard_range *b)
++{
++	resource_size_t a_end, b_end;
++
++	/* All current ranges are fixed-size and known to be below 2^48. */
++	if (!a->size || !b->size ||
++	    a->start > (resource_size_t)-1 - a->size ||
++	    b->start > (resource_size_t)-1 - b->size)
++		return true;
++
++	a_end = a->start + a->size;
++	b_end = b->start + b->size;
++	return a->start < b_end && b->start < a_end;
++}
++
++static bool apple_s8000_port1_metadata_isolated(void)
++{
++	int i, j;
++
++	for (i = 0; i < ARRAY_SIZE(wlan_candidate); i++) {
++		for (j = i + 1; j < ARRAY_SIZE(wlan_candidate); j++)
++			if (apple_s8000_regions_overlap(&wlan_candidate[i],
++							&wlan_candidate[j]))
++				return false;
++
++		for (j = 0; j < ARRAY_SIZE(protected); j++)
++			if (apple_s8000_regions_overlap(&wlan_candidate[i],
++							&protected[j]))
++				return false;
++	}
++
++	return true;
++}
++
++static int apple_s8000_guard_probe(struct platform_device *pdev)
++{
++	/*
++	 * This checks metadata only; it intentionally refuses all probes.
++	 * Even if a future accidental DT enables the synthetic compatible,
++	 * NO resource, clock, GPIO, DMA or IRQ operation can occur.
++	 */
++	if (!of_machine_is_compatible("apple,n71") ||
++	    !of_machine_is_compatible("apple,s8000"))
++		return -ENODEV;
++
++	if (!apple_s8000_port1_metadata_isolated())
++		return -ERANGE;
++
++	dev_warn(&pdev->dev, "S8000 PCIe research guard: hardware probe blocked\n");
++	return -EOPNOTSUPP;
++}
++
++static const struct of_device_id apple_s8000_guard_of_match[] = {
++	{ .compatible = "apple,s8000-pcie-research-blocked" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, apple_s8000_guard_of_match);
++
++static struct platform_driver apple_s8000_guard_driver = {
++	.probe = apple_s8000_guard_probe,
++	.driver = {
++		.name = "apple-s8000-pcie-research-guard",
++		.of_match_table = apple_s8000_guard_of_match,
++	},
++};
++module_platform_driver(apple_s8000_guard_driver);
++
++MODULE_DESCRIPTION("OFFLINE-only A9 S8000 port-1 PCIe safety guard (no hardware probe)");
++MODULE_LICENSE("GPL");
