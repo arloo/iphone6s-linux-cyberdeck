@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Fail-closed, read-only A9 PCIe resource-0 PHY mapping evidence gate.
+"""Fail-closed A9 PCIe PHY selector-ARGUMENT-zero mapping evidence gate.
 
 Inspects only a locally owned decompressed iOS 15.8.8 ARM64 Mach-O and
 private Apple ADT. Does NOT touch MMIO, export firmware, imply a safe common
@@ -42,7 +42,7 @@ def require(ok:bool, reason:str)->None:
 SHARED_AT=0x268
 SPECIAL_AT=0x534
 EXPECTED={
-    0x00:0x52800001, # MOV W1,0: provider resource index 0
+    0x00:0x52800001, # MOV W1,0: VIRTUAL SELECTOR ARGUMENT, NOT resource index
     0x04:0xd63f0100, # BLR X8
     0x08:0xaa0003e1, # MOV X1,X0
     0x0c:0xf9400268, # LDR X8,[X19]
@@ -183,8 +183,10 @@ def main()->int:
         print("A9_PHY_RESOURCE_GATE_FAIL_CLOSED:",str(exc),file=sys.stderr)
         return 1
     print("A9_PHY_RESOURCE0_MAPPING_INSTRUCTIONS_PASS: both original A9 PCIe modules")
-    print("MAPPED_RESOURCE_INDEX",report["mapped_index"])
-    print("ADT_REG0_CANDIDATE",hex(report["adt_first_base"]),
+    print("VIRTUAL_SELECTOR_ARGUMENT",report["mapped_index"])
+    print("MAPPED_PROVIDER_RESOURCE_INDEX_NOT_DERIVED_BY_THIS_TOOL")
+    print("SEE_N71_S8000_ROOT_RESOURCE_GATE_FOR_VERIFIED_INDEX_10")
+    print("ADT_REG0_ECAM_WINDOW_NOT_PHY",hex(report["adt_first_base"]),
           "size",hex(report["adt_first_length"]))
     print("OTHER_COMMON_MMIO_RESOURCE_SELECTORS_DYNAMIC",
           report["common_dynamic_selectors"])

@@ -15,6 +15,8 @@ The real original AppleS8000PCIe specialized kernel extension contains a functio
 | 4 | 0x124 + port_index * 0x80 | **0x1A4** |
 | 5 | 0x12C + port_index * 0x80 | **0x1AC** |
 
+**New root-class mapping evidence:** [The verified S8000 root startup audit](N71_S8000_ROOT_START_RESOURCE_INDEX_2026_11_11.md) shows that the original common-register selectors produce provider resource indices **9** and **10**, corresponding conditionally to ADT reg[9]/reg[10]. This does NOT prove provider ADT order, register semantics or safe MMIO access. The former index-zero PHY inference was incorrect.
+
 These are the first independently decoded A9/S8000-specific register offset formulas in this project. They are NOT full physical register addresses. The actual common-controller MMIO base and numerical ID meanings remain unverified. Port1 offsets alone do not establish safe read/write behavior. Particularly, IDs 0 and 1 are global/shared offsets and are off-limits until their effects on storage port0 and baseband port2 are established.
 
 The private original KEXT also names separate PCIe PHY and APCIe common mapping paths; the current evidence does not establish the exact relation between those paths and the two global PCIe regions recorded in the ADT, or any PHY/reference-clock sequencing.
@@ -31,7 +33,7 @@ Fourteen fully synthetic tests in tests/test_n71_s8000_common_reg_audit.py valid
 
 The previous original S8000 GOT/callgraph audit showed 14 direct calls into the shared AppleS800xPCIe module across five distinct branch destination addresses (call multiplicities 6/5/1/1/1). Those addresses have NOT been independently established as callable hardware initialization functions, and C++ virtual calls are outside that earlier limited direct-call graph.
 
-**Further physical mapping evidence:** [The PHY resource-index audit](N71_S8000_PCIE_PHY_RESOURCE_INDEX_2026_11_11.md) confirms original Apple resource index 0 and two dynamic common map selectors. It does NOT justify adding these relative offsets to a physical address or activating a controller.\n\n## Remaining strict bring-up gates
+**Historical selector trace:** [The corrected PHY selector audit](N71_S8000_PCIE_PHY_RESOURCE_INDEX_2026_11_11.md) checks an argument-zero call, whose returned mapped resource index is **10** in the actual S8000 root class. It does NOT justify adding these relative offsets to a physical address or activating a controller.\n\n## Remaining strict bring-up gates
 
 1. Establish exact A9 common MMIO region and functional names, bitfields, read/write permissions and global side effects for each numeric ID.
 2. Determine safe port1-only root-complex, PHY/refclock, reset and link training ordering while proving storage0/baseband2 isolation, including global controller changes.

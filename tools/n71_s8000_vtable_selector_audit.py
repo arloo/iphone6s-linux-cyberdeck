@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Static MetaClass-versus-instance vtable audit for original A9 PCIe.
+"""Static MetaClass-versus-PORT-instance vtable audit for original A9 PCIe.
 
 IMPORTANT CORRECTION (2026-11-11): the original audit used the vptr
 assigned by the KEXT MetaClass constructor, NOT by the instance
@@ -132,15 +132,15 @@ def inspect(macho:bytes)->dict[str,object]:
     special=groups[SPECIAL]
     shared=groups[SHARED]
     require(special[1856]==(CORE,"constant_zero"),
-            "Original S8000 root slot1856 cannot be verified")
+            "Original S8000Port MetaClass slot1856 cannot be verified")
     require(special[1880]==(CORE,"iokit_unsupported_status"),
-            "Original S8000 root slot1880 cannot be verified")
+            "Original S8000Port MetaClass slot1880 cannot be verified")
     require(shared[1856][1]=="not_an_established_constant",
             "Unexpected shared root slot1856 classification")
     require(shared[1880][1]!="iokit_unsupported_status",
             "Shared root slot1880 unexpectedly matches S8000 default error")
     require(instance_ptrs[SPECIAL]==instance_ptrs[SHARED],
-            "S8000 instance selector slots differ from inherited S800x")
+            "S8000Port instance slots differ from S800xPort")
     return {
       "s8000_meta_slot_1856":special[1856][1],
       "s8000_meta_slot_1880":special[1880][1],
@@ -169,7 +169,7 @@ def main()->int:
     print("S8000_META_CLASS_SLOT_1880",result["s8000_meta_slot_1880"])
     print("S800X_META_CLASS_SLOT_1856",result["shared_meta_slot_1856"])
     print("S800X_META_CLASS_SLOT_1880",result["shared_meta_slot_1880"])
-    print("S8000_INSTANCE_SLOT_1856_1880_INHERITED_FROM_S800X=YES")
+    print("S8000_PORT_INSTANCE_SLOT_1856_1880_INHERITED_FROM_S800X=YES")
     print("META_CLASS_SLOT_1880_EQUALS_kIOReturnUnsupported",hex(UNSUPPORTED))
     print("RUNTIME_DISPATCH_OBJECT_PROVEN=NO")
     print("COMMON_MMIO_RESOURCE_INDEX_RESOLVED=NO")

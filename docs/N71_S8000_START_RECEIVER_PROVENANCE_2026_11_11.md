@@ -4,7 +4,7 @@ Date: 2026-11-11. **Offline-only study of the original iOS 15.8.8 N71 ARM64 kern
 
 ## Verified argument flow within a separate AppleEmbeddedPCIE method
 
-**Later correction:** [The three-constructor S8000/S800x/Embedded audit](N71_S8000_CONSTRUCTOR_CHAIN_PORT3_OVERRIDE_2026_11_11.md) establishes that the method below is not shown to execute as the constructed S8000 instance's startup. Its data-flow observations remain valid *within that method*; the method must NOT be used as evidence of the physical S8000 resource indices.
+**ROOT/PORT CORRECTION:** The [port-constructor audit](N71_S8000_CONSTRUCTOR_CHAIN_PORT3_OVERRIDE_2026_11_11.md) examined a separate AppleS8000PCIePort class and was incorrectly extrapolated to the ROOT controller. The [new root-class audit](N71_S8000_ROOT_START_RESOURCE_INDEX_2026_11_11.md) has now verified that the S800x root start routine statically calls this EmbeddedPCIe root start method through its parent vtable, and that its actual S8000 root virtual selectors return indices 0 and 9. This original method's X19/X20 register-flow observations remain valid. Physical provider resource ordering remains unverified.
 
 The AppleEmbeddedPCIE method saves its first argument (X0: controller object / self) to X19 and its second argument (X1: hardware provider) to X20. Both resource-selector virtual calls load the vtable through X19 and invoke the selector with X19 as receiver. In each case the returned value becomes the memory resource index passed to a distinct virtual mapping call on the provider X20. This distinction is verified from the original ARM64 instruction path.
 
@@ -16,7 +16,7 @@ Independent original Apple prelink metadata includes a single IOKit matching per
 
 The private N71 Apple ADT has the matching apcie,s8000 device node. This is evidence of the intended class/provider match, not a live iOS runtime trace.
 
-The earlier constructor-vtable audit found an immediate zero and kIOReturnUnsupported (0xE00002C7) at **MetaClass** slots 1856 and 1880, not at constructed instance slots. This does **not** establish the vtable actually installed during the analyzed inherited-start path. A separate static scan did not locate a direct pointer to this inherited-start entry in the selected constructed root vtables; compiler thunks, inheritance, overrides or alternative paths remain possible. Thus neither numeric common-resource index nor physical common MMIO base can yet be concluded.
+The earlier zero/unsupported values were from a **PORT-object MetaClass** audit, not the root-controller vtable. The later root audit independently resolves the inherited base-start call and confirms the root selector return indices 0/9/10 for the four-port N71 ADT. The conditional physical mappings remain unqualified pending runtime provider-resource-order verification.
 
 ## Public reproducibility
 

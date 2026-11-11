@@ -1,4 +1,6 @@
-# iPhone 6s N71/S8000: constructor-chain and port-3 override audit
+# iPhone 6s N71/S8000: PORT-object constructor chain and port-3 override audit
+
+**CORRECTION:** This entire four-slot override finding concerns AppleS8000PCIePort (an individual PORT object), not the root AppleS8000PCIe controller. The [new ROOT analysis](N71_S8000_ROOT_START_RESOURCE_INDEX_2026_11_11.md) separately proves the actual controller constructor/start chain and resource indices 0, 9 and 10. The four-slot port analysis remains valid within its original, more limited scope.
 
 Date: 2026-11-11. **Original, privately owned iOS 15.8.8/19H422 kernelcache examined OFFLINE.** No live PCIe/MMIO, PHY, DMA, NAND, wireless configuration or reboot.
 
@@ -6,7 +8,7 @@ Date: 2026-11-11. **Original, privately owned iOS 15.8.8/19H422 kernelcache exam
 
 The earlier [constructor-vtable report](N71_S8000_PCIE_VTABLE_SELECTOR_LIMITS_2026_11_11.md) inspected the pointer stored by the **MetaClass constructor** near the first part of the S8000 and S800x KEXT executable sections. The static zero-return and IOKit unsupported-status method found at MetaClass virtual slots 1856 and 1880 are **not evidence** of the same behavior on an instantiated A9 PCIe controller.
 
-The original Mach-O contains separate constructors which write a second, different vtable pointer to an instance. The old [start receiver audit](N71_S8000_START_RECEIVER_PROVENANCE_2026_11_11.md) correctly showed the register flow inside a lengthy method in the AppleEmbeddedPCIE module, but **that method is not established as the actual startup code invoked by an S8000 root object**. It belongs to a separate vtable from the constructed ancestry analyzed here. Earlier reports must therefore not be used to infer S8000 common-memory resource numbers from that method.
+The original Mach-O contains separate AppleS8000PCIePort and AppleS800xPCIePort constructors which install the relevant PORT-object vtables. The old [start receiver audit](N71_S8000_START_RECEIVER_PROVENANCE_2026_11_11.md) correctly showed the register flow inside a lengthy method in the AppleEmbeddedPCIE module, and the [later ROOT analysis](N71_S8000_ROOT_START_RESOURCE_INDEX_2026_11_11.md) now proves that its original ARM64 entry is the base ROOT start method reached by S800x through a parent-vtable call. That method is separate from the PORT vtable ancestry analyzed here. Earlier reports must therefore not be used to infer S8000 common-memory resource numbers from that method.
 
 The previous public read-only vtable tool has been corrected to identify its old findings as **MetaClass** methods and to validate that the two instance selector entries are instead inherited from S800x.
 
@@ -14,30 +16,30 @@ The previous public read-only vtable tool has been corrected to identify its old
 
 By decoding the original AArch64 BL-to-stub operations and following the bounded module-specific GOT entries in the fully prelinked Mach-O, we recovered this original constructor sequence:
 
-1. AppleS8000PCIe instance construction calls an AppleS800xPCIe constructor.
-2. That AppleS800xPCIe constructor calls an AppleEmbeddedPCIE base constructor.
-3. Each constructor installs its **own instance vtable** after the parent constructor returns.
+1. AppleS8000PCIePort construction calls an AppleS800xPCIePort constructor.
+2. That AppleS800xPCIePort constructor calls an AppleEmbeddedPCIEPort constructor.
+3. Each constructor installs its **own PORT-instance vtable** after the parent constructor returns.
 
 This proves a static **base-to-derived construction chain**, not that a specific constructor or IOKit call executed on a currently running iOS system. Both the parent-call targets and final instance-vtable pointer calculations are validated with original ARM64 instruction-pattern checks. No original code or addresses of linked executable functions are redistributed.
 
-Comparing the first 256 pointer slots in the verified constructed instance vtables gives:
+Comparing the first 256 pointer slots in the verified constructed **PORT-instance** vtables gives:
 
 | Comparison | Identical slots | Different slots |
 |---|---:|---:|
 | EmbeddedPCIe → S800xPCIe | 207 / 256 | 49 / 256 |
 | S800xPCIe → S8000PCIe | **252 / 256** | **4 / 256** |
 
-The four S8000 differences occur at vtable byte offsets **0, 8, 56, and 1816**. The first three are class lifecycle / metadata-related entries; the fourth is the only additional virtual-method override within that examined 2,048-byte window.
+The four S8000 **PORT-class** differences occur at vtable byte offsets **0, 8, 56, and 1816**. The first three are class lifecycle / metadata-related entries; the fourth is the only additional virtual-method override within that examined 2,048-byte window.
 
 ### S8000 override at virtual slot 1816
 
-At this virtual slot, the S8000 constructed instance points to an original S8000-specific method. The parent S800x virtual slot 1816 points to a different original S800x method.
+At this virtual slot, the S8000 constructed **port instance** points to an original S8000-specific method. The parent S800x virtual slot 1816 points to a different original S800x method.
 
 The original S8000 override checks one virtual hardware-query result against the constant **3** and also compares its stored **port index** with **3**. Only the matching special case enters the alternative branch. The other branch obtains a fallback method pointer from the original parent S800x vtable and tail-branches to it. We verified in the original kernelcache that the fallback pointer and the parent's virtual-slot-1816 pointer are **identical**.
 
 Thus, for a port whose index is **1**, the port-index-equals-3 condition cannot select that special branch: the observed override uses its inherited S800x method for this virtual operation. This conclusion is restricted to the one original override and cannot be extrapolated to all PCIe power/clock/reset or Wi-Fi initialization.
 
-The previous [A9 six-register offset selector](N71_S8000_PCIE_COMMON_REGISTER_OFFSETS_2026_11_11.md) remains a separate, valid static offset-formula result. Its physical base and functional register roles remain unproven.
+The separate root-controller [A9 six-register offset selector](N71_S8000_PCIE_COMMON_REGISTER_OFFSETS_2026_11_11.md) remains a separate, valid static offset-formula result. Its physical base and functional register roles remain unproven.
 
 ## Public reproducibility without proprietary data
 

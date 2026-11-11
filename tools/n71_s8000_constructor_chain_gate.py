@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Offline-only S8000->S800x->EmbeddedPCIe constructor chain audit.
+"""Offline AppleS8000PCIePort -> S800xPCIePort -> EmbeddedPCIePort constructor audit.
 
 A read-only, version-pinned study of a locally obtained original A9 N71
 ARM64 prelinked Mach-O. Does not export Apple code, private addresses,
@@ -240,11 +240,13 @@ def main() -> int:
         print("N71_CONSTRUCTOR_CHAIN_FAIL_CLOSED:",str(exc),file=sys.stderr)
         return 1
     print("N71_S8000_CONSTRUCTOR_CHAIN_STATIC_PASS")
-    print("CHAIN", " > ".join(result["constructor_chain"]))
-    print("A9_VTABLE_CHANGED_SLOTS", ",".join(
+    print("PORT_CLASS_CONSTRUCTOR_CHAIN",
+          "AppleEmbeddedPCIEPort > AppleS800xPCIePort > AppleS8000PCIePort")
+    print("A9_PORT_VTABLE_CHANGED_SLOTS", ",".join(
         str(v) for v in result["a9_changed_vtable_slots"]))
     print("A9_NON_PORT3_SHARED_METHOD_FALLBACK=VERIFIED_STATIC")
-    print("OTHER_EMBEDDED_START_NOT_IN_VERIFIED_CLASS_CHAIN")
+    print("THIS_IS_PORT_CLASS_NOT_ROOT_CONTROLLER=YES")
+    print("EMBEDDED_ROOT_START_NOT_IN_PORT_CLASS_CHAIN")
     print("RUNTIME_PCIE_INIT_AND_WLAN_ASSOCIATION_PROVEN=NO")
     print("HARDWARE_BLOCKED: MMIO physical base, port1 reset, DART SID/DMA")
     return 0
