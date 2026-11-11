@@ -85,6 +85,8 @@ deck net
 
 **Do not expose an unauthenticated root Telnet service to an untrusted network.** This is a temporary USB-link development interface.
 
+For a dated, reproducible engineering check (six ARM64 RFC patches compiled and RAM payload reproduced bit-for-bit), read the [11 November 2026 offline/build validation](docs/N71_OFFLINE_BUILD_AND_RAM_REPRODUCIBILITY_2026_11_11.md). No new touchscreen activation is implied.
+
 ## Community
 
 We welcome testers, kernel engineers, Apple device-tree contributors, Broadcom wireless contributors, postmarketOS developers and reverse engineers.

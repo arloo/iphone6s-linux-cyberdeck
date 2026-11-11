@@ -25,6 +25,8 @@ The [versioned GitHub Actions workflow template](../ci/verify.yml) has been test
 
 GitHub Actions produces **software check statuses**, never a fictional hardware-success badge. Until activated, the results in this document are **local manual validations**, not green GitHub-hosted CI checks.
 
+**Independent local rerun (2026-11-11):** the six RFC patches applied and their ARM64 driver objects compiled successfully; the RAM packer reproduced the already live-booted kernel #5 payload **byte for byte**. See [the dated OFFLINE/BUILD evidence report](N71_OFFLINE_BUILD_AND_RAM_REPRODUCIBILITY_2026_11_11.md). These results are not GitHub-hosted CI or new touch hardware evidence.
+
 ## Upstream source provenance
 
 [manifests/upstreams.json](../manifests/upstreams.json) pins full 40-character Git SHAs and original HTTPS URLs for Linux, m1n1, the boot kit and documentation. The manifest records that **S8000/N71 is live-tested** and **S8003/N71m is not**.
