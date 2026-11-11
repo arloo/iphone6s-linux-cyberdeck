@@ -1,0 +1,4 @@
+# A unified-diff .patch naturally contains context lines with leading " "
+# and trailing whitespace; disable only the *patch container* whitespace
+# interpretation. git apply --check still validates actual source patch.
+*.patch -whitespace

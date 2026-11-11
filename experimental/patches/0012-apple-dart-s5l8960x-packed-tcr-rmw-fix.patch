@@ -1,0 +1,48 @@
+--- a/drivers/iommu/apple-dart.c
++++ b/drivers/iommu/apple-dart.c
+@@ -357,24 +357,36 @@
+ 		dart->hw->write_tcr(dart, sid, tcr);
+ }
+ 
+ static u32 apple_dart_s5l8960x_read_tcr(struct apple_dart *dart, u32 sid)
+ {
+-	WARN_ON(sid >= 4);
+-	u32 tcr = readl(dart->regs + dart->hw->tcr);
+-
+-	return (tcr >> (sid * 8)) & 0xff;
++	u32 tcr;
++
++	if (WARN_ON(sid >= 4))
++		return 0;
++
++	tcr = readl(dart->regs + dart->hw->tcr);
++	return (tcr >> (sid * DART_S5L8960X_TCR_BITS_PER_STREAM)) & 0xff;
+ }
+ 
+ static void apple_dart_s5l8960x_write_tcr(struct apple_dart *dart, u32 sid, u32 val)
+ {
+-	WARN_ON(sid >= 4);
+-	u32 tcr = readl(dart->regs + dart->hw->tcr);
+-
+-	tcr &= 0xff << (sid * DART_S5L8960X_TCR_BITS_PER_STREAM);
+-	tcr |= val;
++	unsigned long flags;
++	u32 tcr, shift, mask;
++
++	if (WARN_ON(sid >= 4 || val > 0xff))
++		return;
++
++	shift = sid * DART_S5L8960X_TCR_BITS_PER_STREAM;
++	mask = 0xffU << shift;
++
++	/* Four streams share one register; preserve all other stream fields. */
++	spin_lock_irqsave(&dart->lock, flags);
++	tcr = readl(dart->regs + dart->hw->tcr);
++	tcr = (tcr & ~mask) | ((val << shift) & mask);
+ 	writel(tcr, dart->regs + dart->hw->tcr);
++	spin_unlock_irqrestore(&dart->lock, flags);
+ }
+ 
+ static u32 apple_dart_t8020_read_tcr(struct apple_dart *dart, u32 sid)
+ {
+ 	return readl(dart->regs + DART_TCR(dart, sid));
