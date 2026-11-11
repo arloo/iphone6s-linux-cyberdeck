@@ -31,7 +31,7 @@ Fourteen fully synthetic tests in tests/test_n71_s8000_common_reg_audit.py valid
 
 The previous original S8000 GOT/callgraph audit showed 14 direct calls into the shared AppleS800xPCIe module across five distinct branch destination addresses (call multiplicities 6/5/1/1/1). Those addresses have NOT been independently established as callable hardware initialization functions, and C++ virtual calls are outside that earlier limited direct-call graph.
 
-## Remaining strict bring-up gates
+**Further physical mapping evidence:** [The PHY resource-index audit](N71_S8000_PCIE_PHY_RESOURCE_INDEX_2026_11_11.md) confirms original Apple resource index 0 and two dynamic common map selectors. It does NOT justify adding these relative offsets to a physical address or activating a controller.\n\n## Remaining strict bring-up gates
 
 1. Establish exact A9 common MMIO region and functional names, bitfields, read/write permissions and global side effects for each numeric ID.
 2. Determine safe port1-only root-complex, PHY/refclock, reset and link training ordering while proving storage0/baseband2 isolation, including global controller changes.
