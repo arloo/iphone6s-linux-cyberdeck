@@ -35,3 +35,12 @@ Sysfs diagnostic runtime_probe is present on-device. The *initial automatic* dri
 The meaning of 0xea or the short E1 report is not proven on this device. Upstream Z2 developers have documented non-E1 not-ready responses during startup and added an explicit E1 guard, but this does NOT prove that EA is a not-ready marker on S8000. Reference: https://lkml.iu.edu/hypermail/linux/kernel/2512.2/03692.html
 
 Next bounded gate: perform one user-timed read-once while the operator continuously holds a finger on the display; then inspect interrupt counter and USB stability. No automatic repeated probe, firmware upload or GPIO flip. This experiment is still classified PARTIAL, not functional touch.
+
+
+## Finger-held one-shot, same physical RAM boot
+
+A second, exactly-once manual runtime probe was performed while the operator confirmed a continuous finger press on the panel. The SPI diagnostic again returned **rc=-61 reply=0xea len=0 fingers=0**, identical to the previous idle read. GPIO142 Linux IRQ count remained **1**. Host USB gadget 05ac:4142 remained present; 2/2 ICMP replies after the probe.
+
+This does not establish that the controller firmware completed its full operating-mode initialization, nor does it prove the GPIO wiring is defective. In the external m1n1 Z2 SPI tracer, the Z2 runtime command set includes a **0xee wake command**, report metadata queries and an 0xeb interrupt-read operation. The current experimental N71 driver proceeds from firmware EXECUTE directly to 0xeb without an explicit 0xee wake or device-info/report initialization sequence. This is a **specific source-verified diagnostic hypothesis**, not authorization to send 0xee blindly, and cannot be assumed to apply identically to N71.
+
+Next gate should review a physically compatible N71 protocol trace or independently validated Z2 runtime sequence before any further SPI write. Instrument one command with full 16-byte framing, checksum, timing, bounded timeout, rollback and expected reply only after validating the sequence; never claim real touch until EVDEV events pass.
