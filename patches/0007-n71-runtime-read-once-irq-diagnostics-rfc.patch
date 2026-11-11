@@ -1,0 +1,220 @@
+--- a/drivers/input/touchscreen/apple_z2.c
++++ b/drivers/input/touchscreen/apple_z2.c
+@@ -13,6 +13,7 @@
+ #include <linux/input/touchscreen.h>
+ #include <linux/interrupt.h>
+ #include <linux/module.h>
++#include <linux/mutex.h>
+ #include <linux/of.h>
+ #include <linux/regulator/consumer.h>
+ #include <linux/spi/spi.h>
+@@ -48,6 +49,7 @@
+ #define APPLE_Z2_HBPP_IDLE               0x4879
+ #define APPLE_Z2_HBPP_READ_DATA          0x4c39
+ #define APPLE_Z2_HBPP_PKT_LEN            16
++#define APPLE_Z2_RX_BUF_SIZE              4000
+ /* 0x3001, len/4, addr (two words), header sum: 10 bytes, no padding */
+ #define APPLE_Z2_HBPP_DATA_HDR_LEN       10
+ /* Experimental S8000 polled-PIO safety bound. Preserve a single SPI
+@@ -132,6 +134,7 @@
+ 	struct regulator *avdd;
+ 	struct clk *clk;
+ 	bool powered;
++	struct mutex report_lock;
+ 	u8 *tx_buf;
+ 	u8 *rx_buf;
+ };
+@@ -173,6 +176,14 @@
+ 	__le16 checksum;
+ };
+ 
++/* Runtime probe publishes protocol status only, never proprietary payloads. */
++struct apple_z2_runtime_probe {
++	int result;
++	u8 reply;
++	size_t packet_len;
++	u8 fingers;
++};
++
+ static void apple_z2_parse_touches(struct apple_z2 *z2,
+ 				   const u8 *msg, size_t msg_len)
+ {
+@@ -216,44 +227,102 @@
+ 	input_sync(z2->input_dev);
+ }
+ 
+-static int apple_z2_read_packet(struct apple_z2 *z2)
++static int apple_z2_read_packet(struct apple_z2 *z2,
++				struct apple_z2_runtime_probe *out)
+ {
+-	struct apple_z2_read_interrupt_cmd *len_cmd = (void *)z2->tx_buf;
+-	struct spi_transfer xfer;
+-	int error;
+-	size_t pkt_len;
+-
+-	memset(&xfer, 0, sizeof(xfer));
+-	len_cmd->cmd = APPLE_Z2_CMD_READ_INTERRUPT_DATA;
+-	len_cmd->counter = z2->index_parity + 1;
+-	len_cmd->checksum =
+-		cpu_to_le16(APPLE_Z2_CMD_READ_INTERRUPT_DATA + len_cmd->counter);
++	struct apple_z2_read_interrupt_cmd *cmd = (void *)z2->tx_buf;
++	struct apple_z2_runtime_probe sample = { };
++	struct spi_transfer xfer = { };
++	size_t pkt_len, msg_len;
++	unsigned int nfingers;
++	int err;
++
++	mutex_lock(&z2->report_lock);
++	cmd->cmd = APPLE_Z2_CMD_READ_INTERRUPT_DATA;
++	cmd->counter = z2->index_parity + 1;
++	cmd->checksum = cpu_to_le16(APPLE_Z2_CMD_READ_INTERRUPT_DATA +
++					cmd->counter);
+ 	z2->index_parity = !z2->index_parity;
+ 	xfer.tx_buf = z2->tx_buf;
+ 	xfer.rx_buf = z2->rx_buf;
+-	xfer.len = sizeof(*len_cmd);
+-
+-	error = spi_sync_transfer(z2->spidev, &xfer, 1);
+-	if (error)
+-		return error;
+-
+-	if (z2->rx_buf[0] != APPLE_Z2_REPLY_INTERRUPT_DATA) {
+-		dev_dbg(&z2->spidev->dev, "EB reply %*ph\n", 16, z2->rx_buf);
+-		return 0;
+-	}
+-
+-	pkt_len = (get_unaligned_le16(z2->rx_buf + 1) + 8) & 0xfffffffc;
+-
+-	error = spi_read(z2->spidev, z2->rx_buf, pkt_len);
+-	if (error)
+-		return error;
++	xfer.len = sizeof(*cmd);
++	err = spi_sync_transfer(z2->spidev, &xfer, 1);
++	if (err)
++		goto out;
++
++	sample.reply = z2->rx_buf[0];
++	if (sample.reply != APPLE_Z2_REPLY_INTERRUPT_DATA) {
++		dev_dbg(&z2->spidev->dev, "EB non-report reply %02x\n",
++			sample.reply);
++		err = -ENODATA;
++		goto out;
++	}
++
++	pkt_len = (get_unaligned_le16(z2->rx_buf + 1) + 8) & ~3U;
++	sample.packet_len = pkt_len;
++	if (pkt_len > APPLE_Z2_RX_BUF_SIZE ||
++	    pkt_len < 5 + APPLE_Z2_FINGERS_OFFSET) {
++		dev_warn_ratelimited(&z2->spidev->dev,
++			"Z2 invalid report length %zu\n", pkt_len);
++		err = -EMSGSIZE;
++		goto out;
++	}
++	err = spi_read(z2->spidev, z2->rx_buf, pkt_len);
++	if (err)
++		goto out;
++
++	msg_len = pkt_len - 5;
++	nfingers = z2->rx_buf[5 + APPLE_Z2_NUM_FINGERS_OFFSET];
++	sample.fingers = nfingers;
++	if (nfingers > (msg_len - APPLE_Z2_FINGERS_OFFSET) /
++				sizeof(struct apple_z2_finger)) {
++		dev_warn_ratelimited(&z2->spidev->dev,
++			"Z2 invalid finger count %u in %zu bytes\n",
++			nfingers, pkt_len);
++		err = -EBADMSG;
++		goto out;
++	}
++	dev_dbg(&z2->spidev->dev, "Z2 report bytes=%zu fingers=%u\n",
++		pkt_len, nfingers);
++	apple_z2_parse_touches(z2, z2->rx_buf + 5, msg_len);
++out:
++	sample.result = err;
++	if (out)
++		*out = sample;
++	mutex_unlock(&z2->report_lock);
++	return err;
++}
+ 
+-	dev_dbg(&z2->spidev->dev, "report %zu: %*ph\n", pkt_len,
+-		(int)min_t(size_t, pkt_len, 48), z2->rx_buf);
+-	apple_z2_parse_touches(z2, z2->rx_buf + 5, pkt_len - 5);
++/*
++ * One userspace read => one bounded SPI runtime report query.
++ * No reset, regulator change, firmware loading, or persistent writes.
++ * Does NOT run automatically, and is exposed only on S8000/N71.
++ */
++static ssize_t runtime_probe_show(struct device *dev,
++				 struct device_attribute *attr, char *buf)
++{
++	struct apple_z2 *z2 = dev_get_drvdata(dev);
++	struct apple_z2_runtime_probe sample = { };
+ 
+-	return 0;
+-}
++	if (!z2 || !z2->variant || !z2->variant->hbpp ||
++	    !of_machine_is_compatible("apple,n71"))
++		return -EOPNOTSUPP;
++	if (!READ_ONCE(z2->booted))
++		return -EAGAIN;
++	apple_z2_read_packet(z2, &sample);
++	return sysfs_emit(buf, "rc=%d reply=0x%02x len=%zu fingers=%u\n",
++			sample.result, sample.reply, sample.packet_len,
++			sample.fingers);
++}
++
++static DEVICE_ATTR_RO(runtime_probe);
++static struct attribute *apple_z2_diag_attrs[] = {
++	&dev_attr_runtime_probe.attr,
++	NULL,
++};
++static const struct attribute_group apple_z2_diag_group = {
++	.attrs = apple_z2_diag_attrs,
++};
+ 
+ static irqreturn_t apple_z2_irq(int irq, void *data)
+ {
+@@ -262,7 +331,7 @@
+ 	if (unlikely(!z2->booted))
+ 		complete(&z2->boot_irq);
+ 	else
+-		apple_z2_read_packet(z2);
++		apple_z2_read_packet(z2, NULL);
+ 
+ 	return IRQ_HANDLED;
+ }
+@@ -852,7 +921,7 @@
+ 	}
+ 
+ 	z2->booted = true;
+-	apple_z2_read_packet(z2);
++	apple_z2_read_packet(z2, NULL);
+ 	return 0;
+ }
+ 
+@@ -987,11 +1056,12 @@
+ 	if (!z2->tx_buf)
+ 		return -ENOMEM;
+ 	/* 4096 will end up being rounded up to 8192 due to devres header */
+-	z2->rx_buf = devm_kzalloc(dev, 4000, GFP_KERNEL);
++	z2->rx_buf = devm_kzalloc(dev, APPLE_Z2_RX_BUF_SIZE, GFP_KERNEL);
+ 	if (!z2->rx_buf)
+ 		return -ENOMEM;
+ 
+ 	z2->spidev = spi;
++	mutex_init(&z2->report_lock);
+ 	z2->variant = device_get_match_data(dev);
+ 	init_completion(&z2->boot_irq);
+ 	spi_set_drvdata(spi, z2);
+@@ -1085,6 +1155,11 @@
+ 	if (error)
+ 		return error;
+ 
++	if (of_machine_is_compatible("apple,n71")) {
++		error = devm_device_add_group(dev, &apple_z2_diag_group);
++		if (error)
++			dev_warn(dev, "Z2 runtime sysfs unavailable: %d\n", error);
++	}
+ 	return 0;
+ }
+ 
