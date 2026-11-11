@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "observed_on": "2026-11-11",
+  "test_id": "n71_first_live_evdev_single_contact_2026_11_11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_TYPE1_FIRST_PHYSICAL_TOUCH_SUCCESS_2026_11_11.md",
+  "summary": "Real S8000 Linux kernel #5 generated EVDEV ABS_MT_TRACKING_ID, ABS_MT_POSITION_X/Y, BTN_TOUCH, SYN_REPORT events with finger motion and release after bounded manual EE, E3/D9, E7/D9 Type1, 9D/BF and AF SPI setup. IRQ142 rose from 1 to 25 during capture. Simultaneous multitouch and edge precision unverified; private calibration/firmware omitted."
+}
