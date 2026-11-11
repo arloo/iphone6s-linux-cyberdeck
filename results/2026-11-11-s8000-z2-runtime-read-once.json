@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "test_id": "z2_runtime_read_once_0xea",
+  "observed_on": "2026-11-11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_RUNTIME_READ_ONCE_DIAGNOSTIC_RFC_2026_11_11.md",
+  "summary": "New N71 kernel #2 booted, private Z2 firmware ACKs and start logged, runtime_probe sysfs present. Automatic E1 20-byte short packet rejected; single manual runtime read rc=-61 reply=0xea len=0 fingers=0. GPIO142 IRQ 1. USB stable, actual touch event still blocked."
+}

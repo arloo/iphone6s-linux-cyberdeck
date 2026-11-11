@@ -25,3 +25,13 @@ The new ARM64 Z2 object and complete Image.gz linked successfully on the Kubuntu
 **Next supervised gate:** perform exactly one new private RAM boot from DFU/PongoOS, confirm Linux gadget and HBPP startup, then issue one requested runtime_probe read while touching the panel. A reply E1 and well-formed contact report, a different reply, malformed report and SPI error each imply different subsequent experiments. Real EVDEV tracking IDs, coordinates and release still determine functional touch acceptance.
 
 **Stop condition:** if USB is lost, do not loop uploads. Recover using the previously proven RAM payload under supervision. Never alter Apple NAND or publish Apple firmware, private calibration, serial identifiers or raw device logs.
+
+## Physical verification — 2026-11-11, build #2
+
+The privately staged 11,816,131-byte RAM-only N71/S8000 payload booted ARM64 Linux 7.3.0-rc1-g68aadac820d0-dirty #2. Host USB transitioned PongoOS 05ac:4141 to HoolockLinux 05ac:4142, ICMP 3/3 PASS. N71 device-specific calibration ACKed, both firmware blocks ACKed and the driver logged firmware started at 0x10003400. The last log means EXECUTE sent and 40ms elapsed; it does not independently prove capacitive scans.
+
+Sysfs diagnostic runtime_probe is present on-device. The *initial automatic* driver report read saw reply E1 with a calculated short length of 20 bytes, and correctly rejected it as insufficient for the expected touch report layout. The *single manual* user-triggered runtime_probe read (no held-finger coordination) returned rc=-61 reply=0xea len=0 fingers=0. -61 is the driver's ENODATA for a non-E1 response, not a USB transport error. GPIO142 remained high with touch IRQ total 1. USB remained stable (2/2 ICMP after the probe). No actual EVDEV events observed.
+
+The meaning of 0xea or the short E1 report is not proven on this device. Upstream Z2 developers have documented non-E1 not-ready responses during startup and added an explicit E1 guard, but this does NOT prove that EA is a not-ready marker on S8000. Reference: https://lkml.iu.edu/hypermail/linux/kernel/2512.2/03692.html
+
+Next bounded gate: perform one user-timed read-once while the operator continuously holds a finger on the display; then inspect interrupt counter and USB stability. No automatic repeated probe, firmware upload or GPIO flip. This experiment is still classified PARTIAL, not functional touch.
