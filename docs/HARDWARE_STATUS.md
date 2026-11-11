@@ -1,5 +1,8 @@
 # Hardware state — iPhone 6s Samsung A9 (N71/S8000)
 
+> **Updated N71/S8000 touch evidence, 2026-11-11:** The [physical device calibration experiment](N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md) received real HBPP **ACK_DATA=0x4bc1** on its first poll, using five bounded SPI transfers in one message. USB and watchdog cleanup passed. **No touch EVDEV input or controller firmware start yet.** Older sections below describe previous stages, not the latest calibration status.
+
+
 Captured from a working Linux boot on November 9, 2026.
 
 ## Verified runtime

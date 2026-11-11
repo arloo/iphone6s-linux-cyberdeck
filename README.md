@@ -7,7 +7,7 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 > [!WARNING]
 > **Experimental hardware research, not a supported phone OS.** Booting custom kernels through checkm8/PongoOS can leave the device in DFU/Recovery or require manual recovery. This project's current tests are RAM-only and deliberately avoid writes to internal storage. Do not assume this eliminates all risks. Back up your device and proceed at your own risk.
 
-## Verified hardware, November 10, 2026 — S8000/N71 only
+## Verified hardware, November 11, 2026 — S8000/N71 only
 
 | Component | Observed result | Status |
 |---|---|---|
@@ -20,7 +20,7 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 | USB gadget networking | iPhone `172.16.42.1`, host `172.16.42.2`, USB `05ac:4142` | Working |
 | Interactive shell | BusyBox shell via USB Telnet (port 23) | Working, insecure |
 | Hardware buttons | `gpio-keys` exposed as `/dev/input/event0` | Detected |
-| Touchscreen | Integrated guarded SPI2/clock/analog/reset test; two strict HBPP `READ_DATA` responses and checksums verified; controller version `0x434d15c1`. No `ACK_DATA`, touch EVDEV or usable multitouch yet. | **Priority 1 — calibration blocker** |
+| Touchscreen | **Live device-specific HBPP calibration ACK_DATA=0x4bc1 received on first poll** after one 1040-byte NOP-prefixed upload split into five 256-byte-bounded SPI transfers. Strict checksum-validated ID reads, watchdog rollback and USB continuity verified. No firmware startup or EVDEV touch input yet. | **Calibration ACK PASS; touch input blocked** |
 | Wi-Fi | No wireless interface; `CONFIG_WLAN` disabled | **Priority 1 — missing** |
 | Bluetooth | Broadcom `BCM4350C5` patchram **build 0825** loaded privately; 25 BLE advertising reports received in a 12-second passive on-device scan | **BLE radio verified; pairing pending** |
 | Internal storage | No block devices enumerated | Not used; avoid NAND writes |
@@ -30,16 +30,16 @@ This matrix reports **observations**, not promises. A detected controller or fra
 
 ## Immediate goals — contributions wanted
 
-1. **Touch:** live clock/analog rollback and checksum-validated HBPP controller reads now pass. **Next:** obtain real `ACK_DATA=0x4bc1`, bring up a touchscreen-specific EVDEV device, and prove one full tap with coordinates and release (then simultaneous multitouch). The physical 32 kHz waveform and aftermarket calibration compatibility remain unverified.
+1. **Touch:** strict HBPP reads **and real segmented calibration ACK_DATA=0x4bc1 now PASS on N71/S8000**. **Next:** integrate private matched firmware upload and guarded controller startup, create a dedicated EVDEV input node and prove an actual 750x1334 tap with tracking ID, then simultaneous multitouch. No EVDEV input has yet been observed.
 2. **Wi-Fi:** identify the WLAN transport on S8000/N71, enable the necessary kernel stack and device tree description, and validate firmware / board-specific calibration without publishing private data.
 3. **Bluetooth:** private board-compatible BCM4350C5 firmware initialization and BLE scanning are now **verified**. Next validate pairing, bonding, reconnection and power management. No Apple firmware is distributed here.
 4. **Security gate:** replace plain Telnet with authenticated USB-bound SSH before connecting Linux to additional networks. A RAM-only source-based packaging process is available offline; boot remains separately hardware-qualified.
 
 See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.md), [live touchscreen test and calibration blocker](docs/TOUCH_LIVE_TEST.md), [driver worklog](docs/DRIVER_WORKLOG.md), [research leads](docs/RESEARCH_LEADS.md), [roadmap](docs/ROADMAP.md) and [firmware policy](docs/FIRMWARE_POLICY.md).
 
-## Current physical-device recovery gate
+## Physical-device recovery and calibration breakthrough
 
-**Hardware incident, 2026-11-10:** The S8000 iPhone disappeared from USB during a one-shot 1040-byte private HBPP calibration-NOP experiment, before any calibration ACK or cleanup log was received. The root cause has not been established. **Physical recovery is required**; no further on-device testing is authorized by the existing session until the phone is identified and the baseline is independently verified. The previously successful status-only controller checks remain historical evidence, **not** proof that the current device is running. See [the sanitized failure report](docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md). A bounded-256-byte SPI source RFC is offline-only and has not been tested physically.
+The [November 10 USB disconnect incident](docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md) remains important safety evidence and is **not conclusively root-caused**. The device was successfully recovered with attended RAM-only boot on November 11, and guarded short HBPP probes independently re-verified the full touch power/reset/clock baseline. In a later *single* supervised experiment, 1040-byte NOP-prefixed device calibration **succeeded via five SPI transfers within one message**, receiving the real expected **ACK_DATA=0x4bc1** on the first poll. Read the [dated hardware report](docs/N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md). The private calibration blob, firmware, test binary and unique device identifiers are **not** published. Firmware startup, Linux EVDEV touch and production-driver compatibility remain unverified.
 
 ## Reproducible engineering workflow
 
@@ -87,7 +87,7 @@ deck net
 
 For a dated, reproducible engineering check (six ARM64 RFC patches compiled and RAM payload reproduced bit-for-bit), read the [11 November 2026 offline/build validation](docs/N71_OFFLINE_BUILD_AND_RAM_REPRODUCIBILITY_2026_11_11.md). No new touchscreen activation is implied.
 
-**November 11 recovery check:** [attended RAM-only Linux reboot and repeated strict hardware HBPP test](docs/N71_POST_USB_LOSS_RAM_RECOVERY_AND_HBPP_2026_11_11.md) passed, including watchdog restoration and 12/12 USB-link ICMP replies. **Calibration and EVDEV touch remain blocked.**
+**November 11 recovery check:** [attended RAM-only Linux reboot and repeated strict hardware HBPP test](docs/N71_POST_USB_LOSS_RAM_RECOVERY_AND_HBPP_2026_11_11.md) passed, including watchdog restoration and 12/12 USB-link ICMP replies. **The later segmented calibration trial passed; EVDEV input remains blocked.**
 
 ## Community
 

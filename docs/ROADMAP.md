@@ -2,13 +2,14 @@
 
 **Target for current experiments: N71 / Samsung A9 / S8000 only.** The N71m/TSMC A9/S8003 variant is expressly **out of active experimental scope** until a compatible physical device is available. Its test matrix remains entirely `not_tested`. Upstream source compatibility and references may remain in the build manifest; this is not authorization to run S8003-specific hardware tests or claim working peripherals.
 
-**Recovery prerequisite (2026-11-10):** The S8000 lost its USB gadget during the first 1040-byte NOP-prefixed calibration attempt. Its current power/reset and kernel state are unknown. **No additional live SPI/calibration tests until attended physical recovery** and renewed baseline verification. See [incident report](N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md). The 256-byte SPI segmentation is an unverified RFC, not a solved issue.
+**Recovery resolved and calibration milestone, 2026-11-11:** The N71/S8000 was physically recovered to known-good RAM-only Linux #5, with hardware baselines and strict HBPP register reads verified. The previous 1040-byte **single-transfer** calibration USB-loss incident has **no proven root cause**. The new **single-message segmented 256+256+256+256+16** private calibration upload obtained genuine **ACK_DATA=0x4bc1 on poll 0**, while the USB gadget remained healthy (40/40 ICMP). See [live calibrated ACK report](N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md). This is a controller-acknowledgment milestone, **not** touch firmware boot or working EVDEV input.
 
 ## Milestone T — first complete Linux touch contact
 
 - **T0 — LIVE PASS:** S8000 framebuffer and SPI2 host, reference clock and Chestnut analog rail independently verified with exact rollback.
-- **T1 — LIVE PARTIAL:** Integrated power + reset + SPI2 HBPP at 1 MHz produced two verified `READ_DATA=0x4c39` register replies with valid checksums, including controller version `0x434d15c1`. The aftermarket panel worked as a touch display in iOS, but Linux calibration is **not accepted yet**.
-- **T2 — NEXT / BLOCKED:** Receive genuine calibration `ACK_DATA=0x4bc1`, start matched touch firmware, and register a real touchscreen EVDEV node. Current controller returns `REQ_CAL`/`IDLE` after earlier calibration attempts. A public NOP-prefix *offline-only* framing RFC is available as an opt-in hypothesis, **not** a validated hardware solution.
+- **T1 — LIVE PASS:** Integrated touch power/reset/clock, strict HBPP READ_DATA/checksum validation and version 0x434d15c1 reproduced on the physical S8000.
+- **T2a — LIVE PASS (2026-11-11):** Single supervised NOP-prefixed 1040-byte *private* calibration upload, five SPI transfers under one message, received **ACK_DATA=0x4bc1** on the first poll. Independent watchdog and rollback PASS. This is not proof that the production driver can repeat the full boot sequence.
+- **T2b — NEXT / BLOCKED:** After accepted calibration, load the privately supplied matching Z2 firmware through bounded SPI transfers, program the controller startup sequence and register real Linux touchscreen input. Preserve independent recovery, bounded watchdog and private firmware segregation. **No EVDEV touchscreen has been observed.**
 - **T3 — FIRST VERTICAL RELEASE GATE:** Independently capture one real 750×1334 touch contact with bounded X/Y coordinates, SYN_REPORT, and tracking ID release. No synthetic input counts.
 - **T4:** Stable two-finger simultaneous contacts, tracked drag, edge/corner accuracy, and no stuck touches.
 - **T5:** Stability across repeated RAM-only boots, idle and blank/unblank cycles.

@@ -88,7 +88,7 @@ class SourcePinAndCiTests(unittest.TestCase):
         state = s8000["hardware_results"]
         self.assertEqual(state["hbpp_strict_read"], "live_pass")
         self.assertNotEqual(state["touch_evdev_multitouch"], "live_pass")
-        self.assertNotEqual(state["calibration_ack_data"], "live_pass")
+        self.assertEqual(state["calibration_ack_data"], "live_pass")
 
     def test_workflow_separates_three_levels(self):
         content = (ROOT / "ci/verify.yml").read_text()

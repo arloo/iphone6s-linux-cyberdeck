@@ -2,6 +2,8 @@
 
 **Status: engineering infrastructure, 2026-11-10.** These commands do not establish on-device support. Evidence for physical tests is recorded separately.
 
+**New human-reviewed HARDWARE evidence (2026-11-11):** [N71 segmented calibration ACK_DATA=0x4bc1 live success](N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md), independently observed on S8000 after offline and build checks. This is NOT a GitHub Actions result and does not imply working EVDEV touch.
+
 ## Three levels of proof
 
 | Level | Where | What it proves | What it never proves |

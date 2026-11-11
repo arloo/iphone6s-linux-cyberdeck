@@ -20,7 +20,7 @@
         "touch_clock_rollback": "live_pass",
         "touch_analog_rollback": "live_pass",
         "hbpp_strict_read": "live_pass",
-        "calibration_ack_data": "blocked",
+        "calibration_ack_data": "live_pass",
         "touch_evdev_multitouch": "blocked",
         "wifi_network": "blocked",
         "bluetooth_scan": "partial",
@@ -32,7 +32,8 @@
         "docs/N71_TOUCH_CLOCK_AND_ANALOG_LIVE_VALIDATION.md",
         "docs/N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md",
         "docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md",
-        "docs/N71_POST_USB_LOSS_RAM_RECOVERY_AND_HBPP_2026_11_11.md"
+        "docs/N71_POST_USB_LOSS_RAM_RECOVERY_AND_HBPP_2026_11_11.md",
+        "docs/N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md"
       ]
     },
     {

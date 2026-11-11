@@ -54,7 +54,8 @@ def check() -> None:
     s8000 = profiles["s8000-n71"]["hardware_results"]
     assert s8000["hbpp_strict_read"] == "live_pass"
     assert s8000["touch_evdev_multitouch"] != "live_pass"
-    assert s8000["calibration_ack_data"] != "live_pass"
+    assert s8000["calibration_ack_data"] == "live_pass"
+    assert (ROOT / "results/2026-11-11-s8000-segmented-cal-ack.json").is_file()
     assert s8000["authenticated_remote_shell"] != "live_pass"
 
     # Evidence is a manually reviewed sanitized artifact, never a CI assertion.

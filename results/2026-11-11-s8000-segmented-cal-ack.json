@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "hbpp_segmented_calibration_ack_data",
+  "observed_on": "2026-11-11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md",
+  "summary": "One real private 1024-byte device-calibration DATA packet framed with NOP prefix and sent as five SPI transfers (256+256+256+256+16) in one message; controller returned ACK_DATA 4bc1 on first poll. Strict controller identity/checksums, watchdog and baseline PASS; 40/40 USB ICMP responses, no firmware or touch evdev."
+}
