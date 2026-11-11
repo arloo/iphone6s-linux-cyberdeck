@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "test_id": "z2_firmware_start_evdev_irq_gate",
+  "observed_on": "2026-11-11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_Z2_FIRMWARE_START_EVDEV_IRQ_GATE_2026_11_11.md",
+  "summary": "RAM-only Linux boot and USB networking passed; private controller calibration and both firmware blocks ACKed, firmware start logged, /dev/input/event0 registered at 750x1334. Physical attended touches produced zero EVDEV events; Apple-GPIO142 touch IRQ counter remained at 1. Functional touch remains blocked."
+}

@@ -20,7 +20,7 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 | USB gadget networking | iPhone `172.16.42.1`, host `172.16.42.2`, USB `05ac:4142` | Working |
 | Interactive shell | BusyBox shell via USB Telnet (port 23) | Working, insecure |
 | Hardware buttons | `gpio-keys` exposed as `/dev/input/event0` | Detected |
-| Touchscreen | **Live device-specific HBPP calibration ACK_DATA=0x4bc1 received on first poll** after one 1040-byte NOP-prefixed upload split into five 256-byte-bounded SPI transfers. Strict checksum-validated ID reads, watchdog rollback and USB continuity verified. No firmware startup or EVDEV touch input yet. | **Calibration ACK PASS; touch input blocked** |
+| Touchscreen | **Live device-specific HBPP calibration ACK_DATA=0x4bc1 received on first poll** after one 1040-byte NOP-prefixed upload split into five 256-byte-bounded SPI transfers. Strict checksum-validated ID reads, watchdog rollback and USB continuity verified. A later RAM-only boot **ACKed both firmware blocks and started the controller**, registering /dev/input/event0; physical touch events remain absent and GPIO142 IRQ count is stagnant. | **Calibration + firmware start + EVDEV registration PASS; real touch events blocked** |
 | Wi-Fi | No wireless interface; `CONFIG_WLAN` disabled | **Priority 1 — missing** |
 | Bluetooth | Broadcom `BCM4350C5` patchram **build 0825** loaded privately; 25 BLE advertising reports received in a 12-second passive on-device scan | **BLE radio verified; pairing pending** |
 | Internal storage | No block devices enumerated | Not used; avoid NAND writes |
@@ -30,7 +30,7 @@ This matrix reports **observations**, not promises. A detected controller or fra
 
 ## Immediate goals — contributions wanted
 
-1. **Touch:** strict HBPP reads **and real segmented calibration ACK_DATA=0x4bc1 now PASS on N71/S8000**. **Next:** integrate private matched firmware upload and guarded controller startup, create a dedicated EVDEV input node and prove an actual 750x1334 tap with tracking ID, then simultaneous multitouch. No EVDEV input has yet been observed.
+1. **Touch:** strict HBPP reads **and real segmented calibration ACK_DATA=0x4bc1 now PASS on N71/S8000**. **Next:** investigate GPIO142 interrupt delivery/report handling with read-only, bounded tests, then prove an actual 750x1334 tap with tracking ID and simultaneous multitouch. The firmware now starts and /dev/input/event0 is registered, but no real touch events were captured.
 2. **Wi-Fi:** identify the WLAN transport on S8000/N71, enable the necessary kernel stack and device tree description, and validate firmware / board-specific calibration without publishing private data.
 3. **Bluetooth:** private board-compatible BCM4350C5 firmware initialization and BLE scanning are now **verified**. Next validate pairing, bonding, reconnection and power management. No Apple firmware is distributed here.
 4. **Security gate:** replace plain Telnet with authenticated USB-bound SSH before connecting Linux to additional networks. A RAM-only source-based packaging process is available offline; boot remains separately hardware-qualified.
@@ -39,7 +39,7 @@ See [hardware findings](docs/HARDWARE_STATUS.md), [bring-up notes](docs/BRINGUP.
 
 ## Physical-device recovery and calibration breakthrough
 
-The [November 10 USB disconnect incident](docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md) remains important safety evidence and is **not conclusively root-caused**. The device was successfully recovered with attended RAM-only boot on November 11, and guarded short HBPP probes independently re-verified the full touch power/reset/clock baseline. In a later *single* supervised experiment, 1040-byte NOP-prefixed device calibration **succeeded via five SPI transfers within one message**, receiving the real expected **ACK_DATA=0x4bc1** on the first poll. Read the [dated hardware report](docs/N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md). The private calibration blob, firmware, test binary and unique device identifiers are **not** published. Firmware startup, Linux EVDEV touch and production-driver compatibility remain unverified.
+The [November 10 USB disconnect incident](docs/N71_CAL_NOP_USB_DISCONNECT_2026_11_10.md) remains important safety evidence and is **not conclusively root-caused**. The device was successfully recovered with attended RAM-only boot on November 11, and guarded short HBPP probes independently re-verified the full touch power/reset/clock baseline. In a later *single* supervised experiment, 1040-byte NOP-prefixed device calibration **succeeded via five SPI transfers within one message**, receiving the real expected **ACK_DATA=0x4bc1** on the first poll. Read the [dated hardware report](docs/N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md). The private calibration blob, firmware, test binary and unique device identifiers are **not** published. Firmware startup and EVDEV registration subsequently passed on a RAM-only boot, but actual touchscreen contact delivery and production-driver compatibility remain unverified; see the [firmware-start / IRQ gate report](docs/N71_Z2_FIRMWARE_START_EVDEV_IRQ_GATE_2026_11_11.md).
 
 ## Reproducible engineering workflow
 
