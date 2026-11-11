@@ -36,6 +36,44 @@ class TestADT(unittest.TestCase):
         self.assertIn("#ports: 0x4", out.getvalue())
         self.assertNotIn("NEVER_PRINT_ME", out.getvalue())
 
+    def test_full_tree_visitor_includes_unrelated_phandle_nodes(self):
+        other=node("unrelated-device",extra=[
+            prop("AAPL,phandle",struct.pack("<I",0x7b)),
+            prop("private-token",b"NEVER_OUTPUT_THIS")])
+        host=node("apcie",extra=[
+            prop("AAPL,phandle",struct.pack("<I",0x42))])
+        blob=node("device-tree",children=[other,host])
+        got=[]
+        stdout=io.StringIO()
+        with redirect_stdout(stdout):
+            consumed=adt.parse_node(
+                blob,0,"",visitor=lambda path,props: got.append(
+                    (path,props.get("AAPL,phandle"))),
+                visit_all=True)
+        self.assertEqual(consumed,len(blob))
+        self.assertIn(("/device-tree/unrelated-device",
+                       struct.pack("<I",0x7b)),got)
+        self.assertIn(("/device-tree/apcie",
+                       struct.pack("<I",0x42)),got)
+        self.assertEqual(stdout.getvalue(),"")
+
+    def test_normal_visitor_remains_hardware_node_filtered(self):
+        blob=node("device-tree",children=[
+            node("irrelevant"),
+            node("apcie",extra=[
+                prop("AAPL,phandle",struct.pack("<I",0x45))])])
+        paths=[]
+        adt.parse_node(blob,0,"",visitor=lambda path,props: paths.append(path))
+        self.assertEqual(paths,["/device-tree/apcie"])
+
+    def test_duplicate_relevant_phandle_property_fails_closed(self):
+        bad=node("device-tree",children=[
+            node("apcie",extra=[
+                prop("AAPL,phandle",struct.pack("<I",0x44)),
+                prop("AAPL,phandle",struct.pack("<I",0x45))])])
+        with self.assertRaises(adt.InvalidADT):
+            adt.parse_node(bad,0,"",visitor=lambda *_:None,visit_all=True)
+
     def test_truncated_header_rejected(self):
         with self.assertRaises(adt.InvalidADT):
             adt.parse_node(struct.pack("<II", 1, 0) + b"short", 0, "")

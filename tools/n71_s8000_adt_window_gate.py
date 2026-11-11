@@ -153,22 +153,63 @@ def inspect(props_by_path: dict[str, dict[str, bytes]]) -> str:
 
 def audit_bytes(blob: bytes) -> str:
     found: dict[str, dict[str, bytes]] = {}
+    # On Apple XNU, IOMapper identifies its provider by "iommu-id", or
+    # by "AAPL,phandle" if absent. Check the *entire* ADT for duplicate
+    # reference IDs; only keep integer IDs and paths, never unknown data.
+    ids: dict[int, str] = {}
     def visitor(path: str, props: dict[str, bytes]) -> None:
+        phandle = props.get("AAPL,phandle")
+        if phandle is not None:
+            if len(phandle) != 4:
+                raise RejectedADT("Malformed Apple phandle length")
+            value = struct.unpack("<I", phandle)[0]
+            if value == 0 or value in ids:
+                raise RejectedADT("Null or duplicate Apple phandle")
+            ids[value] = path
         if path in WHITELIST:
             if path in found:
                 raise RejectedADT("Duplicate ADT target node")
-            # Preserve ONLY specifically permitted hardware metadata.
+            # Retain ONLY hardware metadata needed by strict validations.
             keep = {"compatible", "reg", "interrupts", "iommu-parent",
                     "#ports", "bus-range", "clock-gates", "power-gates",
-                    "msi-vector-offset"}
+                    "msi-vector-offset", "AAPL,phandle", "iommu-id",
+                    "page-size", "vm-size"}
             found[path] = {k:v for k,v in props.items() if k in keep}
     try:
-        parsed = ADT.parse_node(blob, 0, "", visitor=visitor)
+        parsed = ADT.parse_node(blob, 0, "", visitor=visitor, visit_all=True)
     except (ADT.InvalidADT, UnicodeError, struct.error) as exc:
         raise RejectedADT("Malformed ADT") from exc
     if parsed > len(blob):
         raise RejectedADT("ADT parser overrun")
-    return inspect(found)
+
+    # Must succeed *before* we print any "PASS" result.
+    # The Apple ADT uses a reference to mapper-apcie1, NOT to DART1
+    # itself, and that mapper belongs to the isolated WLAN DART1.
+    wlan = found.get(WLAN, {})
+    mapper = found.get(MAPPER, {})
+    ref = cell32(wlan, "iommu-parent")
+    if len(ref) != 1 or ref[0] == 0:
+        raise RejectedADT("WLAN has no unique IOMMU parent reference")
+    mapper_handle = cell32(mapper, "AAPL,phandle")
+    if len(mapper_handle) != 1 or mapper_handle[0] == 0:
+        raise RejectedADT("Missing WLAN mapper phandle")
+    if "iommu-id" in mapper:
+        raise RejectedADT("Unexpected overriding mapper iommu-id requires review")
+    if ref[0] != mapper_handle[0] or ids.get(ref[0]) != MAPPER:
+        raise RejectedADT("WLAN IOMMU parent does not uniquely target DART1 mapper")
+
+    dart = found.get(DART_PATHS[1], {})
+    if cell32(dart, "page-size") != (4096,):
+        raise RejectedADT("Unreviewed WLAN DART page size")
+    if cell32(dart, "vm-size") != (0x3FFFF000,):
+        raise RejectedADT("Unreviewed WLAN DART IOVA window size")
+    result = inspect(found)
+    return (result + "\n"
+            "WLAN_IOMMU_TO_DART1_MAPPER=UNIQUE_RESOLVED; "
+            f"GLOBAL_ADT_PHANDLES_UNIQUE={len(ids)}; "
+            "DART1_PAGE_SIZE=4096; "
+            "DART1_VM_SIZE=0x3ffff000; "
+            "DART1_STREAM_ID_HARDWARE_UNVERIFIED")
 
 
 def main() -> int:

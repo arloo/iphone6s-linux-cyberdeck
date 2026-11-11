@@ -32,8 +32,25 @@ def prop(key,value):
             b"\0"*((-len(value))%4))
 
 
-def node(name,properties=(),children=()):
-    allprops=(("name",name.encode()+b"\0"),*properties)
+PHANDLE_BY_NODE = {
+    "device-tree": 0x01,
+    "arm-io": 0x02,
+    "apcie": 0x03,
+    "pci-bridge0": 0x30,
+    "pci-bridge1": 0x31,
+    "pci-bridge2": 0x32,
+    "wlan": 0x33,
+    "dart-apcie0": 0x40,
+    "dart-apcie1": 0x41,
+    "dart-apcie2": 0x42,
+    "mapper-apcie1": 0x84,
+}
+
+def node(name,properties=(),children=(),phandle=None):
+    if phandle is None:
+        phandle=PHANDLE_BY_NODE[name]
+    allprops=(("name",name.encode()+b"\0"),
+              ("AAPL,phandle",cells(phandle)),*properties)
     return (struct.pack("<II",len(allprops),len(children))+
             b"".join(prop(k,v) for k,v in allprops)+
             b"".join(children))
@@ -46,7 +63,9 @@ def compat(*labels):
 def fixture(*,host_windows=None,host_compat=None,dart_layout=None,
             dart1_compat=None,wlan_compat=None,mapper_id=0,
             iommu_parent=0x84,port_count=4,skip_dart=None,
-            wlan_under_bridge=1,secret=False):
+            wlan_under_bridge=1,secret=False,mapper_phandle=0x84,
+            mapper_iommu_id=None,dart_page_size=4096,
+            dart_vm_size=0x3ffff000):
     host_windows=host_windows or module.HOST_LAYOUT
     dart_layout=dart_layout or module.DART_LAYOUT
     bridge_children=[]
@@ -81,10 +100,19 @@ def fixture(*,host_windows=None,host_compat=None,dart_layout=None,
             ("reg",regs(dart_layout[n])),
             ("interrupts",cells(0xf5+3*n)),
         ]
-        descendants=[node(f"mapper-apcie1",[
+        if n==1:
+            props.extend([
+                ("page-size",cells(dart_page_size)),
+                ("vm-size",cells(dart_vm_size)),
+            ])
+        mapper_props=[
             ("compatible",compat("iommu-mapper")),
             ("reg",cells(mapper_id)),
-        ])] if n==1 else []
+        ]
+        if mapper_iommu_id is not None:
+            mapper_props.append(("iommu-id",cells(mapper_iommu_id)))
+        descendants=[node("mapper-apcie1",mapper_props,
+                          phandle=mapper_phandle)] if n==1 else []
         darts.append(node(f"dart-apcie{n}",props,descendants))
     arm=node("arm-io",children=[host,*darts])
     return node("device-tree",children=[arm])
@@ -100,6 +128,9 @@ class TestS8000ADTWindowGate(unittest.TestCase):
         self.assertIn("S8000_ADT_METADATA_GATE_PASS",output)
         self.assertIn("DART1_FALLBACK=dart,s5l8960x",output)
         self.assertIn("HARDWARE_BLOCKED",output)
+        self.assertIn("WLAN_IOMMU_TO_DART1_MAPPER=UNIQUE_RESOLVED",output)
+        self.assertIn("DART1_PAGE_SIZE=4096",output)
+        self.assertIn("DART1_VM_SIZE=0x3ffff000",output)
 
     def test_wrong_foundry_or_host_rejected(self):
         for value in (("apcie,s8003",),("apcie,t8103",),("apple,pcie",)):
@@ -138,6 +169,30 @@ class TestS8000ADTWindowGate(unittest.TestCase):
 
     def test_wlan_iommu_reference_must_be_nonzero(self):
         self.assert_reject(fixture(iommu_parent=0))
+
+    def test_wlan_cannot_point_directly_to_dart1(self):
+        self.assert_reject(fixture(iommu_parent=0x41))
+
+    def test_wlan_cannot_reference_dart0_storage(self):
+        self.assert_reject(fixture(iommu_parent=0x40))
+
+    def test_wlan_cannot_reference_unknown_node(self):
+        self.assert_reject(fixture(iommu_parent=0xdead))
+
+    def test_wrong_mapper_phandle_rejected(self):
+        self.assert_reject(fixture(mapper_phandle=0x85))
+
+    def test_duplicate_global_phandle_rejected(self):
+        self.assert_reject(fixture(mapper_phandle=0x31))
+
+    def test_unreviewed_mapper_iommu_id_override_rejected(self):
+        self.assert_reject(fixture(mapper_iommu_id=0x85))
+
+    def test_wlan_dart_page_size_must_be_4k(self):
+        self.assert_reject(fixture(dart_page_size=16384))
+
+    def test_wlan_dart_vm_size_must_match_s8000_adt(self):
+        self.assert_reject(fixture(dart_vm_size=0x40000000))
 
     def test_mapper_reg_index_must_remain_zero(self):
         self.assert_reject(fixture(mapper_id=1))

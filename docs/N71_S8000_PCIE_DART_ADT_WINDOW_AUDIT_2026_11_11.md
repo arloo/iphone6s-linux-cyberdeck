@@ -6,7 +6,7 @@
 
 Two identical private Apple Device Tree (ADT) snapshots were independently checked by a new strictly read-only audit tool. Both describe the S8000 host as apcie,s8000 with four PCIe ports, a wlan-pcie,bcm4350 endpoint on bridge 1, and a distinct dart-apcie1 node. Crucially, the DART compatible list contains **dart,s8000 AND dart,s5l8960x**. The pinned Linux driver already includes the legacy apple,s5l8960x-dart OF match and a four-stream, 36-bit output address profile.
 
-The Apple ADT and Linux OF compatible strings are *not literally identical*. Whether this older DART hardware layout can safely operate on A9 remains UNTESTED. The WLAN endpoint has an IOMMU parent reference and the associated DART child mapper reports index 0; a working Linux phandle/stream ID relationship, DMA translation and fault behavior have NOT yet been established.
+The Apple ADT and Linux OF compatible strings are *not literally identical*. Whether this older DART hardware layout can safely operate on A9 remains UNTESTED. The WLAN endpoint references a DART child mapper at index 0. Its Apple ADT iommu-parent target was subsequently resolved by a full-tree audit; a working Linux stream ID, DMA translation and fault behavior have NOT yet been established.
 
 ## Allowed audit results: physical address map (metadata only)
 
@@ -39,7 +39,9 @@ Usage (requires a private file, NEVER commit the file):
 
     python3 tools/n71_s8000_adt_window_gate.py /private/path/to/runtime-apple-adt.bin
 
-Successful output contains BOTH S8000_ADT_METADATA_GATE_PASS and HARDWARE_BLOCKED. Nineteen synthetic tests in tests/test_n71_s8000_adt_window_gate.py reject corrupted ADT, wrong silicon, spoofed WLAN, altered or overlapping memory windows, missing/incorrect DART, wrong mapper index, absent IOMMU reference and accidental disclosure. Together with the previous compiled-DTB isolation gate, **38 adversarial PCIe/DART safety tests are now available offline.**
+Successful output contains BOTH S8000_ADT_METADATA_GATE_PASS and HARDWARE_BLOCKED. Twenty-seven synthetic tests in tests/test_n71_s8000_adt_window_gate.py reject corrupted ADT, wrong silicon, spoofed WLAN, altered or overlapping memory windows, missing/incorrect DART, wrong mapper index, absent IOMMU reference and accidental disclosure. Together with the previous compiled-DTB isolation gate, **46 adversarial PCIe/DART safety tests are now available offline.**
+
+**Subsequent 2026-11-11 verification:** A [full-tree phandle audit](N71_BCM4350_DART1_PARENT_RESOLUTION_2026_11_11.md) now resolves BCM4350 iommu-parent uniquely to DART1 mapper-apcie1, among 178 unique global ADT phandles. Page-size=4096 and vm-size=0x3ffff000 are also checked. The prior uncertainty about the Apple *reference target* is superseded; the real DMA stream ID and isolation are still unverified.
 
 ## Remaining actual hardware blockers
 

@@ -76,7 +76,8 @@ def print_hardware_node(path: str, props: dict[str, bytes]) -> None:
             print(f"  {key}: {format_u32_array(props[key])}")
 
 
-def parse_node(blob: bytes, pos: int, parent: str, depth: int = 0, visitor=None) -> int:
+def parse_node(blob: bytes, pos: int, parent: str, depth: int = 0,
+               visitor=None, visit_all: bool = False) -> int:
     if depth > MAX_DEPTH:
         raise InvalidADT("Excessive node nesting")
     nprops, nchildren = uint32(blob, pos), uint32(blob, pos + 4)
@@ -95,19 +96,22 @@ def parse_node(blob: bytes, pos: int, parent: str, depth: int = 0, visitor=None)
             raise InvalidADT("Incomplete property value")
         if key in ("name", "compatible", "reg", "#ports", "bus-range",
                    "clock-gates", "power-gates", "interrupts",
-                   "iommu-parent", "msi-vector-offset"):
+                   "iommu-parent", "msi-vector-offset", "AAPL,phandle",
+                   "iommu-id", "page-size", "vm-size"):
+            if key in props:
+                raise InvalidADT("Duplicate relevant ADT property")
             props[key] = blob[pos:pos + length]
         pos = (pos + length + 3) & ~3
 
     name = printable_name(props.get("name", b""))
     path = parent + "/" + name
-    if relevant(path):
-        if visitor is not None:
+    if visitor is not None:
+        if visit_all or relevant(path):
             visitor(path, props)
-        else:
-            print_hardware_node(path, props)
+    elif relevant(path):
+        print_hardware_node(path, props)
     for _ in range(nchildren):
-        pos = parse_node(blob, pos, path, depth + 1, visitor)
+        pos = parse_node(blob, pos, path, depth + 1, visitor, visit_all)
     return pos
 
 
