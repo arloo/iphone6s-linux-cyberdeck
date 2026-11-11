@@ -39,6 +39,8 @@ https://github.com/apple/darwin-xnu/blob/main/osfmk/arm64/arm_vm_init.c
 The modern Linux Apple PCIe driver is a **different controller family**; its register offsets are not evidence of A9 compatibility:
 https://github.com/torvalds/linux/blob/master/drivers/pci/controller/pcie-apple.c
 
+**Verified follow-up:** The [six-case A9 original register-offset audit](N71_S8000_PCIE_COMMON_REGISTER_OFFSETS_2026_11_11.md) recovered port1-relative controller offset formulas but NOT an MMIO base or safe register semantics.
+
 ## Remaining critical path to true native Wi-Fi
 
 1. Independently identify the hardware semantics and shared/port1 register effects of the relevant S800x/embedded initialization paths, while protecting port0 storage and port2 modem from global reset, clock and PHY operations.

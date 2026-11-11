@@ -121,7 +121,7 @@ def summarize_kernelcache(blob: bytes) -> dict[str, object]:
                             stubs["vm"], stubs["size"], len(blob))
     got_base = file_offset(main, "__PLK_DATA_CONST",
                            got["vm"], got["size"], len(blob))
-    translated: dict[int, str] = {}
+    translated: dict[int, tuple[str, int]] = {}
     for idx in range(stubs["size"] // 12):
         pc = stubs["vm"] + idx * 12
         adrp, ldr, br = struct.unpack_from("<3I", blob, stub_base + idx * 12)
@@ -129,8 +129,9 @@ def summarize_kernelcache(blob: bytes) -> dict[str, object]:
         guard(got["vm"] <= slot and slot + 8 <= got["vm"] + got["size"],
               "External call does not resolve inside this KEXT's GOT")
         pointer = struct.unpack_from("<Q", blob, got_base + slot - got["vm"])[0]
-        translated[pc] = target_category(pointer, extents, main)
+        translated[pc] = (target_category(pointer, extents, main), pointer)
     counts: Counter[str] = Counter()
+    a9_shared_callees: Counter[int] = Counter()
     used_stubs = set()
     for i in range(0, code["size"], 4):
         pc = code["vm"] + i
@@ -142,7 +143,10 @@ def summarize_kernelcache(blob: bytes) -> dict[str, object]:
             counts["a9_self"] += 1
         elif dest in translated:
             used_stubs.add(dest)
-            counts[translated[dest]] += 1
+            category, target = translated[dest]
+            counts[category] += 1
+            if category == "a9_s800x_shared":
+                a9_shared_callees[target] += 1
         else:
             raise RejectedGraph("BL outside private A9 code and known stubs")
     guard(sum(counts.values()) > 0, "No A9 direct BL calls found")
@@ -150,6 +154,9 @@ def summarize_kernelcache(blob: bytes) -> dict[str, object]:
         "direct_branch_calls": sum(counts.values()),
         "stub_count": len(translated),
         "used_stubs": len(used_stubs),
+        "shared_unique_direct_targets": len(a9_shared_callees),
+        "shared_target_multiplicities": sorted(
+            a9_shared_callees.values(), reverse=True),
         "calls": {name: counts[name] for name in (
             "a9_self", "a9_s800x_shared", "apple_embedded_pcie",
             "io_pci_family", "other_kernel_or_kext")},
@@ -174,6 +181,12 @@ def main() -> int:
           "USED_TRAMPOLINES", report["used_stubs"])
     for name, count in report["calls"].items():
         print("CALL_GROUP", name, count)
+    print("SHARED_UNIQUE_DIRECT_CALLEE_ADDRESSES",
+          report["shared_unique_direct_targets"])
+    print("SHARED_DIRECT_CALL_MULTIPLICITIES",
+          ",".join(map(str, report["shared_target_multiplicities"])))
+    print("NOTE: direct branch destinations are NOT independently proven "
+          "function entrypoints or safe register APIs")
     print("HARDWARE_BLOCKED: register semantics, DMA context, IRQ and link "
           "startup remain unverified; no code or addresses exported")
     return 0
