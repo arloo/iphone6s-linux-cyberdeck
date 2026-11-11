@@ -43,6 +43,8 @@ Successful output contains A9_PHY_RESOURCE0_MAPPING_INSTRUCTIONS_PASS together w
 
 The tool uses a small collection of generic ARM64 instruction-pattern signatures, not a redistributed original kernel function. Seventeen synthetic tests in tests/test_n71_s8000_phy_resource_gate.py check positive and negative paths, invalid indices, changed virtual dispatch, null guards, state stores, dynamic resource selector changes, input bounds and absence of hardware-effect APIs.
 
+**Important follow-up:** The [original S8000 constructor-vtable audit](N71_S8000_PCIE_VTABLE_SELECTOR_LIMITS_2026_11_11.md) shows one zero-return and one unsupported-status method at slots 1856/1880. The actual dynamic receiver used during startup is NOT yet proven, so the two mapped common resource indices remain unresolved. This supersedes any assumption that static constructor vtable values can be directly used as physical register-range indices.
+
 ## Physical bring-up remains gated
 
 1. Independently resolve Apple A9 provider memory-resource ordering and the two dynamic common selectors; establish functional register roles and verified physical windows, including global side effects.
