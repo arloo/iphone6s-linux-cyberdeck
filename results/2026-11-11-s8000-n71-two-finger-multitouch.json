@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "observed_on": "2026-11-11",
+  "test_id": "n71_two_simultaneous_mt_slots_live_evdev",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_SIMULTANEOUS_TWO_FINGER_EVDEV_PASS_2026_11_11.md",
+  "summary": "Supervised Linux N71 kernel #5: two simultaneous multitouch IDs at SYN_REPORT boundaries in 273 frames. 2973 EVDEV input records, 391 synchronization frames, 6 tracking starts and 6 releases. After test USB remained reachable, and no new IRQ activity during a 4-second no-touch check. Edge accuracy, latency, sustained operation and boot automation unverified."
+}
