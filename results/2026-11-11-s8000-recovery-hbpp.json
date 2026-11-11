@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "post_recovery_hbpp_strict_read",
+  "observed_on": "2026-11-11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_POST_USB_LOSS_RAM_RECOVERY_AND_HBPP_2026_11_11.md",
+  "summary": "Attended DFU/PongoOS RAM-only Linux build #5 recovery, four stable read-only hardware baseline snapshots, one bounded SPI2 HBPP strict controller read pair with valid checksums and version 434d15c1, watchdog/final baseline PASS. Gadget remains online (12/12 ICMP); no calibration ACK, input EVDEV or firmware transfer."
+}

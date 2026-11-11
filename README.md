@@ -87,6 +87,8 @@ deck net
 
 For a dated, reproducible engineering check (six ARM64 RFC patches compiled and RAM payload reproduced bit-for-bit), read the [11 November 2026 offline/build validation](docs/N71_OFFLINE_BUILD_AND_RAM_REPRODUCIBILITY_2026_11_11.md). No new touchscreen activation is implied.
 
+**November 11 recovery check:** [attended RAM-only Linux reboot and repeated strict hardware HBPP test](docs/N71_POST_USB_LOSS_RAM_RECOVERY_AND_HBPP_2026_11_11.md) passed, including watchdog restoration and 12/12 USB-link ICMP replies. **Calibration and EVDEV touch remain blocked.**
+
 ## Community
 
 We welcome testers, kernel engineers, Apple device-tree contributors, Broadcom wireless contributors, postmarketOS developers and reverse engineers.
