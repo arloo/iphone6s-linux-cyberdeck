@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "observed_on": "2026-11-11",
+  "test_id": "n71_automatic_z2_initialization_and_two_finger_evdev",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md",
+  "summary": "Actual supervised N71 Linux RAM boot with new initramfs completed Z2 EE, E3/D9 twice, Type1 E7/D9, 9D/BF and AF automatically without manual sysfs writes. Operator touch capture: 4096 real EVDEV records, 581 SYN frames, 138 frames with two simultaneous active contacts; observed X 5..724/Y 14..1331 pixels; IRQ 1->935. Capture truncated by 4096-event cap (12 starts/10 releases not a release failure). Follow-up IRQ idle no-change for 4 seconds, USB stable. Latency, edge calibration and prolonged stability not yet verified."
+}
