@@ -31,7 +31,7 @@ REGIONS=((0x602000000,0x4000),
 REQUIRED={
     "compatible","status","research,hardware-activation-blocked",
     "research,pcie-port-index","research,dart1-mapper-index",
-    "research,refclk-to-perst-metadata","reg","reg-names"
+    "research,refclk-to-perst-delay-us","reg","reg-names"
 }
 
 class UnsafePreflight(ValueError):
@@ -70,7 +70,7 @@ def validate_nodes(nodes):
          "Not the original WLAN PCIe port1")
     need(FDT.be32(node,"research,dart1-mapper-index")==0,
          "Unproven DART1 original mapper index")
-    need(FDT.be32(node,"research,refclk-to-perst-metadata")==100,
+    need(FDT.be32(node,"research,refclk-to-perst-delay-us")==100,
          "Original Apple REFCLK/PERST metadata mismatch")
     need(FDT.string_list(node,"reg-names")==NAMES,
          "Missing/unreviewed WLAN port1 and DART1 region name")

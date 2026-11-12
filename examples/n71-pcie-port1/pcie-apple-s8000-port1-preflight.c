@@ -99,12 +99,12 @@ static int apple_s8000_preflight_private_port_metadata(
 
     if (of_property_read_u32(node, "research,pcie-port-index", &port) ||
         of_property_read_u32(node, "research,dart1-mapper-index", &mapper) ||
-        of_property_read_u32(node, "research,refclk-to-perst-metadata",
+        of_property_read_u32(node, "research,refclk-to-perst-delay-us",
                              &refclk_perst))
         return -EINVAL;
 
     if (port != 1 || mapper != 0 || refclk_perst != 100)
-        return -ERANGE; /* Apple source value, TIME UNITS NOT VERIFIED. */
+        return -ERANGE; /* Original Apple XNU _IODelay microseconds, NOT milliseconds. */
 
     /* Resource descriptors only; NOT ioremap, readl or MMIO access. */
     for (i = 0; i < ARRAY_SIZE(wlan_candidate); i++) {

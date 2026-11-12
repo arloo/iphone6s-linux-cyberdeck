@@ -54,3 +54,7 @@ Physical requirements **not cleared:** complete PCIe clock/refclock/PHY/PERST/MS
 The existing separate, fail-closed Linux S8000 PCIe **research-guard** source was also compiled and verified as an AArch64 ELF64 relocatable object in the Dell's *private isolated Linux build output*. Its probe remains deliberately blocked, no MMIO or PCIe driver bring-up is performed, and it is not inserted into the known-good RAM Linux image. The existing working touch/LCD/USB rescue image SHA-256 was rechecked unchanged. This build is a cross-compilation checkpoint, not a functioning host-controller driver.
 
 **No hardware write, root-controller MMIO, DART DMA, iOS reboot, DFU, NAND access, kernel module load, radio reconfiguration or Linux boot was performed in this milestone.** Only read-only iOS diagnostics and offline software tests.
+
+### Follow-up: 2026-11-12 original XNU timer-unit resolution
+
+The original live `t-refclk-to-perst=100` property has since been traced through the authentic original AppleEmbeddedPCIE code to the port object field and **`_IODelay(100)`** in XNU, whose argument unit is **microseconds**. The same original XNU `_IODelay` import is used with argument **10** by the shared root status bit4 polling loop. See [end-to-end original ARM64 and iOS timing proof](N71_S8000_ORIGINAL_REFCLK_PERST_IODelay_MICROSECONDS_2026_11_12.md). This supersedes the earlier unknown-units caution here; hardware REFCLK/PERST# power sequencing, cross-port safety, physical DART1 DMA translation and Linux native WLAN operation remain unresolved.

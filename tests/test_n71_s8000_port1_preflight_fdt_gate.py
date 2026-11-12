@@ -94,7 +94,13 @@ class TestN71S8000Port1Preflight(unittest.TestCase):
         self.changed("research,dart1-mapper-index",be32(1))
 
     def test_fails_on_refclk_time_units_guess(self):
-        self.changed("research,refclk-to-perst-metadata",be32(1000))
+        self.changed("research,refclk-to-perst-delay-us",be32(1000))
+
+    def test_fails_on_100ms_instead_of_100us(self):
+        self.changed("research,refclk-to-perst-delay-us",be32(100000))
+
+    def test_rejects_previous_unitless_metadata_property(self):
+        self.changed("research,refclk-to-perst-metadata",be32(100))
 
     def test_fails_on_unreviewed_root_shared_resource(self):
         a=bytearray(self.nodes[G.PREFLIGHT].props["reg"])

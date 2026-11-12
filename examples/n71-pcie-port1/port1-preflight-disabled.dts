@@ -28,7 +28,7 @@
         research,hardware-activation-blocked;
         research,pcie-port-index = <1>;
         research,dart1-mapper-index = <0>;
-        research,refclk-to-perst-metadata = <100>;
+        research,refclk-to-perst-delay-us = <100>;
 
         /* Linux metadata-only resources; NEVER mapped or touched. */
         reg = <0x6 0x02000000 0 0x4000
