@@ -47,6 +47,8 @@ pcie-port1-preflight@602000000 {
 };
 ```
 
+**Erratum, added after the physical supervised test on 12 November 2026:** The DTS snippet above describes the **intended** decimal 100 µs value. The original builder actually passed literal `100` to `fdtput -t x` and encoded **hexadecimal `0x100` = 256 µs** into the physically booted synthetic descriptor. The subsequently attempted fail-closed research guard correctly refused to load. The metadata-only nature of that earlier physical port1 test is unchanged, but the effective delay property should not be reported as 100 µs until the [corrected private RAM boot is physically tested](N71_S8000_PORT1_GUARD_100US_FAILCLOSED_PHYSICAL_2026_11_12.md). The dedicated offline checker rejects the faulty image and accepts the corrected one; no DART1 MMIO/DMA has been enabled.
+
 These are **resource descriptors only**: they do not map MMIO or cause PCIe enumeration. The exact genuine Linux Image.gz extracted from the **already booted** private image was decompressed and verified not to contain a driver matching `apple,s8000-pcie-research-blocked`. The existing initramfs likewise has no such research compatible or matching research driver. The new node **does not use** the upstream hardware-driving `apple,pcie` binding and has no clocks, PHY, GPIO, resets, MSI, IOMMU linkage, PCIe bus ranges or active DMA properties.
 
 To verify isolation, the builder removed the synthetic node from a copy of the modified DTB and compared decompiled DTB structures: **all remaining N71 tree content is identical**. Independently, all bytes of the staged boot image *before* the N71 DTB and *after* its new end were compared with the previously booted image and were **identical**.
