@@ -1,0 +1,39 @@
+/dts-v1/;
+
+/*
+ * N71/S8000 iPhone 6s — STANDALONE NONBOOTABLE metadata-only fixture.
+ *
+ * Compiled solely for static checks of an explicitly disabled PCIe
+ * port1/DART1 source-descriptor preflight. It is not an operational
+ * Linux board DTB. NEVER integrate into a boot bundle or enable it.
+ *
+ * Fixed Apple SoC hardware window metadata, NOT original proprietary
+ * Apple binary/cell calibration or per-owner device identifiers.
+ *
+ * Status remains "disabled"; a future accidental opt-in to "okay"
+ * will make the referenced kernel research guard *reject* all probes
+ * with -EOPNOTSUPP even if the descriptors are accurate.
+ */
+/ {
+    compatible = "apple,n71", "apple,s8000", "apple,arm-platform";
+    model = "OFFLINE ONLY - N71/S8000 port1 descriptor preflight";
+    #address-cells = <2>;
+    #size-cells = <2>;
+
+    pcie-port1-preflight@602000000 {
+        compatible = "apple,s8000-pcie-research-blocked";
+        status = "disabled";
+
+        /* Synthetic markers NOT present in the native Apple ADT. */
+        research,hardware-activation-blocked;
+        research,pcie-port-index = <1>;
+        research,dart1-mapper-index = <0>;
+        research,refclk-to-perst-metadata = <100>;
+
+        /* Linux metadata-only resources; NEVER mapped or touched. */
+        reg = <0x6 0x02000000 0 0x4000
+               0x6 0x02004000 0 0x4000
+               0x6 0x02008000 0 0x4000>;
+        reg-names = "port1-reg-a", "port1-reg-b", "dart1-reg";
+    };
+};
