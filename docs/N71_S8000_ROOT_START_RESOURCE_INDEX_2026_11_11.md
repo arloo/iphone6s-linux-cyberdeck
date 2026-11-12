@@ -1,5 +1,7 @@
 # N71/S8000 root PCIe: correct constructor, startup and memory-resource indices
 
+**2026-11-12 updated evidence:** [Direct live IODeviceMemory verification](N71_IOS_LIVE_IODEVICEMEMORY_ORDER_2026_11_12.md) on the real N71 running iOS 15.7.9 establishes an exact 11/11 ordered match with the independently validated ADT. The old provider-order uncertainty is resolved, but hardware register safety, port1 reset/PHY and DART DMA remain unverified.
+
 Date: 2026-11-11. Research class: OFFLINE, read-only analysis of the operator's locally held original iOS 15.8.8 N71 ARM64 kernelcache and private Apple ADT. The physical Linux iPhone was NOT modified.
 
 ## Hardware class distinction
