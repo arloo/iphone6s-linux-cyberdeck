@@ -1,0 +1,49 @@
+--- a/drivers/iommu/apple-dart.c
++++ b/drivers/iommu/apple-dart.c
+@@ -1304,17 +1304,46 @@
+ 		writel(U32_MAX, dart->regs + DART_T8110_ERROR_STREAMS + 4 * i);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
++/* N71/S8000 PCIe WLAN DART1 requires verified requester/SID and IOVA
++ * isolation before any MMIO map, reset or TTBR modification. A resource
++ * which overlaps the original N71 dedicated DART1 window is therefore
++ * prohibited in this EXPERIMENTAL kernel, even if its size is malformed.
++ * This does not change the handling of unrelated DART instances.
++ */
++static bool apple_n71_s8000_wlan_dart1_blocked(struct platform_device *pdev)
++{
++	struct resource *res;
++
++	if (!of_machine_is_compatible("apple,n71") ||
++	    !of_machine_is_compatible("apple,s8000"))
++		return false;
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (res && res->end < res->start)
++		return true; /* Malformed descriptor: never risk a live MMIO map. */
++
++	return res && res->start <= 0x60200bfffULL &&
++	       res->end >= 0x602008000ULL;
++}
++
+ static int apple_dart_probe(struct platform_device *pdev)
+ {
+ 	int ret;
+ 	u32 dart_params[4];
+ 	struct resource *res;
+ 	struct apple_dart *dart;
+ 	struct device *dev = &pdev->dev;
++
++	/* Critical: refuse the WLAN DART1 aperture BEFORE any register map,
++	 * clock, reset, DMA translation or interrupt acquisition. */
++	if (apple_n71_s8000_wlan_dart1_blocked(pdev)) {
++		dev_warn(dev, "N71 WLAN DART1 hardware probe blocked until DMA isolation is verified\n");
++		return -EOPNOTSUPP;
++	}
+ 
+ 	dart = devm_kzalloc(dev, sizeof(*dart), GFP_KERNEL);
+ 	if (!dart)
+ 		return -ENOMEM;
+ 
