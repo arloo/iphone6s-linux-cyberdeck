@@ -36,3 +36,11 @@ See [original N71 port-method sequence evidence](../../docs/N71_S8000_ORIGINAL_P
 `port1_rmw_policy_model.c` models the four verified Apple A9/S800x port1 register-bit transitions on **synthetic integer inputs only**. It rejects all other ports, unknown operations and global/shared register writes; the status/shared-register meaning is NOT assumed. It has NO MMIO or PCIe driver registration functions.
 
 The model was actually executed through 65,536 synthetic random-vector bit-preservation tests and built as a genuine AArch64 relocatable object. Tests are in `tests/test_n71_port1_rmw_policy_model.py`. Background: [original private-code RMW static audit](../../docs/N71_S8000_PORT1_RMW_GLOBAL_STATUS_2026_11_11.md).
+
+## Original Apple shared ID1 bit4: real-device memory anchor (2026-11-12)
+
+The [three-source iOS + ADT + original Apple ARM64 proof](../../docs/N71_S8000_ORIGINAL_LIVE_SHARED_STATUS_PHYSICAL_GATE_2026_11_12.md) establishes that the original PCIe ROOT's shared ID1 status polling targets physical address `0x60000002C` (COMMON provider index 9, offset `0x2C`) on N71/S8000, as reconstructed from privately held original kernelcache and authentic live stock iOS 15.7.9 memory-provider order.
+
+`port1_shared_status_snapshot_model.c` is a **data-only, nonbootable C model**. It accepts an immutable array of synthetic 32-bit statuses, checks original bit4 rather than any nonzero value, and fails closed outside the exact port/index/window or a maximum of 4096 samples. The model never maps, probes or writes hardware and never authorizes PCIe initialization.
+
+The [25 private-provenance mutation tests](../../tests/test_n71_port1_live_shared_status_provenance_gate.py) and [21 executed-C synthetic tests](../../tests/test_n71_port1_shared_status_snapshot_model.py) establish the offline code policy. The real C source also compiles as an AArch64 ELF64 object. **Its success means only bit4 present in a synthetic snapshot, NOT PCIe link-ready, DART safety or native WLAN association.**
