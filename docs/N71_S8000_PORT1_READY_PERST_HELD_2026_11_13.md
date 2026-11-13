@@ -89,3 +89,16 @@ Both write trials completed rollback with PERST restored to 00072200, WLAN low/r
 `tests/test_n71_dart_disabled_ttbr.py` compiles the actual sequence header against fake MMIO and exercises ten cases, including active TCR, busy command, fault flag, failed zero/restore readbacks, protected-bank mutation, lost PERST and rejected TCR enable.
 
 This establishes register control and observed rollback only. Stage 11 issues no TLB invalidation, submits no DMA and does not prove physical requester SID routing or fault containment. Stale translations have not been excluded. Keep the Broadcom endpoint reset until selected-stream invalidation and DMA containment are qualified; native Wi-Fi is still unproven.
+
+
+## Stage 12: selected-stream TLB invalidation physically accepted
+
+At uptime 885 s, a fresh preflight again confirmed the board/kernel, monitored battery window, all seven PCIe domains OFF and exclusive GPIO/module ownership. The selected-stream sequence temporarily zeroed only SID0's four TTBR words, enabled TCR byte0 (packed value 0x80), and wrote exactly 0x102 to DART command offset 0x00: SID0 select bit8 plus invalidate bit1. The busy bit3 cleared on the second poll (`rc=0 command=00000102 polls=2`), within the 100-iteration, one-microsecond-delay bound. This follows the local S5L8960X driver command layout and its requirement to enable translation during invalidation. PERST remained physically LOW throughout the test.
+
+The command selector intentionally changes from 0xF to 0x1. The old 0xF02 command is NOT rewritten: that would issue an all-stream invalidation. Outer comparisons allow only selector bits 11:8 to differ; the invalidate helper separately requires exact completion value 0x102. Other command bits, the fault register, the other three TCR bytes and all twelve protected TTBR words must remain unchanged. TCR returned to zero before the four saved roots were restored. If TCR does not disable, the sequence keeps those four roots invalid and reports failure instead of reinstalling valid roots with translation enabled.
+
+Hardware output: `zero_pass=1 restore_pass=1 rc=0`, `COMPLETE rc=0 stage=12`, module and overlay removed, all seven PMGR domains OFF, Bluetooth UP/RUNNING with zero RX/TX errors, USB and touch present. Battery: Charging, 57%, +77 mA, 4.024 V, 30.6 C, remaining charge 723 mAh. Actual module artifact SHA256: `a07ca259c1f18b8cb62e0d584d9649f9ba73d1cbbf1b55c31863eb2a5707266c`.
+
+The additional seven fake-MMIO cases execute the actual invalidation helper inside the outer TTBR sequence: successful busy-to-idle completion, rejected enable, busy timeout, wrong selected stream, changed fault, rejected disable and lost PERST. Alongside the earlier ten cases, all seventeen pass. On hardware, the host runner additionally requires the exact successful SID0 invalidation marker before accepting stage 12.
+
+This qualifies a bounded SID0 invalidation command under endpoint reset. It does not establish physical BCM4350 requester routing or demonstrate a blocked DMA transaction. The next work is to qualify owned empty translation tables, physical requester routing and containment before releasing PERST and training the endpoint link. No native Wi-Fi enumeration is claimed.

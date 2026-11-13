@@ -34,14 +34,14 @@
 #define N71_PINCTRL_PHYS 0x20f100000ULL
 #define N71_PINCTRL_BYTES 0x1000U
 
-/* There is no PERST release, DART reset/TLB command or PCI host access. */
+/* There is no PERST release, DART reset or PCI host access. */
 static bool armed;
 static unsigned int stage;
 static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset; never release PERST");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate; never release PERST");
 
 static const struct {
     const char *name;
@@ -146,7 +146,7 @@ static bool n71_gpio_ref_ok(struct device_node *np, const char *property,
     return okay;
 }
 
-struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; bool pulse; int pulse_rc; };
+struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; bool pulse; bool flush; int pulse_rc; };
 static unsigned int n71_trial_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->dart + off); }
 static void n71_trial_write(void *ctx, unsigned int off, unsigned int value)
@@ -154,14 +154,19 @@ static void n71_trial_write(void *ctx, unsigned int off, unsigned int value)
 static int n71_trial_perst(void *ctx)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->ap + 4*161) == 0x00072202; }
 static void n71_trial_delay(void *ctx) { msleep(25); }
+static void n71_trial_tick(void *ctx) { udelay(1); }
 static void n71_trial_hold(void *ctx)
 {
     struct n71_dart_trial_mmio *m = ctx;
     const struct n71_dart_trial_ops o = {
         .read = n71_trial_read, .write = n71_trial_write,
-        .perst_low = n71_trial_perst, .hold = n71_trial_delay,
+        .perst_low = n71_trial_perst, .hold = n71_trial_delay, .tick = n71_trial_tick,
     };
-    if (m->pulse) {
+    if (m->flush) {
+        unsigned int command, polls;
+        m->pulse_rc = n71_dart_tcr0_flush_trial(&o, ctx, &command, &polls);
+        pr_info("n71-perst-held: DART1_SID0_TLB_INVALIDATE rc=%d command=%08x polls=%u PERST_LOW no DMA\n", m->pulse_rc, command, polls);
+    } else if (m->pulse) {
         m->pulse_rc = n71_dart_tcr0_pulse(&o, ctx);
         pr_info("n71-perst-held: DART1_TCR0_PULSE rc=%d no TLB command or DMA\n", m->pulse_rc);
     } else n71_trial_delay(ctx);
@@ -424,7 +429,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
             if (stage >= 8) {
                 /* Original N71 DART1 resource=0x602008000/0x4000.
                  * Original S5L8960X read at +0xC, four packed TCR bytes.
-                 * Initial snapshot is read-only; stages 10/11 below perform bounded writes.
+                 * Initial snapshot is read-only; stages 10-12 below perform bounded writes.
                  * Endpoint remains reset and every other port disabled. */
                 dart1 = ioremap(0x602008000ULL, 0x1000);
                 if (!dart1) {
@@ -465,10 +470,11 @@ static int n71_microlease_probe(struct platform_device *pdev)
                     }
                 }
                 if (stage >= 10) {
-                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .pulse = stage == 11 };
+                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .pulse = stage == 11, .flush = stage == 12 };
                     const struct n71_dart_trial_ops ops = {
                         .read = n71_trial_read, .write = n71_trial_write,
                         .perst_low = n71_trial_perst, .hold = n71_trial_hold,
+                        .command_change_mask = stage == 12 ? 0x00000f00U : 0,
                     };
                     unsigned int zero_ok, restore_ok;
                     int trial_rc = n71_dart_disabled_ttbr_trial(&ops, &mm, &zero_ok, &restore_ok);
@@ -591,7 +597,7 @@ static int __init n71_microlease_init(void)
     struct device_node *existing;
     int ret, roll;
 
-    if (stage > 11 || !n71_validate_nodes() ||
+    if (stage > 12 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);
