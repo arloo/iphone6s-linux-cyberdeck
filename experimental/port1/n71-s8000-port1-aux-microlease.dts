@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/dts-v1/;
+/plugin/;
+
+/* Only on phandled N71 Samsung RAM Linux with original port1 block active.
+ * A unique, opt-in microlease experimental device, no MMIO/GPIO/PHY/DART.
+ * THREE PMGR specifiers deliberately prevent the platform core from
+ * attaching and powering a single PM domain before the gated driver probe.
+ * The special driver will target ONLY the independent pcie_aux domain.
+ * NEVER provide any real Apple PCIe host compatible here.
+ */
+/ {
+    fragment@0 {
+        target-path = "/soc";
+        __overlay__ {
+            n71-port1-aux-microlease {
+                compatible = "research,n71-s8000-pcie-aux-microlease";
+                status = "okay";
+                research,owner-supervised-aux-only;
+                power-domains = <0x3a>, <0x3b>, <0x3c>;
+                power-domain-names = "ref", "aux", "link1";
+            };
+        };
+    };
+};
