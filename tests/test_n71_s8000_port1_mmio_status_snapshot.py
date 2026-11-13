@@ -18,15 +18,45 @@ class N71StatusSnapshot(unittest.TestCase):
         self.assertIn('module_init(n71_microlease_init)', SOURCE)
         self.assertIn('module_exit(n71_microlease_exit)', SOURCE)
 
-    def test_read_only_double_gated_with_one_of_two_exclusive_targets(self):
+    def test_read_only_double_gated_with_one_of_three_exclusive_modes(self):
         for expected in ('static bool armed;', 'static bool sample_shared_status;',
                          'static bool sample_port1_status;',
                          'module_param(armed, bool, 0400)',
                          'module_param(sample_shared_status, bool, 0400)',
                          'module_param(sample_port1_status, bool, 0400)',
-                         'sample_shared_status == sample_port1_status'):
+                         'module_param(snapshot_port1_controls, bool, 0400)',
+                         'sample_shared_status + sample_port1_status + snapshot_port1_controls) != 1'):
             self.assertIn(expected, SOURCE)
-        self.assertEqual(SOURCE.count('readl('), 1)
+        self.assertEqual(SOURCE.count('readl('), 2)
+        self.assertNotIn('writel(', SOURCE)
+        self.assertNotIn('readl_relaxed(', SOURCE)
+
+    def test_five_original_port1_registers_are_fixed_read_only(self):
+        for expected in ('{ "root_id1", 0x02cU }',
+                         '{ "port1_id2", 0x180U }',
+                         '{ "port1_id3", 0x194U }',
+                         '{ "port1_id4", 0x1a4U }',
+                         '{ "port1_id5", 0x1acU }',
+                         'snapshot_port1_controls',
+                         'for (j = 0; j < ARRAY_SIZE(port1_regs); j++)',
+                         'n71-control-ro: %s offset=0x%03x value=0x%08x'):
+            self.assertIn(expected, SOURCE)
+        self.assertNotIn('readw(', SOURCE)
+        self.assertNotIn('writeb(', SOURCE)
+        self.assertNotIn('writel(', SOURCE)
+
+    def test_five_exact_port1_control_registers_read_only(self):
+        self.assertIn('static bool snapshot_port1_controls;', SOURCE)
+        self.assertIn('if (snapshot_port1_controls) {', SOURCE)
+        expected=(('root_id1','0x02cU'), ('port1_id2','0x180U'),
+                  ('port1_id3','0x194U'), ('port1_id4','0x1a4U'),
+                  ('port1_id5','0x1acU'))
+        for name, offset in expected:
+            self.assertIn('{ "'+name+'", '+offset+' }', SOURCE)
+        self.assertIn('j < ARRAY_SIZE(port1_regs)', SOURCE)
+        self.assertIn('port1_regs[j].offset', SOURCE)
+        self.assertIn('pr_info("n71-control-ro:', SOURCE)
+        self.assertIn('iounmap(shared_regs)', SOURCE)
         self.assertNotIn('writel(', SOURCE)
         self.assertNotIn('readl_relaxed(', SOURCE)
 

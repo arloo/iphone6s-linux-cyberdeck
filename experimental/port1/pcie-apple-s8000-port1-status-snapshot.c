@@ -33,9 +33,13 @@
 static bool armed;
 static bool sample_shared_status;
 static bool sample_port1_status;
+static bool snapshot_port1_controls;
 module_param(armed, bool, 0400);
 module_param(sample_shared_status, bool, 0400);
 module_param(sample_port1_status, bool, 0400);
+module_param(snapshot_port1_controls, bool, 0400);
+MODULE_PARM_DESC(snapshot_port1_controls,
+  "owner-only five exact N71 S8000 root/port1 32-bit reads, no writes");
 MODULE_PARM_DESC(sample_port1_status,
   "owner-only one 32-bit PORT1 ID5 status read, after PMGR ON");
 MODULE_PARM_DESC(sample_shared_status,
@@ -131,7 +135,9 @@ static int n71_microlease_probe(struct platform_device *pdev)
     u32 status_snapshot;
 
     n71_probe_result = -EPERM;
-    if (!armed || (sample_shared_status == sample_port1_status) ||
+    /* Exactly one read mode, zero if unarmed; never activate implicitly. */
+    if (!armed ||
+        (sample_shared_status + sample_port1_status + snapshot_port1_controls) != 1 ||
         !n71_validate_nodes() ||
         !n71_validate_probe(&pdev->dev))
         return -EPERM;
@@ -169,19 +175,41 @@ static int n71_microlease_probe(struct platform_device *pdev)
         ret = -ENOMEM;
         goto rollback;
     }
-    /* One and only one 32-bit read, selected by XOR module param. Both
-     * offsets are from original Apple N71/S8000 root resource index9.
-     * No polling and NO writes, no port reset or DART/PCIe host access. */
-    status_snapshot = readl((u8 __iomem *)shared_regs +
-           (sample_shared_status ? N71_ROOT_SHARED_REGISTER :
-                                   N71_ROOT_PORT1_REGISTER));
+    /* All offsets are original-N71 validated root register selectors.
+     * No polling or writes: either one selected status sample or a fixed
+     * five-register port1-local snapshot, exclusively by module parameter. */
+    if (snapshot_port1_controls) {
+        static const struct {
+            const char *name;
+            u32 offset;
+        } port1_regs[] = {
+            { "root_id1", 0x02cU },
+            { "port1_id2", 0x180U },
+            { "port1_id3", 0x194U },
+            { "port1_id4", 0x1a4U },
+            { "port1_id5", 0x1acU },
+        };
+        unsigned int j;
+
+        for (j = 0; j < ARRAY_SIZE(port1_regs); j++) {
+            status_snapshot = readl((u8 __iomem *)shared_regs +
+                                    port1_regs[j].offset);
+            pr_info("n71-control-ro: %s offset=0x%03x value=0x%08x\n",
+                    port1_regs[j].name, port1_regs[j].offset,
+                    status_snapshot);
+        }
+    } else {
+        status_snapshot = readl((u8 __iomem *)shared_regs +
+               (sample_shared_status ? N71_ROOT_SHARED_REGISTER :
+                                       N71_ROOT_PORT1_REGISTER));
+        if (sample_shared_status)
+            pr_info("n71-status-ro: root_shared_id1_at_0x60000002c=0x%08x bit4=%u (opaque status, not link)\n",
+                    status_snapshot, !!(status_snapshot & BIT(4)));
+        else
+            pr_info("n71-status-ro: root_port1_id5_at_0x6000001ac=0x%08x bit0=%u (opaque status, not link)\n",
+                    status_snapshot, !!(status_snapshot & BIT(0)));
+    }
     iounmap(shared_regs);
-    if (sample_shared_status)
-        pr_info("n71-status-ro: root_shared_id1_at_0x60000002c=0x%08x bit4=%u (opaque status, not link)\n",
-                status_snapshot, !!(status_snapshot & BIT(4)));
-    else
-        pr_info("n71-status-ro: root_port1_id5_at_0x6000001ac=0x%08x bit0=%u (opaque status, not link)\n",
-                status_snapshot, !!(status_snapshot & BIT(0)));
     msleep(N71_HOLD_MS);
 
 rollback:
@@ -275,5 +303,5 @@ static void __exit n71_microlease_exit(void)
 
 module_init(n71_microlease_init);
 module_exit(n71_microlease_exit);
-MODULE_DESCRIPTION("N71 Samsung gated single PCIe root/port1 status read under PMGR lease");
+MODULE_DESCRIPTION("N71 S8000 gated single-status or five-register read-only PCIe port1 snapshot");
 MODULE_LICENSE("GPL");
