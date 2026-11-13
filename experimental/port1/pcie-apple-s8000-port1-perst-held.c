@@ -40,7 +40,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR; never release PERST");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault; never release PERST");
 
 static const struct {
     const char *name;
@@ -399,7 +399,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
                 readl((u8 __iomem *)root + 0x180), readl((u8 __iomem *)root + 0x194),
                 readl((u8 __iomem *)root + 0x1a4), readl((u8 __iomem *)root + 0x1ac),
                 readl((u8 __iomem *)ap + 4 * N71_PERST_PIN));
-            if (stage == 8) {
+            if (stage >= 8) {
                 /* Original N71 DART1 resource=0x602008000/0x4000.
                  * Original S5L8960X read at +0xC, four packed TCR bytes.
                  * CPU READ ONLY: no driver probe/reset, TTBR, IOVA or SID guess.
@@ -424,6 +424,24 @@ static int n71_microlease_probe(struct platform_device *pdev)
                     goto restore;
                 }
                 pr_info("n71-perst-held: DART1_ALL_FOUR_STREAMS_DISABLED_STATE_PASS; DMA isolation still untested\n");
+                if (stage == 9) {
+                    u32 nonzero = 0, valid = 0, entry, cmd, fault;
+                    unsigned int n;
+                    for (n = 0; n < 16; n++) {
+                        entry = readl((u8 __iomem *)dart1 + 0x40 + 4 * n);
+                        if (entry) nonzero |= BIT(n);
+                        if (entry & BIT(31)) valid |= BIT(n);
+                    }
+                    cmd = readl((u8 __iomem *)dart1 + 0x00);
+                    fault = readl((u8 __iomem *)dart1 + 0x10);
+                    pr_info("n71-perst-held: DART1_TTBR_SNAPSHOT nonzero_mask=%04x valid_mask=%04x command=%08x fault=%08x PERST=%08x READ_ONLY\n",
+                            nonzero, valid, cmd, fault,
+                            readl((u8 __iomem *)ap + 4 * N71_PERST_PIN));
+                    if (readl((u8 __iomem *)ap + 4 * N71_PERST_PIN) != 0x00072202) {
+                        ret = -EIO;
+                        goto restore;
+                    }
+                }
                 iounmap(dart1);
                 dart1 = NULL;
             }
@@ -539,7 +557,7 @@ static int __init n71_microlease_init(void)
     struct device_node *existing;
     int ret, roll;
 
-    if (stage > 8 || !n71_validate_nodes() ||
+    if (stage > 9 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);

@@ -64,3 +64,11 @@ was absent and two pings failed. Cause is not established. This cycle is
 INCOMPLETE, not a full acceptance pass. Current phone health and final
 PMGR states require renewed live verification after USB recovery.
 No PERST release or DART write was introduced.
+
+## Next staged step: stage 9 DART1 selected-register snapshot
+
+Stage 9 extends the existing PERST-held sequence by reading the 16 TTBR words (four tables per each of four streams, contiguous 32-bit registers starting at offset 0x40), command register 0x00 and fault register 0x10. It reports only TTBR nonzero/valid bitmasks, not physical table addresses. The existing packed-TCR zero-state check and low-PERST validation remain mandatory. No DART write, TLB command, TTBR programming, reset release or PCI scan is added.
+
+The real ARM64 module compiled against the current `n71-batt1` kernel. Physical execution is PENDING: the owner-host USB address disappeared before the runner could bind its USB-only transfer server. A subsequent read-only host check showed no Apple USB device and no USB network address. Therefore this stage sent no module to the phone and performed no new phone register access. The last confirmed live check before that interruption showed battery Charging at 57%, about +103 mA, and Bluetooth UP/RUNNING with zero errors. Current phone state requires reconnection and revalidation.
+
+This snapshot prepares the next decision about isolated DART configuration; it is not a claim of working DMA isolation or native Wi-Fi enumeration.
