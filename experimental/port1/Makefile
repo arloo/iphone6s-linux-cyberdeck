@@ -15,3 +15,4 @@ obj-m += pcie-apple-s8000-port1-triplet-microlease.o
 obj-m += pcie-apple-s8000-port1-status-snapshot.o
 obj-m += pcie-apple-s8000-port1-id3-id2-stage.o
 obj-m += pcie-apple-s8000-port1-id3-id2-id4-stage.o
+obj-m += n71-s8000-wlan-pmu-regon-microlease.o
