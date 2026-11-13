@@ -114,3 +114,18 @@ On the Dell, the project source tree has its existing private touch and research
 **No upstream patch was actually applied** to the owner's working Linux tree, compiled into the currently running phone, or executed on any hardware. The static feasibility check is not a functional test. All original Apple firmware/OTP/calibration remain private. The phone still runs the last verified RAM Linux with Wi-Fi software and unchanged inert port1.
 
 **Priority update:** Reuse the S8003 implementation's **architecture, bounded state machine and error rollback design** as abstract engineering references, and prioritize S5L8960X DART hardening in a separate offline worktree. Implement the **S8000-only** root and PHY semantics with independent verification against original N71 evidence; prohibit global root tuning replay, NAND reset and requester-to-SID guesses.
+
+## Evidence correction — 2026-11-13: Bluetooth chip id 110 is NOT PCIe Wi-Fi enumeration
+
+A third-party research summary used [this project's issue #3](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/3) to claim that the BCM4350 Wi-Fi PCIe endpoint was publicly enumerated on an iPhone 6s N71/S8000. We verified that issue and its two comments directly through GitHub. **They contain no Wi-Fi PCIe enumeration log.**
+
+- The log `Bluetooth: hci0: BCM: chip id 110` and `Bluetooth: hci0: BCM4350C5` is from the Bluetooth controller on Apple UART HCI, **not a PCIe config-space read**. HCI chip ID 110 is not the PCI vendor/device identifier.
+- The actual Nov 9 physical N71 Bluetooth experiment did load owner-private Patchram build 0825 into RAM, with **25 passive BLE advertisements in 12 seconds**. This demonstrates HCI/BLE RF reception, not Bluetooth pairing and not Wi-Fi.
+- The [upstream Linux Wireless brcmfmac PCIe device list](https://wireless.docs.kernel.org/en/latest/en/users/drivers/brcm80211.html) documents expected BCM4350 ID **14e4:43a3**, but source driver support and board firmware availability do **not** prove the endpoint has appeared on the N71 PCIe bus.
+- A repeat **physical read-only smoke test** of the owner's currently running N71 RAM Linux with cfg80211/brcmfmac and 17 original C5 files still returns `N71_BCM4350_PCIE_ENDPOINTS_IOMMU_NATIVE_WLAN_ALL_ZERO=YES` and a retained pre-MMIO hardware activation block.
+- [AppleBCMWLANCompanion](https://github.com/0xFireWolf/AppleBCMWLANCompanion) addresses Broadcom firmware on supported **macOS** configurations; it is not a demonstrated N71/S8000 Linux PCIe/DART1 port.
+- [Orchard N71 support status](https://github.com/OrchardLinux/orchard/blob/main/devices/n71/device.toml) says `wifi = "missing"`. Its existing S8003 host driver uses a T8010-like `phy-ip` region that the Samsung S8000 does not expose.
+
+**Proof still required:** actual safe S8000 PCIe config-space vendor/device 14e4:43a3 with stable port1 bus numbering; correct physical PCIe requester-to-DART1 SID, IOVA fault containment and protected NAND/baseband ports; then brcmfmac firmware startup, authenticated wireless association, DHCP and traffic. **Never interpret `chip id 110` as that PCIe proof.**
+
+This corrects the **specific cited claims** only; it does not assert that no unpublished work elsewhere could exist. No on-device hardware writes or Apple firmware disclosure were involved.
