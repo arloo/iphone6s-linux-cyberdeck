@@ -4,3 +4,4 @@
 #   make -C <kernel> O=<matching-build> M=<this-dir> ARCH=arm64 modules
 # Never activate hardware without a supervised RAM-only test plan.
 obj-m += pcie-apple-s8000-port1-powerstage.o
+obj-m += pcie-apple-s8000-port1-live-dt-observer.o
