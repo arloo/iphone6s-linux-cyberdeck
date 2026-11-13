@@ -2,7 +2,11 @@
 
 **2026-11-13. Verified directly against owner-private original N71 Apple kernelcache Mach-O, authentic N71 ADT, and original iOS PCIe root/port1 IORegistry snapshots. Entirely OFFLINE; no iPhone PCIe/MMIO/DART activity.**
 
-## New original-source findings
+## Correction: the mapping initialization below belongs to a different class
+
+The original analysis incorrectly connected the shared-module initializer at +0x2074 to the port-instance +208 pointer. That initializer belongs to another class in the same executable; equal field offsets do not establish object identity. This report's index0/global-config inference is superseded by `tools/n71_s8000_port_local_mmio_gate.py`. The constructed port uses the Embedded port initializer (vslot104, +0x4918): its root vslot1864 selects `1+2*port`, the map object is stored at +200, its virtual base at +208 and a physical/helper result at +216. Port1 selects resource3, 0x602000000/0x4000. The exact original vtables, instruction chain and original live resource list pass the new gate. The old tool's initializer-fragment checks alone do not prove port-pointer provenance.
+
+## Historical findings (partially superseded)
 
 We resolved a previously opaque part of the authentic Apple `AppleS800xPCIePort` driver: the **port-local virtual configuration writer** and its pointer provenance. This is original Apple runtime-source analysis and **not** a new Linux driver that can operate Wi-Fi.
 

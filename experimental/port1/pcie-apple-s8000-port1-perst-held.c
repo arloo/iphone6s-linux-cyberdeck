@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /* N71/S8000: bounded PERST-low WLAN/PMGR/ID3 experiment.
- * Never drives PERST HIGH or scans PCI; stages10-14 write selected DART state.
+ * Never drives PERST HIGH or scans PCI; stages10-15 write selected DART state.
  * Stage8 only reads the original DART1 packed TCR once under endpoint reset.
  * Source and physical test are board-specific; no analog voltage claim.
  */
@@ -27,6 +27,7 @@
 #include "n71-s8000-port1-perst-held-blob.h"
 #include "n71-dart-ttbr-disabled-trial.h"
 #include "n71-dart-owned-roots-trial.h"
+#include "n71-port-local-trial.h"
 
 #define N71_STATUS_SNAPSHOT_NODE "/soc/n71-port1-perst-held"
 #define N71_PCI_GUARD "/soc/pcie-port1-preflight@602000000"
@@ -46,7 +47,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell; never release PERST");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control; never release PERST");
 
 static const struct {
     const char *name;
@@ -212,7 +213,7 @@ fail:
     return ret;
 }
 
-struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; void __iomem *root; bool dwell; bool pulse; bool flush; bool owned; const u32 *roots; int pulse_rc; };
+struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; void __iomem *root; void __iomem *port; bool local; bool dwell; bool pulse; bool flush; bool owned; const u32 *roots; int pulse_rc; };
 static unsigned int n71_trial_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->dart + off); }
 static void n71_trial_write(void *ctx, unsigned int off, unsigned int value)
@@ -239,13 +240,48 @@ static int n71_owned_active_hold(void *ctx)
     pr_info("n71-perst-held: DART1_OWNED_ROOTS_ACTIVE_STABLE samples=25 TCR=00000080 command=00000102 PERST_LOW\n");
     return 0;
 }
+static unsigned int n71_port_read(void *ctx, unsigned int off)
+{ struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->port + off); }
+static void n71_port_write(void *ctx, unsigned int off, unsigned int value)
+{ struct n71_dart_trial_mmio *m = ctx; writel(value, (u8 __iomem *)m->port + off); }
+static int n71_port_perst_level(void *ctx)
+{
+    struct n71_dart_trial_mmio *m = ctx;
+    u32 value = readl((u8 __iomem *)m->ap + 4*161);
+    return value == 0x00072202 ? 0 : value == 0x00072203 ? 1 : -1;
+}
+static int n71_port_dart_ready(void *ctx)
+{
+    struct n71_dart_trial_mmio *m = ctx;
+    unsigned int j;
+    if (n71_trial_read(ctx, 0x0c) != 0x80 || n71_trial_read(ctx, 0) != 0x102 ||
+        (n71_trial_read(ctx, 0x10) & BIT(31)) ||
+        readl((u8 __iomem *)m->root + 0x1ac) != 1 ||
+        (readl((u8 __iomem *)m->root + 0x2c) & 0x11) != 0x11) return 0;
+    for (j = 0; j < 4; j++)
+        if (n71_trial_read(ctx, 0x40 + 4*j) != m->roots[j]) return 0;
+    return 1;
+}
+static void n71_port_delay(void *ctx) { msleep(10); }
+static int n71_port_active_hold(void *ctx)
+{
+    const struct n71_port_trial_ops ops = {
+        .read = n71_port_read, .write = n71_port_write,
+        .perst_level = n71_port_perst_level, .dart_ready = n71_port_dart_ready,
+        .delay = n71_port_delay,
+    };
+    unsigned int status, samples, restored;
+    int rc = n71_port_local_trial(&ops, ctx, 0, &status, &samples, &restored);
+    pr_info("n71-perst-held: PORT1_LOCAL_CONTROL_TRIAL rc=%d status88=%08x samples=%u restored=%u PERST_LOW\n", rc, status, samples, restored);
+    return rc;
+}
 static void n71_trial_hold(void *ctx)
 {
     struct n71_dart_trial_mmio *m = ctx;
     const struct n71_dart_trial_ops o = {
         .read = n71_trial_read, .write = n71_trial_write,
         .perst_low = n71_trial_perst, .hold = n71_trial_delay, .tick = n71_trial_tick,
-        .active_hold = m->dwell ? n71_owned_active_hold : NULL,
+        .active_hold = m->local ? n71_port_active_hold : m->dwell ? n71_owned_active_hold : NULL,
     };
     if (m->owned) {
         unsigned int command, polls;
@@ -272,7 +308,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
     struct device_node *ap_node;
     struct platform_device *ap_dev = NULL;
     struct regmap *map;
-    void __iomem *ap = NULL, *root = NULL, *dart1 = NULL;
+    void __iomem *ap = NULL, *root = NULL, *dart1 = NULL, *port1 = NULL;
     u32 perst_saved, cached, protected_saved[ARRAY_SIZE(protected_pins)];
     u32 id1 = 0, id2 = 0, id3 = 0, id4 = 0, id5 = 0, after = 0;
     u32 lane_saved = 0, done_saved = 0, common_status = 0;
@@ -559,7 +595,11 @@ static int n71_microlease_probe(struct platform_device *pdev)
                     }
                 }
                 if (stage >= 10) {
-                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .root = root, .dwell = stage == 14, .pulse = stage == 11, .flush = stage == 12, .owned = stage >= 13, .roots = n71_tables.word };
+                    if (stage >= 15) {
+                        port1 = ioremap(0x602000000ULL, 0x4000);
+                        if (!port1) { ret = -ENOMEM; goto restore; }
+                    }
+                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .root = root, .port = port1, .local = stage >= 15, .dwell = stage == 14, .pulse = stage == 11, .flush = stage == 12, .owned = stage >= 13, .roots = n71_tables.word };
                     const struct n71_dart_trial_ops ops = {
                         .read = n71_trial_read, .write = n71_trial_write,
                         .perst_low = n71_trial_perst, .hold = n71_trial_hold,
@@ -688,6 +728,8 @@ out:
         gpiod_put(wlan);
     if (perst)
         gpiod_put(perst);
+    if (port1)
+        iounmap(port1);
     if (dart1)
         iounmap(dart1);
     if (root)
@@ -721,7 +763,7 @@ static int __init n71_microlease_init(void)
     struct device_node *existing;
     int ret, roll;
 
-    if (stage > 14 || !n71_validate_nodes() ||
+    if (stage > 15 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);

@@ -126,3 +126,12 @@ On the phone, active dwell ran from approximately uptime 1610.224 to 1610.501 s 
 Actual stage14 module SHA256: `ae530aa48b3921df0561dc6af161b95930bf0bb80e5293ad7b1c6973aee02304`. The fake-MMIO suite now has thirty scenarios across three compiled-C tests, including accepted and rejected active-dwell callbacks. These synthetic callback cases check propagation and rollback; the native sampling loop was exercised on the physical phone.
 
 The result establishes bounded register stability with owned empty roots under reset. It does not prove that a BCM4350 DMA request reaches SID0, that the hardware table walker interprets the empty entries as expected, or that a real fault is contained. Link training, physical requester qualification and enumeration remain outstanding; native Wi-Fi is not yet active. The current RAM boot stays available for the next supervised hardware stage.
+
+
+## Stage 15: original-source local port mapping and control accepted
+
+The actual port-instance initializer selects root resource `1+2*port` through root vslot1864, maps that resource, stores the map object at +200 and virtual base at +208. Port1 therefore uses resource3 (0x602000000/0x4000), confirmed against the original constructed vtables and live iOS resource list. An earlier report had incorrectly connected a different class's initializer to the port. The new original-source gate corrects that inference and also qualifies port control 0x80 bit0 and status 0x88 bit0 through the actual port accessors.
+
+Stage15 maps only this port1 aperture, sets control0x80 from 0 to 1 under PERST LOW and active empty SID0 roots, samples status0x88 25 times, then restores control0x80 to 0 before DART teardown. At uptime2093 s: `rc=0 status88=00000004 samples=25 restored=1 PERST_LOW`. No endpoint reset release, PCI config access or DMA submission. Full TTBR/control/GPIO restoration, all seven PMGR domains OFF, module/overlay absent, USB/touch/HCI preserved with zero Bluetooth errors. Battery Charging, 60%, +63 mA, 4.052 V, 31.5 C. Module SHA256 `2ed20ca532571b97e3b6f4d3c71d19bad5cfcdbd08c5000d427c78a047c628dd`.
+
+The actual C transaction passes eleven fake-I/O cases including control write/restore failure, changed DART guard, unexpected PERST, and modeled release/reassert paths. Those release paths have not yet run physically at this checkpoint. Status bit0 stayed clear under endpoint reset; no working link is inferred.
