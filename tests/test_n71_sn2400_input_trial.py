@@ -18,11 +18,13 @@ SHIM = r"""
 #define __exit
 #define BIT(n) (1u << (n))
 #define module_param(...)
+#define MODULE_PARM_DESC(...)
 #define MODULE_LICENSE(...)
 #define MODULE_DESCRIPTION(...)
 #define module_init(...)
 #define module_exit(...)
 #define pr_info(...) do {} while (0)
+#define pr_info_ratelimited(...) do {} while (0)
 #define pr_err(...) do {} while (0)
 struct device_node {int unused;};
 struct device {struct device_node *of_node;};
@@ -69,7 +71,7 @@ int regmap_write(struct regmap *m, unsigned int r, unsigned int v) {
         if(v==0 && fail_restore)return -EIO;
         regs[r]=v;
         if(v!=0 && partial_input_fail)return -EIO;
-    } else regs[r]=adc_timeout?v:0;
+    } else regs[r]=adc_timeout?v:(v & ~BIT(4));
     return 0;
 }
 #define regmap_read_poll_timeout(m,r,v,condition,delay,timeout) \
@@ -99,13 +101,16 @@ int main(int argc, char **argv) {
     if(!strcmp(case_name,"no-battery"))no_battery=true;
     if(!strcmp(case_name,"partial-write"))partial_input_fail=true;
     if(!strcmp(case_name,"restore-failure")){partial_input_fail=true;fail_restore=true;}
+    if(!strcmp(case_name,"adc-idle-selector"))regs[0x11]=0x0a;
+    if(!strcmp(case_name,"adc-unknown"))regs[0x11]=0x80;
+    if(!strcmp(case_name,"lease-invalid"))lease_seconds=3601;
     rc=trial_init();
     if(!strcmp(case_name,"low-battery") || !strcmp(case_name,"hot") || !strcmp(case_name,"cold") || !strcmp(case_name,"low-voltage")) {
         assert(rc==-ERANGE && writes==0 && device_refs==0 && battery_refs==0);return 0;
     }
     if(!strcmp(case_name,"wrong-board")){assert(rc==-ENODEV && bus_gets==0 && writes==0);return 0;}
-    if(!strcmp(case_name,"invalid-current")){assert(rc==-EINVAL && bus_gets==0 && writes==0);return 0;}
-    if(!strcmp(case_name,"existing-input") || !strcmp(case_name,"disabled-input")) {
+    if(!strcmp(case_name,"invalid-current") || !strcmp(case_name,"lease-invalid")){assert(rc==-EINVAL && bus_gets==0 && writes==0);return 0;}
+    if(!strcmp(case_name,"existing-input") || !strcmp(case_name,"disabled-input") || !strcmp(case_name,"adc-unknown")) {
         assert(rc==-EPERM && writes==0 && device_refs==0 && battery_refs==0);return 0;
     }
     if(!strcmp(case_name,"no-battery")){assert(rc==-ENODEV && writes==0 && device_refs==0 && battery_refs==0);return 0;}
@@ -119,15 +124,16 @@ int main(int argc, char **argv) {
         assert(regs[9]==0 && device_refs==0 && battery_refs==0);return 0;
     }
     assert(rc==0 && regs[9]==21 && scheduled==1 && changed);
-    if(!strcmp(case_name,"deadline"))jiffies=30000;
+    if(!strcmp(case_name,"deadline") || !strcmp(case_name,"adc-idle-selector"))jiffies=30000;
     else if(!strcmp(case_name,"droop")){jiffies=2000;vbus=4500000;}
     else if(!strcmp(case_name,"detach")){jiffies=2000;regs[7]&=~BIT(5);}
     else if(!strcmp(case_name,"hot-monitor")){jiffies=2000;temperature=400;}
     else if(!strcmp(case_name,"healthy-monitor"))jiffies=2000;
-    else if(strcmp(case_name,"unload"))abort();
+    else if(strcmp(case_name,"unload") && strcmp(case_name,"adc-idle-selector"))abort();
     if(strcmp(case_name,"unload"))monitor_work(NULL);
     if(!strcmp(case_name,"healthy-monitor"))assert(changed && regs[9]==21 && scheduled==2);
     else if(strcmp(case_name,"unload"))assert(!changed && regs[9]==0);
+    if(!strcmp(case_name,"adc-idle-selector"))assert(regs[0x11]==0x0a);
     trial_exit();assert(!changed && regs[9]==0 && device_refs==0 && battery_refs==0);
     return 0;
 }
@@ -153,7 +159,7 @@ class TrialTests(unittest.TestCase):
         for case in ['unarmed','low-battery','hot','cold','low-voltage','wrong-board',
                      'invalid-current','existing-input','disabled-input','adc-timeout',
                      'low-vbus','no-battery','partial-write','restore-failure','deadline',
-                     'droop','detach','hot-monitor','healthy-monitor','unload']:
+                     'droop','detach','hot-monitor','healthy-monitor','unload','adc-idle-selector','adc-unknown','lease-invalid']:
             with self.subTest(case=case):
                 subprocess.run([str(self.exe),case],check=True,capture_output=True,text=True)
 

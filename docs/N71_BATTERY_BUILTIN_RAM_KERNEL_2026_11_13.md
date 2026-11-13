@@ -78,3 +78,7 @@ The complete non-identifying TSV and summary are retained privately in the owner
 ## Input-limit restriction located; charging trial pending recharge
 
 Charging work now takes priority over further PCIe tests. A physical read-only SN2400 snapshot read `07=b9`, `09=00`, `0d=ff`, `10=04`, `1d=00`. The zero input setting corresponds to 90 mA in the upstream SN2400 driver; original N71 Apple driver arithmetic independently corroborates the scale. A new default-inert [input-limit trial module](../experimental/power/README.md) is built for the current diagnostic kernel, with 300 mA default and timed rollback. The actual arm request was refused at 9% before changing the input limit. Battery recharge is required before physical current validation; a working charging fix is not yet claimed.
+
+## Charging under Linux physically demonstrated
+
+After recharge, a same-boot 90 -> 300 -> 90 mA input-limit experiment changed the battery gauge from -150 mA discharge to +100..+112 mA charge, then back to -142 mA discharge after automatic rollback. Remaining charge increased from 700 to 701 mAh during the brief trial; temperature stayed 31.0 C and VBUS under load was about 4.9 V. The ADC selector inherited from iOS (`0x0a`) is now preserved across VBUS measurements. A subsequent monitored 300 mA session lease is enabled for up to one hour, with automatic restoration and unchanged battery/VBUS bounds. Details and scope: [SN2400 session fix](../experimental/power/README.md). This is a RAM-session fix, not yet persistent across boots or validated through a full charge.

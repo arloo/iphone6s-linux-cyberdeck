@@ -21,6 +21,9 @@
 #define REG_ADC_DATA 0x12
 static bool armed;
 static unsigned int input_ua = 300000;
+static unsigned int lease_seconds = 30;
+module_param(lease_seconds, uint, 0400);
+MODULE_PARM_DESC(lease_seconds, "30..3600 seconds, then restore original input limit");
 module_param(armed, bool, 0400);
 module_param(input_ua, uint, 0400);
 static struct device *chip_dev;
@@ -48,15 +51,19 @@ static int battery_ok(void)
 }
 static int vbus_read(int *uv)
 {
-    unsigned int value;
-    int ret = regmap_write(chip_map, REG_ADC_CTL, BIT(4));
+    unsigned int value, saved_adc;
+    int ret, restore_ret;
+    ret = regmap_read(chip_map, REG_ADC_CTL, &saved_adc);
     if (ret) return ret;
-    ret = regmap_read_poll_timeout(chip_map, REG_ADC_CTL, value,
+    /* Permit any idle channel selector; reject active/unknown controls. */
+    if (saved_adc & ~0x0eU) return -EBUSY;
+    ret = regmap_write(chip_map, REG_ADC_CTL, BIT(4));
+    if (!ret) ret = regmap_read_poll_timeout(chip_map, REG_ADC_CTL, value,
                                   !(value & BIT(4)), 5000, 100000);
-    if (ret) return ret;
-    ret = regmap_read(chip_map, REG_ADC_DATA, &value);
+    if (!ret) ret = regmap_read(chip_map, REG_ADC_DATA, &value);
     if (!ret) *uv = value * 25000;
-    return ret;
+    restore_ret = regmap_write(chip_map, REG_ADC_CTL, saved_adc);
+    return ret ? ret : restore_ret;
 }
 static int restore_input(const char *reason)
 {
@@ -77,7 +84,7 @@ static void monitor_work(struct work_struct *work)
     mutex_lock(&trial_lock);
     if (!changed) goto out;
     if (time_after_eq(jiffies, deadline)) {
-        restore_input("30s-expired");
+        restore_input(lease_seconds == 30 ? "30s-expired" : "lease-expired");
         goto out;
     }
     ret = battery_ok();
@@ -92,7 +99,7 @@ static void monitor_work(struct work_struct *work)
         restore_input("monitor-stop");
         goto out;
     }
-    pr_info("n71-sn2400-trial: MONITOR VBUS_uV=%d status=%02x input_uA=%u\n", uv, status, input_ua);
+    pr_info_ratelimited("n71-sn2400-trial: MONITOR VBUS_uV=%d status=%02x input_uA=%u\n", uv, status, input_ua);
     schedule_delayed_work(&monitor, msecs_to_jiffies(2000));
 out:
     mutex_unlock(&trial_lock);
@@ -102,7 +109,8 @@ static int __init trial_init(void)
     unsigned int status, control, adc;
     int ret;
     INIT_DELAYED_WORK(&monitor, monitor_work);
-    if (input_ua != 300000 && input_ua != 500000) return -EINVAL;
+    if ((input_ua != 300000 && input_ua != 500000) ||
+        lease_seconds < 30 || lease_seconds > 3600) return -EINVAL;
     if (!armed) {
         pr_info("n71-sn2400-trial: UNARMED no hardware access\n");
         return 0;
@@ -125,7 +133,7 @@ static int __init trial_init(void)
     if (ret) goto fail;
     pr_info("n71-sn2400-trial: BASE status=%02x control=%02x input=%02x adc=%02x\n",
             status, control, saved_input, adc);
-    if ((status & 0xa0) != 0xa0 || control != 0x04 || saved_input != 0 || adc != 0) { ret = -EPERM; goto fail; }
+    if ((status & 0xa0) != 0xa0 || control != 0x04 || saved_input != 0 || (adc & ~0x0eU)) { ret = -EPERM; goto fail; }
     ret = vbus_read(&baseline_uv);
     if (ret) goto fail;
     if (baseline_uv < 4400000 || baseline_uv > 5500000) { ret = -ERANGE; goto fail; }
@@ -142,9 +150,9 @@ static int __init trial_init(void)
         }
         goto fail;
     }
-    deadline = jiffies + msecs_to_jiffies(30000);
+    deadline = jiffies + msecs_to_jiffies(lease_seconds * 1000);
     schedule_delayed_work(&monitor, msecs_to_jiffies(2000));
-    pr_info("n71-sn2400-trial: APPLIED input_uA=%u original_uA=90000 VBUS_uV=%d automatic_restore_ms=30000\n", input_ua, baseline_uv);
+    pr_info("n71-sn2400-trial: APPLIED input_uA=%u original_uA=90000 VBUS_uV=%d automatic_restore_ms=%u\n", input_ua, baseline_uv, lease_seconds * 1000);
     return 0;
 fail:
     if (battery) { power_supply_put(battery); battery = NULL; }

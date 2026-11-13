@@ -1,6 +1,6 @@
 # N71 SN2400 charging investigation
 
-Status: a concrete input-limit restriction is observed; a bounded charging trial is compiled. Positive battery current from the change is NOT YET verified.
+Status: physical N71 before/during/after trial PASS. Increasing the input limit from 90 to 300 mA produces positive battery current; restoring 90 mA returns to discharge. A monitored session lease is active; automatic boot integration and full-charge durability remain pending.
 
 The N71 diagnostic kernel reads the BQ27540 gauge correctly, but its existing SN2400 driver only handles HDQ ownership. Across a 60-sample Dell/wall-supply observation the gauge reported net discharge throughout. Native PCIe/WLAN remains pending; PCIe tests are paused for charging work.
 
@@ -38,3 +38,21 @@ make -C "$KERNEL" O="$BUILD" M="$PWD/experimental/power" \
 ```
 
 The existing private RAM image is unchanged. A pinned owner-local USB runner is staged for a before/during/after comparison following recharge. It defaults unarmed, uses the single-syscall module loader, and does not automatically retry a rejected arm request.
+
+## Physical charging fix validation after recharge
+
+The owner returned with Linux active and 56% battery. The initial trial rejected an idle ADC selector of `0x0a`; it made no input-limit change. The revised ADC helper accepts idle selectors only, saves the selector, performs the VBUS conversion, and restores the selector after each measurement. Active and unknown ADC control bits remain rejected.
+
+The complete physical comparison on the same diagnostic kernel was:
+
+| Phase | Input limit | Battery state/current | Other observation |
+| --- | --- | --- | --- |
+| Before | 90 mA | Discharging, -150 mA | 55%, 3.921 V, 31.0 C |
+| During | 300 mA | Charging: +100, +107, +101, +112, +101 mA | Remaining charge 700 to 701 mAh; VBUS about 4.9 V |
+| After automatic restore | 90 mA | Discharging, -142 mA | Restore readback and module removal returned 0; USB intact |
+
+This demonstrates real net charging under Linux and the effect of the input limit on this N71. It does not prove that the earlier Wi-Fi experiments caused the 90 mA setting, or qualify every charger/cable and temperature condition.
+
+A subsequent version adds read-only `lease_seconds=30..3600`, default 30, to support a monitored research session. A 3600-second lease at 300 mA was explicitly activated on the physical phone after the successful rollback test. It automatically restores the previous input setting on expiry, monitor failure or unload. This is a temporary RAM-session fix; it must be re-applied after reboot and is not an autonomous, full-charge driver. Battery voltage/temperature and VBUS bounds are unchanged.
+
+The actual C source passes 23 fake-I/O scenarios, including the preserved idle ADC selector, unknown ADC control rejection, and excessive lease rejection. ARM64 module compilation and matching kernel ABI pass. No battery charge-voltage/current setpoints were altered.
