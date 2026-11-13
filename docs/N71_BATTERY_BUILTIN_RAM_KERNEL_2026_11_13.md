@@ -57,3 +57,20 @@ Both an unarmed module load/unload and a single armed stage-8 test completed on 
 This completes a new full postflight; it does not retroactively complete the previous battery-interrupted cycle or prove DART DMA isolation. PERST release, physical enumeration and native Wi-Fi remain pending.
 
 `tools/n71-battery-log.sh` provides a finite, timestamped gauge log for a supervised comparison between Dell USB and a wall supply while keeping this same Linux boot. It does not write charging controls, refuses overwriting an existing log, samples at most 60 times at intervals of at most 10 seconds, and stops if state of charge drops below 15% or temperature reaches 45 C. It is transferred into RAM after boot; the pinned image itself is unchanged. A physical supply comparison has not yet been performed.
+
+## Wall-supply comparison in the same Linux boot
+
+The owner moved the running phone from Dell USB to a wall charger and back. Linux remained on the same diagnostic boot; the USB controller logged its next host enumeration at uptime 1134.5 s. The finite RAM logger completed all 60 samples over 600.15 seconds (uptime 609.43 through 1209.58 s). The owner-reported wall-supply interval is included; exact unplug and wall-attachment timestamps and charger specifications were not independently recorded.
+
+| Measurement | Recorded result |
+| --- | --- |
+| State of charge | 18% to 16% |
+| Remaining charge | 221 to 194 mAh |
+| Status | Discharging in 60/60 samples |
+| Current | -319 to -150 mA; median -159 mA |
+| Positive-current samples | 0/60 |
+| Reading after return to Dell | 16%, -160 mA, 3.594 V, 30.5 C |
+
+The phone showed net discharge throughout the observed test, including the owner-reported wall-charger phase. Battery telemetry remains operational. This result does not distinguish absent charger input, input insufficient to cover the load, charger configuration/watchdog behavior, or other hardware causes; it does not establish that every Linux setup is unable to charge. The next extended hardware session requires recharging in iOS or an independently verified source of sustained net charge. No charger setpoints, flash storage, PCIe reset release or DART writes were attempted in this comparison.
+
+The complete non-identifying TSV and summary are retained privately in the owner workspace. USB access recovered and HCI remained UP/RUNNING with zero RX/TX errors on return to Dell. The diagnostic kernel, private RAM image and module source are unchanged.
