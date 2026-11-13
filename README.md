@@ -23,6 +23,8 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 
 **Original N71 S8000 PCIe CONFIG writer and provider-index provenance audited OFFLINE (2026-11-13):** [Authentic Apple kernelcache + iOS IORegistry evidence, opcode/source verifier and 16 synthetic tests](docs/N71_S8000_ORIGINAL_PCIE_PORT_CONFIG_POINTER_PROVIDER_2026_11_13.md). Original port method 1568 uses selected relative config offsets `0x124` and `0x128`; port method 2008 validates access then performs an indirect 32-bit write via port object field `+208`. The original constructor gets this pointer from parent provider slot976 with index0, whereas the **stock iOS provider resource index0 is the 16-MiB GLOBAL PCIe configuration window**, not Wi-Fi port1 windows (indexes3/4). These are **source-level, not physical pointer-return or register-effect proofs**. The global configuration window is unsafe for an unqualified port1-only write allowlist. No new hardware access, physical BCM4350 enumeration, DART1 DMA, or iPhone reboot took place.
 
+**BCM4350 PCIe OTP firmware-selection driver compiled OFFLINE for AArch64 (2026-11-13):** [Orchard-derived exact two-hunk patch 0017, ARM64 kernel-object proof, and 15 adversarial software tests](docs/N71_S8000_BCM4350_OTP_SOFTWARE_AARCH64_2026_11_13.md). The N71 software-only `brcmfmac/pcie.o` cross-compile produced a verified **758,344-byte AArch64 ELF relocatable**. The upstream layout is known from BCM4350 **C2** on iPad Air 2; actual N71 **C5** OTP format/firmware compatibility is **not validated**. No real PCIe endpoint, DART1 DMA or native WLAN was enabled, and the existing phone Linux RAM boot remains unchanged.
+
 ## Verified hardware, November 11, 2026 — S8000/N71 only
 
 | Component | Observed result | Status |

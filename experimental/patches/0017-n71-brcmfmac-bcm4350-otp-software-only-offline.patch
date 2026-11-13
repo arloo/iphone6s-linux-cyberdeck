@@ -1,0 +1,61 @@
+Subject: [EXPERIMENTAL OFFLINE] brcmfmac: BCM4350 OTP selection from Orchard
+SPDX-License-Identifier: GPL-2.0-only
+
+Source: OrchardLinux/orchard upstream kernel wifi patch 0005 (29 Oct 2026).
+Author: Henrik Klee. Reported by Martin Puskac. Credit retained by reference.
+Upstream: https://github.com/OrchardLinux/orchard/tree/main/kernel/patches/drivers/wifi
+The upstream code was applied unmodified on the project-specific kernel source.
+Compiled on owner Dell only; NOT installed on iPhone, not PCIe enabled.
+Original upstream validation used BCM4350 iPad Air 2 with C2 OTP, not N71 C5.
+This does not establish C5 firmware compatibility or native WLAN.
+---
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
+@@ -2049,14 +2049,31 @@
+ static int brcmf_pcie_read_otp(struct brcmf_pciedev_info *devinfo)
+ {
+ 	const struct pci_dev *pdev = devinfo->pdev;
+ 	struct brcmf_bus *bus = dev_get_drvdata(&pdev->dev);
+-	u32 coreid, base, words, idx, sromctl;
++	u32 coreid, base, words, idx, sromctl, otpsize;
++	bool optional = false;
+ 	u16 *otp;
+ 	struct brcmf_core *core;
+ 	int ret;
+ 
+ 	switch (devinfo->ci->chip) {
++	case BRCM_CC_4350_CHIP_ID:
++		/*
++		 * The 40 nm OTP holds (CC_CAP_OTPSIZE + 1) Kbit and is
++		 * shadowed in ChipCommon from 0x800; Apple's records start
++		 * at 0x8c0. The BCM4350 is used on non-Apple boards too,
++		 * whose OTP has no Apple record, so don't fail without one.
++		 */
++		otpsize = (devinfo->ci->cc_caps & CC_CAP_OTPSIZE) >>
++			  CC_CAP_OTPSIZE_SHIFT;
++		if (!otpsize)
++			return 0;
++		coreid = BCMA_CORE_CHIPCOMMON;
++		base = 0x8c0;
++		words = (otpsize + 1) * 1024 / 16 - (0x8c0 - 0x800) / 2;
++		optional = true;
++		break;
+ 	case BRCM_CC_4355_CHIP_ID:
+ 		coreid = BCMA_CORE_CHIPCOMMON;
+ 		base = 0x8c0;
+ 		words = 0xb2;
+@@ -2126,8 +2143,13 @@
+ 	}
+ 
+ 	ret = brcmf_pcie_parse_otp(devinfo, (u8 *)otp, 2 * words);
+ 	kfree(otp);
++
++	if (ret && optional) {
++		brcmf_dbg(PCIE, "No Apple OTP record, using default firmware\n");
++		return 0;
++	}
+ 
+ 	return ret;
+ }
+ 
