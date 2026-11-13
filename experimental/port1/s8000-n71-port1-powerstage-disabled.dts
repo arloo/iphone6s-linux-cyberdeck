@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/*
+ * NOT BOOTABLE AS AN ACTIVE POWER EXPERIMENT WITHOUT SUPERVISION.
+ * Unlike descriptor-only preflight, enabling this node and loading the
+ * matching module with allow_power_test=1 invokes real PMGR power control.
+ * This DTB leaves the node DISABLED and cannot turn on any domain by default.
+ */
+#include "s8000-n71-port1-preflight.dts"
+
+&pcie_port1_preflight {
+    compatible = "apple,n71-s8000-pcie-port1-powerstage";
+    apple,explicit-supervised-power-test;
+    power-domains = <&ps_pcie_ref>, <&ps_pcie_aux>, <&ps_pcie_link1>;
+    power-domain-names = "ref", "aux", "link1";
+    status = "disabled";
+};
