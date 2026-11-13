@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/dts-v1/;
+/plugin/;
+
+/* Pinned phandles are validated on the owner N71/S8000 RAM tree before
+ * either native GPIO is reserved. Four PMGR refs prevent implicit power.
+ * No real PCI host compatible, DART reference or PERST release is provided. */
+/ {
+    fragment@0 {
+        target-path = "/soc";
+        __overlay__ {
+            n71-port1-perst-held {
+                compatible = "research,n71-s8000-pcie-perst-held";
+                status = "okay";
+                research,owner-supervised-perst-held;
+                power-domains = <0x3a>, <0x3b>, <0x3c>, <0x2c>;
+                power-domain-names = "ref", "aux", "link1", "root";
+                perst-gpios = <0x0a 161 0>;
+                wlan-reg-on-gpios = <0x09 10 0>;
+            };
+        };
+    };
+};

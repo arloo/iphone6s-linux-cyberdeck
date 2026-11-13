@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**13 November 2026: N71/S8000 port1 controller READY while endpoint PERST stays LOW.** [Physical result and bounded source](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md): original COMMON initialization changes status 0x10 to 0x11; port1 ID5=1 survives 25 samples over 250ms in two cycles. DART1 TCR single read is 0. All PCIe domains return OFF; storage/modem controls, Bluetooth, USB and touch remain intact. Native PCIe enumeration, DMA isolation and Wi-Fi are still unverified.
+
 **Community-driven, hardware-first Linux bring-up for the Apple iPhone 6s.** Active experimental target: **N71 / S8000 (Samsung A9)**. **N71m / S8003 (TSMC A9) experiments are deferred until compatible hardware becomes available**; all its hardware statuses remain NOT TESTED.
 
 We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-Fi and Bluetooth are the top priorities**. Native Linux now displays the CYBERDECK / A9 framebuffer UI and automatically initializes a real two-finger touchscreen on the physical iPhone 6s. Wi-Fi is still missing; Bluetooth has separate partial BLE evidence, and the current RAM-only boot is not a persistent OS installation.
