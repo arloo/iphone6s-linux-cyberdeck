@@ -59,7 +59,7 @@ static bool n71_inserted_node_qualified(void)
            of_property_count_u32_elems(node, "power-domains") == 3 &&
            of_property_count_strings(node, "power-domain-names") == 3;
     for (i = 0; good && i < ARRAY_SIZE(n71_links); i++) {
-        struct device_node *provider;
+        struct device_node *provider, *expected;
         const char *domain;
         u32 ref;
 
@@ -75,9 +75,13 @@ static bool n71_inserted_node_qualified(void)
             break;
         }
         provider = of_parse_phandle(node, "power-domains", i);
-        if (!provider || of_node_cmp(provider->full_name, n71_links[i].path))
+        expected = of_find_node_by_path(n71_links[i].path);
+        /* The live OF node's full_name may be only its basename; compare
+         * actual referenced node identity, not the path string. */
+        if (!provider || !expected || provider != expected)
             good = false;
         of_node_put(provider);
+        of_node_put(expected);
     }
     of_node_put(node);
     return good;

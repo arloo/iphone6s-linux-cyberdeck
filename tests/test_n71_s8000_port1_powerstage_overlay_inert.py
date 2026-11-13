@@ -42,7 +42,10 @@ class N71PowerstageInertOverlayTests(unittest.TestCase):
 
     def test_inert_node_phandles_resolve_without_attach(self):
         self.assertIn('of_parse_phandle(node, "power-domains", i)',S)
-        self.assertIn('of_node_cmp(provider->full_name, n71_links[i].path)',S)
+        self.assertIn('expected = of_find_node_by_path(n71_links[i].path)',S)
+        self.assertIn('provider != expected',S)
+        self.assertIn('of_node_put(expected)',S)
+        self.assertNotIn('of_node_cmp(provider->full_name',S)
         self.assertIn('power-domains = <0x3a>, <0x3b>, <0x3c>;',D)
         self.assertIn('of_property_count_u32_elems(node, "power-domains") == 3',S)
 
