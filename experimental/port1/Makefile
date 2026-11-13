@@ -7,3 +7,4 @@ obj-m += pcie-apple-s8000-port1-powerstage.o
 obj-m += pcie-apple-s8000-port1-live-dt-observer.o
 obj-m += pcie-apple-s8000-port1-runtime-sandbox.o
 obj-m += pcie-apple-s8000-port1-powerstage-overlay-inert.o
+obj-m += pcie-apple-s8000-port1-refclk-microlease.o
