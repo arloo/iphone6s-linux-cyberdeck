@@ -5,3 +5,4 @@
 # Never activate hardware without a supervised RAM-only test plan.
 obj-m += pcie-apple-s8000-port1-powerstage.o
 obj-m += pcie-apple-s8000-port1-live-dt-observer.o
+obj-m += pcie-apple-s8000-port1-runtime-sandbox.o

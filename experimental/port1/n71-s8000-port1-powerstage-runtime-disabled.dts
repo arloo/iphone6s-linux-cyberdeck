@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/dts-v1/;
+/plugin/;
+
+/* PRIVATE N71 Samsung RAM Linux only AFTER exactly three PMGR bootstrap
+ * provider phandles 0x3a (ref), 0x3b (aux), 0x3c (link1) are verified.
+ * Insert a DISABLED provider consumer node. No power, GPIO, reset,
+ * MMIO, DART initialization or PCIe host driver can bind by default.
+ * No apple,explicit-supervised-power-test property is present.
+ */
+/ {
+    fragment@0 {
+        target-path = "/soc";
+        __overlay__ {
+            pcie-port1-powerstage@602000000 {
+                compatible = "apple,n71-s8000-pcie-port1-powerstage";
+                status = "disabled";
+                apple,port-index = <1>;
+                apple,perst-pin = <161>;
+                apple,clkreq-pin = <165>;
+                apple,device-wake-pin = <73>;
+                reg = <0x6 0x00000000 0x0 0x8000>,
+                      <0x6 0x02000000 0x0 0x4000>,
+                      <0x6 0x02004000 0x0 0x4000>,
+                      <0x6 0x10000000 0x0 0x1000000>;
+                reg-names = "root-common", "port1-control", "port1-aux", "config-shared";
+                power-domains = <0x3a>, <0x3b>, <0x3c>;
+                power-domain-names = "ref", "aux", "link1";
+            };
+        };
+    };
+};

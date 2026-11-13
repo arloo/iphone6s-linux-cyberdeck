@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/dts-v1/;
+/plugin/;
+
+/* This adds one DISABLED, resource-free leaf to the Linux RAM DT.
+ * It MUST NOT add GPIOs, clocks, PMGR phandles, MMIO ranges,
+ * PCI hosts, interrupts, IOMMUs or a matchable active driver.
+ * No iOS firmware data or vendor binary is carried in this DTS.
+ */
+/ {
+    fragment@0 {
+        target-path = "/soc";
+        __overlay__ {
+            n71-port1-runtime-sandbox {
+                compatible = "research,n71-s8000-port1-inert-sandbox";
+                status = "disabled";
+                research,observer-only;
+            };
+        };
+    };
+};
