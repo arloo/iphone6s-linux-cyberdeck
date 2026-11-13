@@ -13,3 +13,4 @@ obj-m += pcie-apple-s8000-port1-root-microlease.o
 obj-m += pcie-apple-s8000-port1-link1-microlease.o
 obj-m += pcie-apple-s8000-port1-triplet-microlease.o
 obj-m += pcie-apple-s8000-port1-status-snapshot.o
+obj-m += pcie-apple-s8000-port1-id3-id2-stage.o
