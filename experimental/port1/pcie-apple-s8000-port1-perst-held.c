@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /* N71/S8000: bounded PERST-low WLAN/PMGR/ID3 experiment.
- * Never drives PERST HIGH, writes DART or scans PCI.
+ * Never drives PERST HIGH or scans PCI; stages10/11 write selected DART state.
  * Stage8 only reads the original DART1 packed TCR once under endpoint reset.
  * Source and physical test are board-specific; no analog voltage claim.
  */
@@ -21,6 +21,7 @@
 #include <linux/pm_runtime.h>
 
 #include "n71-s8000-port1-perst-held-blob.h"
+#include "n71-dart-ttbr-disabled-trial.h"
 
 #define N71_STATUS_SNAPSHOT_NODE "/soc/n71-port1-perst-held"
 #define N71_PCI_GUARD "/soc/pcie-port1-preflight@602000000"
@@ -33,14 +34,14 @@
 #define N71_PINCTRL_PHYS 0x20f100000ULL
 #define N71_PINCTRL_BYTES 0x1000U
 
-/* There is no PERST release mode, DART write or PCI host access. */
+/* There is no PERST release, DART reset/TLB command or PCI host access. */
 static bool armed;
 static unsigned int stage;
 static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault; never release PERST");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset; never release PERST");
 
 static const struct {
     const char *name;
@@ -143,6 +144,27 @@ static bool n71_gpio_ref_ok(struct device_node *np, const char *property,
     of_node_put(expected);
     of_node_put(parsed.np);
     return okay;
+}
+
+struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; bool pulse; int pulse_rc; };
+static unsigned int n71_trial_read(void *ctx, unsigned int off)
+{ struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->dart + off); }
+static void n71_trial_write(void *ctx, unsigned int off, unsigned int value)
+{ struct n71_dart_trial_mmio *m = ctx; writel(value, (u8 __iomem *)m->dart + off); }
+static int n71_trial_perst(void *ctx)
+{ struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->ap + 4*161) == 0x00072202; }
+static void n71_trial_delay(void *ctx) { msleep(25); }
+static void n71_trial_hold(void *ctx)
+{
+    struct n71_dart_trial_mmio *m = ctx;
+    const struct n71_dart_trial_ops o = {
+        .read = n71_trial_read, .write = n71_trial_write,
+        .perst_low = n71_trial_perst, .hold = n71_trial_delay,
+    };
+    if (m->pulse) {
+        m->pulse_rc = n71_dart_tcr0_pulse(&o, ctx);
+        pr_info("n71-perst-held: DART1_TCR0_PULSE rc=%d no TLB command or DMA\n", m->pulse_rc);
+    } else n71_trial_delay(ctx);
 }
 
 static int n71_microlease_probe(struct platform_device *pdev)
@@ -402,7 +424,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
             if (stage >= 8) {
                 /* Original N71 DART1 resource=0x602008000/0x4000.
                  * Original S5L8960X read at +0xC, four packed TCR bytes.
-                 * CPU READ ONLY: no driver probe/reset, TTBR, IOVA or SID guess.
+                 * Initial snapshot is read-only; stages 10/11 below perform bounded writes.
                  * Endpoint remains reset and every other port disabled. */
                 dart1 = ioremap(0x602008000ULL, 0x1000);
                 if (!dart1) {
@@ -424,7 +446,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
                     goto restore;
                 }
                 pr_info("n71-perst-held: DART1_ALL_FOUR_STREAMS_DISABLED_STATE_PASS; DMA isolation still untested\n");
-                if (stage == 9) {
+                if (stage >= 9) {
                     u32 nonzero = 0, valid = 0, entry, cmd, fault;
                     unsigned int n;
                     for (n = 0; n < 16; n++) {
@@ -441,6 +463,18 @@ static int n71_microlease_probe(struct platform_device *pdev)
                         ret = -EIO;
                         goto restore;
                     }
+                }
+                if (stage >= 10) {
+                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .pulse = stage == 11 };
+                    const struct n71_dart_trial_ops ops = {
+                        .read = n71_trial_read, .write = n71_trial_write,
+                        .perst_low = n71_trial_perst, .hold = n71_trial_hold,
+                    };
+                    unsigned int zero_ok, restore_ok;
+                    int trial_rc = n71_dart_disabled_ttbr_trial(&ops, &mm, &zero_ok, &restore_ok);
+                    pr_info("n71-perst-held: DART1_SID0_TTBR_DISABLED_TRIAL zero_pass=%u restore_pass=%u rc=%d; TCR_DISABLED PERST_LOW no DMA\n",
+                            zero_ok, restore_ok, trial_rc);
+                    if (trial_rc || mm.pulse_rc) { ret = -EIO; goto restore; }
                 }
                 iounmap(dart1);
                 dart1 = NULL;
@@ -533,8 +567,8 @@ out:
     if (ap_dev)
         put_device(&ap_dev->dev);
     n71_probe_result = ret;
-    pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; endpoint reset NEVER released, no DART writes/DMA/PCI scan\n",
-            ret, stage, poll_rc == 0, poll_rc);
+    pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; endpoint reset NEVER released, DART_TTBR_WRITE_TEST=%u no DMA/PCI scan\n",
+            ret, stage, poll_rc == 0, poll_rc, stage >= 10);
     return -ENODEV;
 }
 
@@ -557,7 +591,7 @@ static int __init n71_microlease_init(void)
     struct device_node *existing;
     int ret, roll;
 
-    if (stage > 9 || !n71_validate_nodes() ||
+    if (stage > 11 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);

@@ -39,7 +39,7 @@ Stage0 is PERST only; 1 adds WLAN; 2 adds PMGR and snapshots; 3/4 are
 negative ID3/ID2 controls; 5 initializes COMMON only; 6 reaches port1 READY;
 7 holds ID2/ID4 and samples READY for 250ms; 8 additionally reads DART1 TCR
 once. Default armed=false performs no GPIO request, MMIO or power operation.
-No mode releases endpoint PERST, scans PCI, writes DART/TTBR, or enables DMA.
+Through stage 9 no mode writes DART/TTBR. Later register-write stages are documented below. No mode releases endpoint PERST or scans PCI.
 GPIO readbacks do not constitute an external analog voltage measurement.
 
 Use [the single-syscall loader](../tools/n71-module-once.c) for qualified
@@ -72,3 +72,20 @@ Stage 9 extends the existing PERST-held sequence by reading the 16 TTBR words (f
 The real ARM64 module compiled against the current `n71-batt1` kernel. Physical execution is PENDING: the owner-host USB address disappeared before the runner could bind its USB-only transfer server. A subsequent read-only host check showed no Apple USB device and no USB network address. Therefore this stage sent no module to the phone and performed no new phone register access. The last confirmed live check before that interruption showed battery Charging at 57%, about +103 mA, and Bluetooth UP/RUNNING with zero errors. Current phone state requires reconnection and revalidation.
 
 This snapshot prepares the next decision about isolated DART configuration; it is not a claim of working DMA isolation or native Wi-Fi enumeration.
+
+
+## batt2 physical acceptance: stages 9, 10 and 11
+
+These follow-ups ran on the physically booted `7.3.0-rc1-n71-batt2-g68aadac820d0-dirty` kernel with monitored charging and Bluetooth active.
+
+* Stage 9: TCR=0, TTBR nonzero mask=ffff and valid mask=ffff, command=00000f02, fault=00000100. All sixteen retained TTBR words were valid despite disabled translation; an empty DART cannot be assumed. No raw table addresses were exported.
+* Stage 10: only stream0's four TTBR words were temporarily zeroed, read back, held 25 ms and restored. Other twelve words, packed TCR, command and fault were compared unchanged. `zero_pass=1 restore_pass=1 rc=0`.
+* Stage 11: with those four TTBR words still zero and PERST LOW, packed TCR was pulsed from 0 to 0x80 for 25 ms and restored to 0 before the saved TTBR words were restored. `DART1_TCR0_PULSE rc=0` and `zero_pass=1 restore_pass=1 rc=0`.
+
+The stage-10 artifact SHA256 was `7ca25ed2887e7905fe15441eae5203660abe702671d125a8db7286d51f165f8f`; stage 11 was `516e1cbcce0c35814e80c72cf1384ce189353434ec393d7f6409fd7a998ae6f4`. These are private module artifacts, not distributed firmware.
+
+Both write trials completed rollback with PERST restored to 00072200, WLAN low/released, synthetic node/module absent, all seven PCIe domains OFF, USB and touch present, and Bluetooth RX/TX error counters zero. Stage 11 ran at uptime 659 s; battery was Charging, 57%, +44 mA, 4.026 V and 30.3 C. The source defaults to unarmed and the host runner checks board, matching kernel, battery window, exclusive ownership and idle PCIe before loading it once.
+
+`tests/test_n71_dart_disabled_ttbr.py` compiles the actual sequence header against fake MMIO and exercises ten cases, including active TCR, busy command, fault flag, failed zero/restore readbacks, protected-bank mutation, lost PERST and rejected TCR enable.
+
+This establishes register control and observed rollback only. Stage 11 issues no TLB invalidation, submits no DMA and does not prove physical requester SID routing or fault containment. Stale translations have not been excluded. Keep the Broadcom endpoint reset until selected-stream invalidation and DMA containment are qualified; native Wi-Fi is still unproven.
