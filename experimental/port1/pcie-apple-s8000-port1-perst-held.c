@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0
 /* N71/S8000: bounded PERST-low WLAN/PMGR/ID3 experiment.
- * Never drives PERST HIGH or scans PCI; stages10/11 write selected DART state.
+ * Never drives PERST HIGH or scans PCI; stages10-13 write selected DART state.
  * Stage8 only reads the original DART1 packed TCR once under endpoint reset.
  * Source and physical test are board-specific; no analog voltage claim.
  */
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
+#include <linux/sizes.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/init.h>
@@ -22,6 +26,7 @@
 
 #include "n71-s8000-port1-perst-held-blob.h"
 #include "n71-dart-ttbr-disabled-trial.h"
+#include "n71-dart-owned-roots-trial.h"
 
 #define N71_STATUS_SNAPSHOT_NODE "/soc/n71-port1-perst-held"
 #define N71_PCI_GUARD "/soc/pcie-port1-preflight@602000000"
@@ -41,7 +46,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate; never release PERST");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots; never release PERST");
 
 static const struct {
     const char *name;
@@ -146,7 +151,68 @@ static bool n71_gpio_ref_ok(struct device_node *np, const char *property,
     return okay;
 }
 
-struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; bool pulse; bool flush; int pulse_rc; };
+struct n71_owned_tables {
+    struct device *dev;
+    void *page[4];
+    dma_addr_t dma[4];
+    bool mapped[4];
+    u32 word[4];
+};
+static struct n71_owned_tables n71_tables;
+static bool n71_roots_quarantined;
+static void n71_owned_free(struct n71_owned_tables *t)
+{
+    unsigned int i;
+    for (i = 0; i < 4; i++) {
+        if (t->mapped[i])
+            dma_unmap_single(t->dev, t->dma[i], PAGE_SIZE, DMA_TO_DEVICE);
+        if (t->page[i]) free_page((unsigned long)t->page[i]);
+    }
+    if (t->dev) put_device(t->dev);
+    memset(t, 0, sizeof(*t));
+}
+static int n71_owned_alloc(struct device *dev, struct n71_owned_tables *t, void __iomem *dart)
+{
+    unsigned int i, j;
+    int ret;
+    if (PAGE_SIZE < SZ_4K || (PAGE_SIZE % SZ_4K) || of_find_property(dev->of_node, "iommus", NULL))
+        return -EPERM;
+    ret = dma_coerce_mask_and_coherent(dev, DMA_BIT_MASK(36));
+    if (ret) return ret;
+    t->dev = get_device(dev);
+    for (i = 0; i < 4; i++) {
+        phys_addr_t pa;
+        t->page[i] = (void *)__get_free_page(GFP_KERNEL);
+        if (!t->page[i]) { ret = -ENOMEM; goto fail; }
+        pa = virt_to_phys(t->page[i]);
+        t->word[i] = n71_dart_owned_ttbr(pa);
+        if (!t->word[i]) { ret = -EPERM; goto fail; }
+        /* Kernel pages may be 16 KiB while each DART root is 4 KiB.
+         * Reject overlap anywhere in the allocation BEFORE explicit zeroing. */
+        for (j = 0; j < 16; j++) {
+            phys_addr_t old_pa = (phys_addr_t)(readl((u8 __iomem *)dart + 0x40 + 4*j) & 0x00ffffffU) << 12;
+            if (old_pa >= pa && old_pa < pa + PAGE_SIZE) { ret = -EBUSY; goto fail; }
+        }
+        memset(t->page[i], 0, PAGE_SIZE);
+        for (j = 0; j < i; j++)
+            if (t->word[j] == t->word[i]) { ret = -EPERM; goto fail; }
+        t->dma[i] = dma_map_single(dev, t->page[i], PAGE_SIZE, DMA_TO_DEVICE);
+        if (dma_mapping_error(dev, t->dma[i])) { ret = -EIO; goto fail; }
+        t->mapped[i] = true;
+        /* This synthetic device must use direct identity DMA; reject a bounce
+         * buffer or an IOVA instead of encoding it as a physical TTBR. */
+        if (t->dma[i] != pa) { ret = -EPERM; goto fail; }
+        dma_sync_single_for_device(dev, t->dma[i], PAGE_SIZE, DMA_TO_DEVICE);
+    }
+    dma_wmb();
+    pr_info("n71-perst-held: OWNED_ROOTS_ALLOCATED roots=4 table_bytes=16384 backing_bytes=%lu zero=1 direct_dma=1 pa36=1 addresses_redacted\n", 4UL * PAGE_SIZE);
+    return 0;
+fail:
+    n71_owned_free(t);
+    return ret;
+}
+
+struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; bool pulse; bool flush; bool owned; const u32 *roots; int pulse_rc; };
 static unsigned int n71_trial_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->dart + off); }
 static void n71_trial_write(void *ctx, unsigned int off, unsigned int value)
@@ -162,7 +228,11 @@ static void n71_trial_hold(void *ctx)
         .read = n71_trial_read, .write = n71_trial_write,
         .perst_low = n71_trial_perst, .hold = n71_trial_delay, .tick = n71_trial_tick,
     };
-    if (m->flush) {
+    if (m->owned) {
+        unsigned int command, polls;
+        m->pulse_rc = n71_dart_owned_roots_trial(&o, ctx, m->roots, &command, &polls);
+        pr_info("n71-perst-held: DART1_OWNED_EMPTY_ROOTS rc=%d command=%08x polls=%u PERST_LOW no endpoint DMA\n", m->pulse_rc, command, polls);
+    } else if (m->flush) {
         unsigned int command, polls;
         m->pulse_rc = n71_dart_tcr0_flush_trial(&o, ctx, &command, &polls);
         pr_info("n71-perst-held: DART1_SID0_TLB_INVALIDATE rc=%d command=%08x polls=%u PERST_LOW no DMA\n", m->pulse_rc, command, polls);
@@ -189,7 +259,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
     u32 lane_saved = 0, done_saved = 0, common_status = 0;
     u32 protected_root[3][4] = {};
     unsigned int j;
-    bool common_changed = false;
+    bool common_changed = false, protected_controls_unchanged = true;
     int common_poll = -EINPROGRESS;
     unsigned int attached = 0, resumed = 0, i;
     bool perst_changed = false, wlan_changed = false, id3_changed = false, id2_changed = false, id4_changed = false;
@@ -429,7 +499,7 @@ static int n71_microlease_probe(struct platform_device *pdev)
             if (stage >= 8) {
                 /* Original N71 DART1 resource=0x602008000/0x4000.
                  * Original S5L8960X read at +0xC, four packed TCR bytes.
-                 * Initial snapshot is read-only; stages 10-12 below perform bounded writes.
+                 * Initial snapshot is read-only; stages 10-13 below perform bounded writes.
                  * Endpoint remains reset and every other port disabled. */
                 dart1 = ioremap(0x602008000ULL, 0x1000);
                 if (!dart1) {
@@ -470,14 +540,48 @@ static int n71_microlease_probe(struct platform_device *pdev)
                     }
                 }
                 if (stage >= 10) {
-                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .pulse = stage == 11, .flush = stage == 12 };
+                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .pulse = stage == 11, .flush = stage == 12, .owned = stage == 13, .roots = n71_tables.word };
                     const struct n71_dart_trial_ops ops = {
                         .read = n71_trial_read, .write = n71_trial_write,
                         .perst_low = n71_trial_perst, .hold = n71_trial_hold,
-                        .command_change_mask = stage == 12 ? 0x00000f00U : 0,
+                        .command_change_mask = stage >= 12 ? 0x00000f00U : 0,
                     };
                     unsigned int zero_ok, restore_ok;
-                    int trial_rc = n71_dart_disabled_ttbr_trial(&ops, &mm, &zero_ok, &restore_ok);
+                    int trial_rc;
+                    if (stage == 13) {
+                        ret = n71_owned_alloc(&pdev->dev, &n71_tables, dart1);
+                        if (ret) goto restore;
+                        /* Never reuse a retained root's physical page, including
+                         * a root belonging to another stream. */
+                        for (i = 0; i < 16; i++)
+                            for (j = 0; j < 4; j++)
+                                if ((readl((u8 __iomem *)dart1 + 0x40 + 4*i) & 0x00ffffffU) ==
+                                    (n71_tables.word[j] & 0x00ffffffU)) {
+                                    n71_owned_free(&n71_tables);
+                                    ret = -EBUSY;
+                                    goto restore;
+                                }
+                    }
+                    trial_rc = n71_dart_disabled_ttbr_trial(&ops, &mm, &zero_ok, &restore_ok);
+                    if (stage == 13) {
+                        bool free_safe = restore_ok &&
+                            readl((u8 __iomem *)dart1 + 0x0c) == 0 &&
+                            !(readl((u8 __iomem *)dart1 + 0x00) & BIT(3));
+                        bool pages_zero = true;
+                        for (j = 0; j < 4; j++) {
+                            dma_sync_single_for_cpu(n71_tables.dev, n71_tables.dma[j], PAGE_SIZE, DMA_TO_DEVICE);
+                            if (memchr_inv(n71_tables.page[j], 0, PAGE_SIZE)) pages_zero = false;
+                        }
+                        if (free_safe) {
+                            n71_owned_free(&n71_tables);
+                            pr_info("n71-perst-held: OWNED_ROOTS_RELEASED after_restore=1 zero_unchanged=%u\n", pages_zero);
+                        } else {
+                            n71_roots_quarantined = true;
+                            __module_get(THIS_MODULE);
+                            pr_err("n71-perst-held: OWNED_ROOTS_QUARANTINED module pinned; no free or retry\n");
+                        }
+                        if (!free_safe || !pages_zero) mm.pulse_rc = -EIO;
+                    }
                     pr_info("n71-perst-held: DART1_SID0_TTBR_DISABLED_TRIAL zero_pass=%u restore_pass=%u rc=%d; TCR_DISABLED PERST_LOW no DMA\n",
                             zero_ok, restore_ok, trial_rc);
                     if (trial_rc || mm.pulse_rc) { ret = -EIO; goto restore; }
@@ -514,13 +618,14 @@ restore:
             for (j = 0; j < ARRAY_SIZE(protected_reg_offsets); j++)
                 if (readl((u8 __iomem *)root + protected_reg_offsets[j] +
                        protected_ports[i] * 0x80) != protected_root[i][j]) {
+                    protected_controls_unchanged = false;
                     pr_err("n71-perst-held: protected root port%u register%u changed\n",
                             protected_ports[i], j);
                     ret = -EIO;
                 }
         pr_info("n71-perst-held: COMMON_RESTORED lane=%08x done=%08x protected_port_controls_unchanged=%u\n",
                 readl((u8 __iomem *)root + 0x004),
-                readl((u8 __iomem *)root + 0x038), ret == 0);
+                readl((u8 __iomem *)root + 0x038), protected_controls_unchanged);
     }
     /* WLAN LOW BEFORE power teardown; PERST remains actively LOW. */
     if (wlan_changed) {
@@ -597,7 +702,7 @@ static int __init n71_microlease_init(void)
     struct device_node *existing;
     int ret, roll;
 
-    if (stage > 12 || !n71_validate_nodes() ||
+    if (stage > 13 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);
@@ -629,6 +734,8 @@ static int __init n71_microlease_init(void)
         pr_err("n71-status-snapshot: could not remove synthetic DT node rc=%d\n", roll);
     if (roll)
         return 0; /* keep module data pinned; retry cleanup on rmmod */
+    if (n71_roots_quarantined)
+        return 0; /* pin module and table pages after failed rollback */
     if (ret)
         return ret;
     pr_info("n71-status-snapshot: synthetic DT added/removed, armed=%d, result=%d\n",

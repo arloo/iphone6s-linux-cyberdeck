@@ -67,8 +67,9 @@ static int n71_dart_tcr0_pulse(const struct n71_dart_trial_ops *o, void *ctx)
  * Unlike stages 10/11, this changes command selection and invalidates SID0 TLB.
  * Does not restore the old f02 command: doing so would invalidate other streams.
  */
-static int n71_dart_tcr0_flush_trial(const struct n71_dart_trial_ops *o, void *ctx,
-                                  unsigned int *last, unsigned int *polls)
+static int n71_dart_tcr0_flush_roots_trial(const struct n71_dart_trial_ops *o, void *ctx,
+                                        const unsigned int roots[4],
+                                        unsigned int *last, unsigned int *polls)
 {
     unsigned int i, fault;
     int ret = -1;
@@ -78,7 +79,7 @@ static int n71_dart_tcr0_flush_trial(const struct n71_dart_trial_ops *o, void *c
         (*last & 8)) return -1;
     fault = o->read(ctx, 0x10);
     if (fault & 0x80000000U) return -1;
-    for (i = 0; i < 4; i++) if (o->read(ctx, 0x40 + 4*i) != 0) return -1;
+    for (i = 0; i < 4; i++) if (o->read(ctx, 0x40 + 4*i) != roots[i]) return -1;
     o->write(ctx, 0x0c, 0x80);
     if (o->read(ctx, 0x0c) != 0x80 || !o->perst_low(ctx)) goto disable;
     o->write(ctx, 0x00, 0x102);
@@ -95,5 +96,11 @@ disable:
     o->write(ctx, 0x0c, 0);
     if (o->read(ctx, 0x0c) != 0) ret = -3;
     return ret;
+}
+static int n71_dart_tcr0_flush_trial(const struct n71_dart_trial_ops *o, void *ctx,
+                                  unsigned int *last, unsigned int *polls)
+{
+    const unsigned int roots[4] = {0, 0, 0, 0};
+    return n71_dart_tcr0_flush_roots_trial(o, ctx, roots, last, polls);
 }
 #endif
