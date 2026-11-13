@@ -32,6 +32,7 @@ def audit(original, adt, root):
  if ptr(roots,1864)!=roots['shared']['vm']+0xd0:raise ValueError('Root port-resource selector changed')
  if ptr(ports,1784)!=ports['shared']['vm']+0x159c:raise ValueError('Port control accessor changed')
  if ptr(ports,1496)!=ports['shared']['vm']+0x1444:raise ValueError('Port status accessor changed')
+ F.check_words(ports['shared']['code'])
  check_words(ports['embedded']['code'],EMBEDDED)
  check_words(ports['shared']['code'],SHARED)
  resources=MEM.compare_private_inputs(root,adt)

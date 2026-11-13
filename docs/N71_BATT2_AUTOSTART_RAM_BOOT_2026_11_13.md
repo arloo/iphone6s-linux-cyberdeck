@@ -28,3 +28,6 @@ sudo bash scripts/n71-batt2-pongo-ram-smoke.sh send
 Use the new sender: earlier senders pin older RAM images. The helper verifies hash/size, exact upload acknowledgement and Linux USB reenumeration. The first live checks are kernel identity, startup log, battery current, HCI counters, touch initialization and all PCIe domains OFF; only then run the staged DART snapshot.
 
 Validation: ARM64 kernel and three matching modules built; configuration delta checked; loader/DTBs preserved; original CPIO-entry preservation checked; init insertion bounded to one call; all added CPIO data/modes and module vermagic checked; shell syntax and wrong-kernel skip passed. Physical USB transfer, boot, startup log and subsequent USB/Bluetooth/touch/PMGR postflights passed.
+
+
+Session stop: stages15/16/18 completed bounded controller/reset tests, but link status bit0 remained clear; stage17 rejected its register readback. Stage19 is compiled only and untested, with private calibration retained locally. See the port1 report's stop checkpoint before resuming.
