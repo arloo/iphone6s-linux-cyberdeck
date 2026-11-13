@@ -87,3 +87,30 @@ Do **not** post any private firmware, authentic Apple ADT blobs, user MAC, ECID,
 - **Success criterion:** physical BCM4350 `14e4:43a3` enumerates, correct stream fault isolation proven, native WLAN appears, authorized network association/DHCP succeeds, and storage/modem remain unaffected. A functioning USB Internet proxy is **not** that success.
 
 **2026-11-13 live phone state:** known-good new ARM64 wireless-software kernel and genuine C5 firmware booted in RAM, USB `05ac:4142` reachable, Z2 touch protocol ready, no PCIe endpoints, IOMMU groups or native Wi-Fi. It remains untouched during this source investigation.
+
+
+## Follow-up: full S8003 **host-driver** patch series found (critical, 2026-11-13)
+
+A second pass over the entire Orchard source tree found an actual **S8003** Apple H8P/H9P **PCIe controller implementation** beyond just the S8003 DT/binding. This significantly improves our source blueprint, but it is **not** an already qualified **Samsung S8000** controller.
+
+- [S8003 PCIe host driver](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0019-PCI-apple-h9p-Add-S8003-support.patch) maps S8003 root register selectors (port stride `0x80`), PHY/REFCLK/PERST# sequencing, finite 250ms/500ms control/link polling and bounded shutdown, and uses `apple,s8003-pcie`, *not* `apple,s8000-pcie`. Its own source notes a T8010-like `phy-ip` block, **absent from original S8000**. Some original software selector offsets resemble the owner-decoded S8000 root operations, but their PHY electrical meaning is NOT portable by assumption.
+- [S8003 common/PHY/port tunables](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0020-PCI-apple-h9p-Apply-the-S8003-tunables.patch) are *S8003- and J71t-specific*. Do **not** replay on N71: the actual S8000 global common tunables have four port-specific selector aliases including protected NAND port0 and modem port2. Independent source/electrical qualification is mandatory.
+- [S8003 storage-first ordering and bounded late port retry](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0024-PCI-apple-h9p-Bring-up-the-S8003-storage-port-first-.patch) explicitly explains the **IOMMU routing hazard**: its `iommu-map` ties bus1 to storage/DART0 and bus2 to port1/DART1. If storage disappears first, a later endpoint could move to bus1 and use the **wrong DART**. This is an essential **source-level safety design constraint** for any future S8000 port. We have NOT proven S8000 physical bus numbering, so do not import the S8003 map; implement a fail-closed bus-identity/stream ownership check before enabling any DMA.
+- [S8003 NVMMU ordered initialization](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0025-PCI-apple-h9p-Initialize-the-S8003-NVMMU-in-iOS-s-or.patch) and [NVMMU invalidation/FIFO](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0021-PCI-apple-h9p-Follow-iOS-s-S8003-NVMMU-init-and-inva.patch) demonstrate why storage and global root control must remain separately protected; not authorization to touch NAND/NVMMU on the owner phone.
+- S8003 interrupt and power-management patches [0022](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0022-PCI-apple-h9p-Leave-the-S8003-port-interrupts-alone.patch) and [0023](https://github.com/OrchardLinux/orchard/blob/main/kernel/patches/drivers/pci/0023-PCI-apple-h9p-Clear-the-S8003-PME_Turn_Off-request-w.patch) are possible architecture patterns, **not validated S8000 register sequences**.
+
+### Read-only application-context check against the current private Linux source
+
+On the Dell, the project source tree has its existing private touch and research-guard edits. A **non-mutating** `git apply --check` inspected five downloaded public patch texts:
+
+| Patch | Result against current worktree | Required next step |
+|---|---|---|
+| DART `0005`, refuse bad DMA windows | **Context matches** | Isolated source worktree, compile and synthetic regressions |
+| Broadcom OTP `0005`, read BCM4350 OTP | **Context matches** | Isolated source worktree, compile; never read OTP until PCIe safely enumerated |
+| DART `0006`, iOS-order translation | **Does not apply directly** | Context/dependency review and manual rebase |
+| DART `0007`, packed stream TCR lock | **Does not apply directly** | Context/dependency review and manual rebase |
+| BCM4350 WLAN power `0016`, J81 | **Target source file absent** | Requires separate pwrctrl framework; not N71 GPIO-safe |
+
+**No upstream patch was actually applied** to the owner's working Linux tree, compiled into the currently running phone, or executed on any hardware. The static feasibility check is not a functional test. All original Apple firmware/OTP/calibration remain private. The phone still runs the last verified RAM Linux with Wi-Fi software and unchanged inert port1.
+
+**Priority update:** Reuse the S8003 implementation's **architecture, bounded state machine and error rollback design** as abstract engineering references, and prioritize S5L8960X DART hardening in a separate offline worktree. Implement the **S8000-only** root and PHY semantics with independent verification against original N71 evidence; prohibit global root tuning replay, NAND reset and requester-to-SID guesses.
