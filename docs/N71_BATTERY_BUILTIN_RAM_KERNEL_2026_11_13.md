@@ -1,6 +1,6 @@
 # N71 battery observation kernel — 13 November 2026
 
-Status: ARM64 build and private RAM image verification PASS; physical boot and battery readings PENDING.
+Status: ARM64 build, private RAM image verification, physical boot, battery telemetry and full PERST-held stage-8 postflight PASS. Charging is observed as net discharge in the tested Dell USB setup.
 
 The owner observed shutdown after a Linux session, followed by an iOS battery indication changing from 44% to 2%. The owner subsequently reported 14%. These observations do not establish the cause of shutdown, charging failure, or a defective battery. No evidence establishes an Apple security restriction.
 
@@ -37,3 +37,23 @@ Use the existing wrapper for the next supervised Pongo attempt. Its `run` mode r
 `scripts/n71-battery-builtin-pongo-ram-smoke.sh send` replaces the earlier PMGR-only image sender for this diagnostic build. It pins the new image's hash and size, refuses sending over an existing Linux gadget, requires the Pongo gadget and a local administrative shell, and requires both exact upload acknowledgement and a new Linux USB gadget before reporting handoff success. A Pongo-tool exit status alone is insufficient. The helper has been installed in the owner workspace; no phone transfer has yet been performed.
 
 Helper verification: shell syntax, byte-identical workspace/repository copies, successful local image-pin status check, and same-size corrupt-image rejection before USB handoff passed. Physical retry and battery observations are pending.
+
+## Physical diagnostic boot and completed postflight
+
+The new pinned RAM image booted as `7.3.0-rc1-n71-batt1-g68aadac820d0-dirty`, with Linux USB `05ac:4142`. The built-in SN2400 mux probed with HDQ control `0x00`, idle state 0; the BQ27540 UART driver established its HDQ link and registered `bq27540-0`.
+
+| Approximate uptime | State of charge | Gauge status | Current | Voltage | Temperature | Remaining charge |
+| --- | --- | --- | --- | --- | --- | --- |
+| 58 s | 20% | Discharging | -150 mA | 3.739 V | 34.1 C | 246 mAh |
+| 150 s | 19% | Discharging | -154 mA | 3.713 V | 33.6 C | 242 mAh |
+| 359 s postflight | 19% | Discharging | -231 mA | 3.671 V | 32.2 C | 233 mAh |
+
+These observations establish net battery discharge during the tested USB-connected Linux session. They do not identify the charger failure mechanism or explain the earlier iOS percentage jump. Gauge telemetry is working; sustained charging remains unverified. The included SN2400 driver controls HDQ ownership only, not charging setpoints.
+
+Matching PMIC GPIO support and the privately verified USI Bluetooth patchram restored HCI firmware build 0825. HCI was UP/RUNNING with cmd_tx=524, evt_rx=524, err_rx=0 and err_tx=0 before and after the port1 test. No pairing or new RF scan was attempted.
+
+Both an unarmed module load/unload and a single armed stage-8 test completed on the diagnostic kernel. The matching module SHA256 is `9d62a4089e7146668c8e9b94a07c4666a80d384e47ae8722d23289710dd9aa94`. Port1 READY held for 25 samples over 250 ms; packed DART1 TCR read `0x00000000`. PERST stayed low throughout activation. Cleanup restored PERST raw `0x00072200`, WLAN GPIO10 low, original COMMON controls, and protected port controls. Module removal returned 0; the temporary node and module were absent afterward. All seven PCIe domains were OFF, no PCI endpoint enumerated, USB and touch input registration remained present, and HCI retained zero errors. Touch initialization reported Type-1 setup and AF completion; no new physical-coordinate acceptance test was performed in this boot.
+
+This completes a new full postflight; it does not retroactively complete the previous battery-interrupted cycle or prove DART DMA isolation. PERST release, physical enumeration and native Wi-Fi remain pending.
+
+`tools/n71-battery-log.sh` provides a finite, timestamped gauge log for a supervised comparison between Dell USB and a wall supply while keeping this same Linux boot. It does not write charging controls, refuses overwriting an existing log, samples at most 60 times at intervals of at most 10 seconds, and stops if state of charge drops below 15% or temperature reaches 45 C. It is transferred into RAM after boot; the pinned image itself is unchanged. A physical supply comparison has not yet been performed.

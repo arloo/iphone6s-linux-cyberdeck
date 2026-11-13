@@ -1,5 +1,7 @@
 # Hardware state — iPhone 6s Samsung A9 (N71/S8000)
 
+> **Latest physical check, 13 November 2026:** [Diagnostic-kernel boot, battery readings and full PERST-held port1 postflight](N71_BATTERY_BUILTIN_RAM_KERNEL_2026_11_13.md) PASS. Battery telemetry is available; the tested Dell USB setup shows net discharge. USB and touch registration remain present, Bluetooth build 0825 is UP/RUNNING without HCI errors, and all PCIe domains are OFF after cleanup. Earlier sections below are historical baselines; they do not describe the current touch, wireless Kconfig or battery-telemetry state.
+
 > **Updated N71/S8000 touch evidence, 2026-11-11:** The [physical device calibration experiment](N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md) received real HBPP **ACK_DATA=0x4bc1** on its first poll, using five bounded SPI transfers in one message. USB and watchdog cleanup passed. **No touch EVDEV input or controller firmware start yet.** Older sections below describe previous stages, not the latest calibration status.
 
 
