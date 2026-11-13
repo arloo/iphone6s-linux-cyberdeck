@@ -27,3 +27,13 @@ The earlier touch changes and wireless software support are retained. Port1 is n
 The HDQ gauge driver reads the gauge. Its SN2400 mux provider temporarily writes the HDQ ownership control and returns ownership to the state observed at probe. This is not a charger-management driver: built-in gauge support does not prove that charging works. The first physical check must inspect probe logs, registered supplies, voltage, current, temperature, state of charge and charging status, then compare a second timestamped sample. Sysfs observations should precede further PCIe experiments.
 
 Validation: kernel Image/modules build, exact three-symbol config diff, matched module vermagic, unchanged loader/DTBs/original CPIO entries, shell syntax, and git whitespace checks passed. Physical boot remains pending while the phone is in iOS charging. The prior stage-8 USB postflight remains incomplete.
+
+## Pongo retry path
+
+The owner supplied earlier successful runs through `scripts/pongo-once-without-mfi-reload.sh run`, followed by the pinned RAM-send helper. A later direct palera1n invocation remained at "Sending pongo image" before interruption. A read-only host check then found the Apple MFi fast-charge module loaded while the temporary runtime policy still existed. This identifies a difference worth controlling; it does not prove the cause of the failed attempt or battery discharge.
+
+Use the existing wrapper for the next supervised Pongo attempt. Its `run` mode requires an administrative local terminal, verifies the pinned Pongo binary, prevents host MFi module auto-loading, and verifies module removal before launching palera1n. Its `restore` mode restores the host driver after testing. No host policy is changed by status checks.
+
+`scripts/n71-battery-builtin-pongo-ram-smoke.sh send` replaces the earlier PMGR-only image sender for this diagnostic build. It pins the new image's hash and size, refuses sending over an existing Linux gadget, requires the Pongo gadget and a local administrative shell, and requires both exact upload acknowledgement and a new Linux USB gadget before reporting handoff success. A Pongo-tool exit status alone is insufficient. The helper has been installed in the owner workspace; no phone transfer has yet been performed.
+
+Helper verification: shell syntax, byte-identical workspace/repository copies, successful local image-pin status check, and same-size corrupt-image rejection before USB handoff passed. Physical retry and battery observations are pending.
