@@ -51,3 +51,16 @@ Next: qualify DART1 fault containment and physical requester routing, then
 separately qualify PERST release, link training and manual PCI configuration
 identity. TCR=0 alone proves neither requester routing nor DMA fault isolation.
 No firmware, calibration, device identifiers or original Apple payloads are included.
+
+## Follow-up: strict DART1 state gate, incomplete postflight
+
+The module now rejects any nonzero packed TCR, including unknown bits,
+with EBUSY and rollback while endpoint PERST remains asserted.
+The matching ARM64 build succeeded. On-device stage8 again reached READY
+for 250ms, read TCR=0, passed the new gate, restored controls and GPIO,
+logged COMPLETE rc=0 and returned RMMOD_RC=0.
+The USB shell then stopped before the postflight marker; USB 05ac:4142
+was absent and two pings failed. Cause is not established. This cycle is
+INCOMPLETE, not a full acceptance pass. Current phone health and final
+PMGR states require renewed live verification after USB recovery.
+No PERST release or DART write was introduced.

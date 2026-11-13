@@ -414,6 +414,16 @@ static int n71_microlease_probe(struct platform_device *pdev)
                     after, after & 0xff, (after >> 8) & 0xff,
                     (after >> 16) & 0xff, (after >> 24) & 0xff,
                     after & 0x80808080U);
+                /* Require the whole packed register, not just enable bits:
+                 * unknown control bits or any active stream block progression.
+                 * This matches the S5L8960X driver's tcr_disabled=0 but does
+                 * not establish physical requester routing/fault containment. */
+                if (after != 0) {
+                    pr_err("n71-perst-held: DART1_STATE_REJECTED; endpoint stays reset\n");
+                    ret = -EBUSY;
+                    goto restore;
+                }
+                pr_info("n71-perst-held: DART1_ALL_FOUR_STREAMS_DISABLED_STATE_PASS; DMA isolation still untested\n");
                 iounmap(dart1);
                 dart1 = NULL;
             }
