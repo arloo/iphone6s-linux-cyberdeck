@@ -1,0 +1,446 @@
+Subject: [EXPERIMENTAL OFFLINE] iommu: apple-dart: A9 S5L8960X ordered TTBR/TLB and fail-closed faults
+SPDX-License-Identifier: GPL-2.0-only
+
+Reference: OrchardLinux/orchard iommu apple-dart 0004 and 0006, source-adapted.
+Upstream contributors: Berkay Kösebay and Henrik Klee; see original Orchard patch history.
+No copyright assignment or representation of upstream acceptance is claimed.
+Requires prior N71 patch 0014: base alignment validation and independent TCR lock.
+This patch is only a separate Linux ARM64 compilation experiment. The original
+all-stream reset, physical S8000 PCIe requester/DART1 SID and NAND/baseband
+isolation are UNPROVEN; it must NOT be automatically loaded on a phone.
+Owner-private firmware, ADT and device-specific calibration are not included.
+---
+diff --git a/drivers/iommu/apple-dart.c b/drivers/iommu/apple-dart.c
+--- a/drivers/iommu/apple-dart.c
++++ b/drivers/iommu/apple-dart.c
+@@ -63,10 +63,17 @@
+ #define DART_S5L8960X_ERROR_ADDR	0x1c
+ 
+ #define DART_S5L8960X_TCR			0xc
+ #define DART_S5L8960X_TCR_BITS_PER_STREAM	8
+ 
++/* Original Apple S5L8960X optional DT-controlled global configuration.
++ * This branch does not enable DART1 physical access on N71/S8000.
++ */
++#define DART_S5L8960X_DIAG_CONFIG 0x20
++#define DART_S5L8960X_ERROR_REFLECTOR 0x24
++#define DART_S5L8960X_FETCH_CONFIG 0x30
++
+ #define DART_S5L8960X_TTBR	0x40
+ 
+ /* T8020/T6000 registers */
+ 
+ #define DART_T8020_STREAM_COMMAND 0x20
+@@ -220,10 +227,18 @@
+ 	struct iommu_group *sid2group[DART_MAX_STREAMS];
+ 	struct iommu_device iommu;
+ 
+ 	u32 save_tcr[DART_MAX_STREAMS];
+ 	u32 save_ttbr[DART_MAX_STREAMS][DART_MAX_TTBR];
++
++	/* Optional A9 S5L8960X properties; never guess firmware values. */
++	u32 error_reflector;
++	u32 fetch_config;
++	u32 diag_config;
++	u32 has_error_reflector : 1;
++	u32 has_fetch_config : 1;
++	u32 has_diag_config : 1;
+ };
+ 
+ struct apple_dart_hw {
+ 	enum dart_type type;
+ 	irqreturn_t (*irq_handler)(int irq, void *dev);
+@@ -283,18 +298,22 @@
+ /*
+  * This structure is attached to each iommu domain handled by a DART.
+  *
+  * @pgtbl_ops: pagetable ops allocated by io-pgtable
+  * @finalized: true if the domain has been completely initialized
++ * @flush_error: S5L8960X: first failed TLB invalidation or translation setup;
++ *               the domain's streams stay blocked and no new mappings are
++ *               accepted once it is set
+  * @init_lock: protects domain initialization
+  * @stream_maps: streams attached to this domain (valid for DMA/UNMANAGED only)
+  * @domain: core iommu domain pointer
+  */
+ struct apple_dart_domain {
+ 	struct io_pgtable_ops *pgtbl_ops;
+ 
+ 	bool finalized;
++	int flush_error;
+ 	u64 mask;
+ 	struct mutex init_lock;
+ 	struct apple_dart_atomic_stream_map stream_maps[MAX_DARTS_PER_DEVICE];
+ 
+ 	struct iommu_domain domain;
+@@ -419,20 +438,25 @@
+ 	for_each_set_bit(sid, stream_map->sidmap, dart->num_streams)
+ 		writel(dart->hw->tcr_bypass,
+ 		       dart->regs + DART_TCR(dart, sid));
+ }
+ 
++static u32 apple_dart_ttbr_value(struct apple_dart *dart, phys_addr_t paddr)
++{
++	return dart->hw->ttbr_valid |
++	       (paddr >> dart->hw->ttbr_shift) << dart->hw->ttbr_addr_field_shift;
++}
++
+ static void apple_dart_hw_set_ttbr(struct apple_dart_stream_map *stream_map,
+ 				   u8 idx, phys_addr_t paddr)
+ {
+ 	struct apple_dart *dart = stream_map->dart;
+ 	int sid;
+ 
+ 	WARN_ON(paddr & ((1 << dart->hw->ttbr_shift) - 1));
+ 	for_each_set_bit(sid, stream_map->sidmap, dart->num_streams)
+-		writel(dart->hw->ttbr_valid |
+-		       (paddr >> dart->hw->ttbr_shift) << dart->hw->ttbr_addr_field_shift,
++		writel(apple_dart_ttbr_value(dart, paddr),
+ 		       dart->regs + DART_TTBR(dart, sid, idx));
+ }
+ 
+ static void apple_dart_hw_clear_ttbr(struct apple_dart_stream_map *stream_map,
+ 				     u8 idx)
+@@ -572,10 +596,30 @@
+ {
+ 	return apple_dart_t8110_hw_tlb_command(
+ 		stream_map, DART_T8110_TLB_CMD_OP_FLUSH_SID);
+ }
+ 
++/* The exact register offsets follow Orchard iommu/apple-dart patch 0004.
++ * All values originate from verified DT properties, never hard-coded presets.
++ */
++static void apple_dart_s5l8960x_set_reflector(struct apple_dart *dart)
++{
++	if (dart->has_error_reflector)
++		writel(dart->error_reflector,
++		       dart->regs + DART_S5L8960X_ERROR_REFLECTOR);
++}
++
++static void apple_dart_s5l8960x_set_configs(struct apple_dart *dart)
++{
++	if (dart->has_fetch_config)
++		writel(dart->fetch_config,
++		       dart->regs + DART_S5L8960X_FETCH_CONFIG);
++	if (dart->has_diag_config)
++		writel(dart->diag_config,
++		       dart->regs + DART_S5L8960X_DIAG_CONFIG);
++}
++
+ static int apple_dart_hw_reset(struct apple_dart *dart)
+ {
+ 	u32 config;
+ 	struct apple_dart_stream_map stream_map;
+ 	int i;
+@@ -606,30 +650,60 @@
+ 
+ 	/*
+ 	 * S5L8960X DART only supports TLB invalidation if translation is
+ 	 * enabled.
+ 	 */
+-	if (dart->hw->type == DART_S5L8960X)
++	if (dart->hw->type == DART_S5L8960X) {
++		apple_dart_s5l8960x_set_reflector(dart);
++		apple_dart_s5l8960x_set_configs(dart);
+ 		return 0;
++	}
+ 
+ 	return dart->hw->invalidate_tlb(&stream_map);
+ }
+ 
+-static void apple_dart_domain_flush_tlb(struct apple_dart_domain *domain)
+-{
+-	int i, j;
++/*
++ * Failed S5L8960X invalidation may leave stale translations cached.
++ * Disable ONLY this domain's owned streams and refuse further mappings.
++ * The existing all-stream hardware reset MUST NOT be called here.
++ */
++static void apple_dart_domain_block(struct apple_dart_domain *domain,
++                                    struct apple_dart_stream_map *stream_map,
++                                    int error)
++{
++    if (stream_map->dart->hw->type != DART_S5L8960X)
++        return;
++
++    apple_dart_hw_disable_dma(stream_map);
++    if (!READ_ONCE(domain->flush_error)) {
++        WRITE_ONCE(domain->flush_error, error);
++        dev_err(stream_map->dart->dev,
++                "blocking DMA for streams %lx: %d\n",
++                stream_map->sidmap[0], error);
++    }
++}
++
++static int apple_dart_domain_flush_tlb(struct apple_dart_domain *domain)
++{
++    int i, j, ret, err = 0;
+ 	struct apple_dart_atomic_stream_map *domain_stream_map;
+ 	struct apple_dart_stream_map stream_map;
+ 
+ 	for_each_stream_map(i, domain, domain_stream_map) {
+ 		stream_map.dart = domain_stream_map->dart;
+ 
+ 		for (j = 0; j < BITS_TO_LONGS(stream_map.dart->num_streams); j++)
+ 			stream_map.sidmap[j] = atomic_long_read(&domain_stream_map->sidmap[j]);
+ 
+-		stream_map.dart->hw->invalidate_tlb(&stream_map);
+-	}
++		ret = stream_map.dart->hw->invalidate_tlb(&stream_map);
++		if (ret) {
++			apple_dart_domain_block(domain, &stream_map, ret);
++			err = ret;
++		}
++	}
++
++	return err ?: READ_ONCE(domain->flush_error);
+ }
+ 
+ static void apple_dart_flush_iotlb_all(struct iommu_domain *domain)
+ {
+ 	apple_dart_domain_flush_tlb(to_dart_domain(domain));
+@@ -642,12 +716,11 @@
+ }
+ 
+ static int apple_dart_iotlb_sync_map(struct iommu_domain *domain,
+ 				     unsigned long iova, size_t size)
+ {
+-	apple_dart_domain_flush_tlb(to_dart_domain(domain));
+-	return 0;
++	return apple_dart_domain_flush_tlb(to_dart_domain(domain));
+ }
+ 
+ static phys_addr_t apple_dart_iova_to_phys(struct iommu_domain *domain,
+ 					   dma_addr_t iova)
+ {
+@@ -668,10 +741,12 @@
+ 	struct apple_dart_domain *dart_domain = to_dart_domain(domain);
+ 	struct io_pgtable_ops *ops = dart_domain->pgtbl_ops;
+ 
+ 	if (!ops)
+ 		return -ENODEV;
++	if (READ_ONCE(dart_domain->flush_error))
++		return READ_ONCE(dart_domain->flush_error);
+ 
+ 	return ops->map_pages(ops, iova & dart_domain->mask, paddr, pgsize,
+ 			      pgcount, prot, gfp, mapped);
+ }
+ 
+@@ -685,27 +760,124 @@
+ 
+ 	return ops->unmap_pages(ops, iova & dart_domain->mask, pgsize, pgcount,
+ 				gather);
+ }
+ 
+-static void
+-apple_dart_setup_translation(struct apple_dart_domain *domain,
+-			     struct apple_dart_stream_map *stream_map)
+-{
+-	int i;
+-	struct io_pgtable_cfg *pgtbl_cfg =
+-		&io_pgtable_ops_to_pgtable(domain->pgtbl_ops)->cfg;
++static bool apple_dart_streams_tcr_is(struct apple_dart_stream_map *stream_map,
++				      u32 tcr)
++{
++	struct apple_dart *dart = stream_map->dart;
++	int sid;
++
++	/* Only the streams of this map: other bytes belong to other masters */
++	for_each_set_bit(sid, stream_map->sidmap, dart->num_streams)
++		if (dart->hw->read_tcr(dart, sid) != tcr)
++			return false;
++
++	return true;
++}
++
++static bool apple_dart_streams_ttbrs_are(struct apple_dart_stream_map *stream_map,
++					 struct io_pgtable_cfg *pgtbl_cfg)
++{
++	struct apple_dart *dart = stream_map->dart;
++	unsigned int n_ttbrs = pgtbl_cfg->apple_dart_cfg.n_ttbrs;
++	int sid, i;
++	u32 expected;
++
++	for_each_set_bit(sid, stream_map->sidmap, dart->num_streams) {
++		for (i = 0; i < dart->hw->ttbr_count; i++) {
++			expected = 0;
++			if (i < n_ttbrs)
++				expected = apple_dart_ttbr_value(dart,
++						pgtbl_cfg->apple_dart_cfg.ttbr[i]);
++			if (readl(dart->regs + DART_TTBR(dart, sid, i)) != expected)
++				return false;
++		}
++	}
++
++	return true;
++}
++
++/*
++ * The S5L8960X sequence of iOS's AppleS5L8960XDART hardware init
++ * (0xfffffff005fb5b58): streams off, error reflector, stream tables, TCR
++ * (read back), fetch and diag configuration, then the invalidation, which
++ * this DART only accepts with translation enabled. Every step that can be
++ * read back is checked, and a failure leaves the streams blocked.
++ */
++static int
++apple_dart_s5l8960x_setup_translation(struct apple_dart_domain *domain,
++				      struct apple_dart_stream_map *stream_map,
++				      struct io_pgtable_cfg *pgtbl_cfg)
++{
++	struct apple_dart *dart = stream_map->dart;
++	int i, ret;
++
++	apple_dart_hw_disable_dma(stream_map);
++	if (!apple_dart_streams_tcr_is(stream_map, dart->hw->tcr_disabled)) {
++		ret = -EIO;
++		goto fail;
++	}
++
++	apple_dart_s5l8960x_set_reflector(dart);
+ 
+ 	for (i = 0; i < pgtbl_cfg->apple_dart_cfg.n_ttbrs; ++i)
+ 		apple_dart_hw_set_ttbr(stream_map, i,
+ 				       pgtbl_cfg->apple_dart_cfg.ttbr[i]);
+-	for (; i < stream_map->dart->hw->ttbr_count; ++i)
++	for (; i < dart->hw->ttbr_count; ++i)
+ 		apple_dart_hw_clear_ttbr(stream_map, i);
+ 
+ 	apple_dart_hw_enable_translation(stream_map,
+ 					 pgtbl_cfg->apple_dart_cfg.n_levels);
+-	stream_map->dart->hw->invalidate_tlb(stream_map);
++	if (!apple_dart_streams_tcr_is(stream_map, dart->hw->tcr_enabled)) {
++		ret = -EIO;
++		goto fail;
++	}
++
++	apple_dart_s5l8960x_set_configs(dart);
++
++	ret = dart->hw->invalidate_tlb(stream_map);
++	if (ret)
++		goto fail;
++
++	if (!apple_dart_streams_ttbrs_are(stream_map, pgtbl_cfg)) {
++		ret = -EIO;
++		goto fail;
++	}
++
++	return 0;
++
++fail:
++	dev_err(dart->dev, "translation setup for streams %lx failed: %d\n",
++		stream_map->sidmap[0], ret);
++	apple_dart_domain_block(domain, stream_map, ret);
++	return ret;
++}
++
++static int
++apple_dart_setup_translation(struct apple_dart_domain *domain,
++                             struct apple_dart_stream_map *stream_map)
++{
++    int i;
++    struct io_pgtable_cfg *pgtbl_cfg =
++        &io_pgtable_ops_to_pgtable(domain->pgtbl_ops)->cfg;
++    struct apple_dart *dart = stream_map->dart;
++
++    if (dart->hw->type == DART_S5L8960X)
++        return apple_dart_s5l8960x_setup_translation(domain, stream_map,
++                                                     pgtbl_cfg);
++
++    for (i = 0; i < pgtbl_cfg->apple_dart_cfg.n_ttbrs; ++i)
++        apple_dart_hw_set_ttbr(stream_map, i,
++                               pgtbl_cfg->apple_dart_cfg.ttbr[i]);
++    for (; i < dart->hw->ttbr_count; ++i)
++        apple_dart_hw_clear_ttbr(stream_map, i);
++
++    apple_dart_hw_enable_translation(stream_map,
++                                     pgtbl_cfg->apple_dart_cfg.n_levels);
++    return dart->hw->invalidate_tlb(stream_map);
+ }
+ 
+ static int apple_dart_finalize_domain(struct apple_dart_domain *dart_domain,
+ 				      struct apple_dart_master_cfg *cfg)
+ {
+@@ -827,12 +999,15 @@
+ 
+ 	ret = apple_dart_domain_add_streams(dart_domain, cfg);
+ 	if (ret)
+ 		return ret;
+ 
+-	for_each_stream_map(i, cfg, stream_map)
+-		apple_dart_setup_translation(dart_domain, stream_map);
++	for_each_stream_map(i, cfg, stream_map) {
++		ret = apple_dart_setup_translation(dart_domain, stream_map);
++		if (ret)
++			return ret;
++	}
+ 	return 0;
+ }
+ 
+ static int apple_dart_attach_dev_identity(struct iommu_domain *domain,
+ 					  struct device *dev,
+@@ -1328,10 +1503,48 @@
+  * isolation before any MMIO map, reset or TTBR modification. A resource
+  * which overlaps the original N71 dedicated DART1 window is therefore
+  * prohibited in this EXPERIMENTAL kernel, even if its size is malformed.
+  * This does not change the handling of unrelated DART instances.
+  */
++/* Orchard S5L8960X patch 0004: DT values are optional upstream.
++ * A missing property never authorizes guessing a register value.
++ * N71 DART1 still fails pre-MMIO in apple_dart_probe().
++ */
++static int apple_dart_s5l8960x_parse_config(struct apple_dart *dart)
++{
++	struct device_node *np = dart->dev->of_node;
++	u64 reflector;
++	int ret;
++
++	ret = of_property_read_u64(np, "apple,error-reflector", &reflector);
++	if (!ret) {
++		if (!IS_ALIGNED(reflector, SZ_4K) || reflector >> 12 > U32_MAX) {
++			dev_err(dart->dev, "invalid apple,error-reflector %#llx\n",
++				reflector);
++			return -EINVAL;
++		}
++		dart->error_reflector = reflector >> 12;
++		dart->has_error_reflector = 1;
++	} else if (ret != -EINVAL) {
++		return ret;
++	}
++
++	ret = of_property_read_u32(np, "apple,fetch-config", &dart->fetch_config);
++	if (!ret)
++		dart->has_fetch_config = 1;
++	else if (ret != -EINVAL)
++		return ret;
++
++	ret = of_property_read_u32(np, "apple,diag-config", &dart->diag_config);
++	if (!ret)
++		dart->has_diag_config = 1;
++	else if (ret != -EINVAL)
++		return ret;
++
++	return 0;
++}
++
+ static bool apple_n71_s8000_wlan_dart1_blocked(struct platform_device *pdev)
+ {
+ 	struct resource *res;
+ 
+ 	if (!of_machine_is_compatible("apple,n71") ||
+@@ -1432,10 +1645,16 @@
+ 			dart->num_streams, DART_MAX_STREAMS);
+ 		ret = -EINVAL;
+ 		goto err_clk_disable;
+ 	}
+ 
++	if (dart->hw->type == DART_S5L8960X) {
++		ret = apple_dart_s5l8960x_parse_config(dart);
++		if (ret)
++			goto err_clk_disable;
++	}
++
+ 	ret = apple_dart_hw_reset(dart);
+ 	if (ret)
+ 		goto err_clk_disable;
+ 
+ 	ret = request_irq(dart->irq, dart->hw->irq_handler, IRQF_SHARED,
