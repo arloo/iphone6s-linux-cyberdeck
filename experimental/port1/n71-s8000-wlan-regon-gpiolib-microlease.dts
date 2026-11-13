@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/dts-v1/;
+/plugin/;
+/ {
+  fragment@0 {
+    target-path = "/soc";
+    __overlay__ {
+      n71-native-wlan-reg-on-microlease {
+        compatible = "research,n71-s8000-native-wlan-regon-gpio10-microlease";
+        status = "okay";
+        research,pmic-gpio10-only;
+        wlan-reg-on-gpios = <0x09 10 0>;
+      };
+    };
+  };
+};
