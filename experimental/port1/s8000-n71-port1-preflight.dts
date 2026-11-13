@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+/*
+ * N71 Samsung S8000 diagnostic-only alternative DTB. NOT the normal N71 DTB.
+ * Register extents and pins are sourced from the original N71 Apple ADT and
+ * iOS IODeviceMemory order and cross-checked with physical GPIO lineinfo.
+ * Never attach a live PCIe host driver to this observer-compatible node.
+ */
+#include "s8000-n71.dts"
+
+&{/soc} {
+    pcie_port1_preflight: pcie-port1-preflight@600000000 {
+        compatible = "apple,n71-s8000-pcie-port1-preflight";
+        reg = <0x6 0x00000000 0x0 0x00008000>,
+              <0x6 0x02000000 0x0 0x00004000>,
+              <0x6 0x02004000 0x0 0x00004000>,
+              <0x6 0x10000000 0x0 0x01000000>;
+        reg-names = "root-common", "port1-control",
+                    "port1-aux", "config-shared";
+        apple,port-index = <1>;
+        apple,observer-only;
+        /* GPIOs are NUMBERS ONLY: no gpiod acquisition, no polarity guess. */
+        apple,perst-pin = <161>;
+        apple,clkreq-pin = <165>;
+        apple,device-wake-pin = <73>;
+        status = "okay";
+    };
+};
