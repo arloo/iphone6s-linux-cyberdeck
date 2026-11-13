@@ -1,0 +1,71 @@
+Subject: [EXPERIMENTAL OFFLINE] iommu: apple-dart: refuse unqualified S8000 all-stream reset
+SPDX-License-Identifier: GPL-2.0-only
+
+Project: iPhone 6s N71 Samsung S8000 Linux cyberdeck research.
+Source: upstream Linux Apple DART lifecycle inspection and owner-specific safety interlock.
+Requires previous N71 patch 0014 and 0015; owner-private source and images not included.
+This is NOT PCIe enablement, stream isolation or DART1 hardware bring-up.
+Block ALL-STREAM reset on Apple S8000-family legacy DART until
+physical requester/SID ownership and cross-port reset effects are proven.
+No module parameter/DT override exists. Do not boot onto a real DART1.
+---
+diff --git a/drivers/iommu/apple-dart.c b/drivers/iommu/apple-dart.c
+--- a/drivers/iommu/apple-dart.c
++++ b/drivers/iommu/apple-dart.c
+@@ -616,15 +616,41 @@
+ 	if (dart->has_diag_config)
+ 		writel(dart->diag_config,
+ 		       dart->regs + DART_S5L8960X_DIAG_CONFIG);
+ }
+ 
++/*
++ * The original DART reset clears ALL streams and ALL TTBRs, irrespective of
++ * ownership. Until the S8000 requester-to-SID mapping and co-ownership are
++ * independently proven, this destructive sequence is forbidden.
++ *
++ * This guard is deliberately earlier than the FIRST reset MMIO read. The
++ * separate N71 WLAN DART1 probe guard remains earlier still, before ioremap.
++ * No DT property, boot argument, kernel parameter or runtime flag can opt in.
++ * A future driver must replace this interlock with verified per-stream
++ * ownership, not weaken this predicate.
++ */
++static bool apple_dart_s8000_unqualified_global_reset(struct apple_dart *dart)
++{
++	return dart->hw->type == DART_S5L8960X &&
++	       (of_machine_is_compatible("apple,s8000") ||
++		 of_machine_is_compatible("apple,n71") ||
++		 of_machine_is_compatible("apple,iphone8,1"));
++}
++
+ static int apple_dart_hw_reset(struct apple_dart *dart)
+ {
+ 	u32 config;
+ 	struct apple_dart_stream_map stream_map;
+ 	int i;
++
++	/* Fail before reading the DART lock register or writing any stream. */
++	if (apple_dart_s8000_unqualified_global_reset(dart)) {
++		dev_warn(dart->dev,
++			 "S8000 unqualified all-stream DART reset blocked\n");
++		return -EOPNOTSUPP;
++	}
+ 
+ 	config = readl(dart->regs + dart->hw->lock);
+ 	if (config & dart->hw->lock_bit) {
+ 		dev_err(dart->dev, "DART is locked down until reboot: %08x\n",
+ 			config);
+@@ -1692,11 +1718,13 @@
+ 
+ static void apple_dart_remove(struct platform_device *pdev)
+ {
+ 	struct apple_dart *dart = platform_get_drvdata(pdev);
+ 
+-	apple_dart_hw_reset(dart);
++	/* This path must not bypass the S8000 pre-MMIO reset interlock. */
++	if (apple_dart_hw_reset(dart))
++		dev_warn(dart->dev, "DART teardown reset refused; further lifecycle safety unqualified\n");
+ 	free_irq(dart->irq, dart);
+ 
+ 	iommu_device_unregister(&dart->iommu);
+ 	iommu_device_sysfs_remove(&dart->iommu);
+ 
