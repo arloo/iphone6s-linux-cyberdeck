@@ -95,6 +95,9 @@ static int n71_dart_tcr0_flush_roots_trial(const struct n71_dart_trial_ops *o, v
     if (!ret && o->active_hold) ret = o->active_hold(ctx);
     if (o->read(ctx, 0x10) != fault) ret = -1;
 disable:
+    /* A release trial must reassert endpoint reset before removing its guard.
+     * If reset cannot be observed LOW, retain active roots for quarantine. */
+    if (!o->perst_low(ctx)) return -3;
     o->write(ctx, 0x0c, 0);
     if (o->read(ctx, 0x0c) != 0) ret = -3;
     return ret;

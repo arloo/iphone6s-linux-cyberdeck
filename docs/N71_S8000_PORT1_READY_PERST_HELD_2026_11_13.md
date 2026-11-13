@@ -135,3 +135,12 @@ The actual port-instance initializer selects root resource `1+2*port` through ro
 Stage15 maps only this port1 aperture, sets control0x80 from 0 to 1 under PERST LOW and active empty SID0 roots, samples status0x88 25 times, then restores control0x80 to 0 before DART teardown. At uptime2093 s: `rc=0 status88=00000004 samples=25 restored=1 PERST_LOW`. No endpoint reset release, PCI config access or DMA submission. Full TTBR/control/GPIO restoration, all seven PMGR domains OFF, module/overlay absent, USB/touch/HCI preserved with zero Bluetooth errors. Battery Charging, 60%, +63 mA, 4.052 V, 31.5 C. Module SHA256 `2ed20ca532571b97e3b6f4d3c71d19bad5cfcdbd08c5000d427c78a047c628dd`.
 
 The actual C transaction passes eleven fake-I/O cases including control write/restore failure, changed DART guard, unexpected PERST, and modeled release/reassert paths. Those release paths have not yet run physically at this checkpoint. Status bit0 stayed clear under endpoint reset; no working link is inferred.
+
+
+## Stage 16: bounded endpoint reset release/reassert, no link indication
+
+With SID0's owned empty roots active and invalidated, stage16 sets local control0x80=1, drives PERST161 HIGH through its exclusively owned GPIOLIB descriptor, samples local status0x88 25 times, reasserts PERST LOW, restores control0x80, then tears down DART. A failed reset reassertion retains active translation/roots and triggers the existing allocation/module quarantine instead of dropping the guard. The fake-MMIO lost-PERST cases now verify that behavior.
+
+At uptime2261 s, the GPIO provider observed HIGH and LOW as requested, separated by approximately277 ms. Sequence and postflight passed, but status88 remained 0x4 (bit0 clear), matching the reset-held observation. This is a successful bounded sequence with a NEGATIVE link-indicator result, not working PCIe. Full register/TTBR/GPIO restoration, no retained module/overlay, all seven PMGR domains OFF, USB/touch/HCI present with zero Bluetooth errors. Battery Charging, 60%, +56 mA, 4.038 V, 31.5 C. Module SHA256 `a982a23533b1327eb7c96cd83fed399bd9fe4a9470d4f6506b9292aa900d5c8c`.
+
+No PCI config access, BME enable, BAR assignment, endpoint DMA submission or native Wi-Fi enumeration occurred. Physical requester SID and hardware DMA containment remain unproven. Next source-defined missing operation: root vslot2040's port1-specific write3 at root offset0x4060; optional REFCLK gating remains separate.

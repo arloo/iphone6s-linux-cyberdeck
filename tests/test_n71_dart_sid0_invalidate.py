@@ -53,9 +53,9 @@ int main(int argc,char **argv){
  if(c.mode==3)assert(rc==0 && r==1 && c.inner==-1);
  if(c.mode==4)assert(rc==-3 && r==0 && c.inner==-1);
  if(c.mode==5)assert(rc==-3 && r==0 && c.inner==-3 && c.regs[3]==0x80);
- if(c.mode==6)assert(rc==-3 && r==0 && c.inner==-2);
- if(c.mode!=5)assert(c.regs[3]==0);
- for(int i=0;i<16;i++)assert(c.regs[16+i]==(c.mode==5 && i<4?0:c.saved[i]));
+ if(c.mode==6)assert(rc==-3 && r==0 && c.inner==-3 && c.regs[3]==0x80);
+ if(c.mode!=5 && c.mode!=6)assert(c.regs[3]==0);
+ for(int i=0;i<16;i++)assert(c.regs[16+i]==((c.mode==5 || c.mode==6) && i<4?0:c.saved[i]));
  return 0;
 }
 '''
