@@ -8,6 +8,7 @@ struct n71_dart_trial_ops {
     int (*perst_low)(void *);
     void (*hold)(void *);
     void (*tick)(void *); /* one microsecond for bounded command polling */
+    int (*active_hold)(void *); /* optional bounded dwell while TCR0=0x80 */
     unsigned int command_change_mask; /* only stream selector bits may differ */
 };
 static int n71_dart_disabled_ttbr_trial(const struct n71_dart_trial_ops *o,
@@ -91,6 +92,7 @@ static int n71_dart_tcr0_flush_roots_trial(const struct n71_dart_trial_ops *o, v
         if (!(*last & 8)) { ret = *last == 0x102 ? 0 : -1; break; }
         o->tick(ctx);
     }
+    if (!ret && o->active_hold) ret = o->active_hold(ctx);
     if (o->read(ctx, 0x10) != fault) ret = -1;
 disable:
     o->write(ctx, 0x0c, 0);

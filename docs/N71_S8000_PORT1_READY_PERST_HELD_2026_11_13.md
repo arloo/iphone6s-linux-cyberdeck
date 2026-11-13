@@ -115,3 +115,14 @@ Accepted at uptime 1438 s: `DART1_OWNED_EMPTY_ROOTS rc=0 command=00000102 polls=
 The eleven new fake-MMIO cases execute actual owned-root encoding and the nested install/invalidate/clear/restore sequence. They cover physical-address bounds/alignment, success, rejected TCR enable/disable, busy timeout, wrong stream selection, fault changes, lost PERST, rejected root write/clear, duplicate roots and reserved bits. The prior seventeen cases also pass. This tests sequence behavior, not hardware DMA, allocator failure injection or cache coherency under device traffic.
 
 The protected-port log now reports an independent comparison result: an unrelated earlier failure no longer prints a false protected-control mismatch. No PERST release, endpoint configuration access, DMA submission or native Wi-Fi enumeration happened. Next: bounded dwell with owned empty roots, followed by requester/link-training qualification.
+
+
+## Stage 14: active empty-root dwell physically accepted
+
+Stage 14 extends the owned-root sequence with 25 samples separated by 10 ms sleeps while packed TCR=0x80 and command=0x102, after the selected-stream invalidate completes and before disabling translation. Every sample checks PERST161 LOW, the four owned TTBR words, exact packed TCR and command, no DART fault flag, port1 ID5=1 and COMMON status bits0/4=1. No endpoint reset release or DMA is introduced. A failed dwell returns an error through the existing inner result and still executes the disabled-TCR/TTBR rollback path.
+
+On the phone, active dwell ran from approximately uptime 1610.224 to 1610.501 s (at least 250 ms), with `DART1_OWNED_ROOTS_ACTIVE_STABLE samples=25 TCR=00000080 command=00000102 PERST_LOW`. Invalidation took two polls; all backing pages remained zero, were unmapped/freed after restoration, and both outer zero/restore checks passed. COMPLETE stage14 rc0, module/overlay absent, all seven PCIe domains OFF, protected port controls unchanged, Bluetooth UP/RUNNING with zero RX/TX errors, USB and touch present. Battery: Charging, 59%, +48 mA, 4.044 V, 31.2 C, remaining charge 743 mAh.
+
+Actual stage14 module SHA256: `ae530aa48b3921df0561dc6af161b95930bf0bb80e5293ad7b1c6973aee02304`. The fake-MMIO suite now has thirty scenarios across three compiled-C tests, including accepted and rejected active-dwell callbacks. These synthetic callback cases check propagation and rollback; the native sampling loop was exercised on the physical phone.
+
+The result establishes bounded register stability with owned empty roots under reset. It does not prove that a BCM4350 DMA request reaches SID0, that the hardware table walker interprets the empty entries as expected, or that a real fault is contained. Link training, physical requester qualification and enumeration remain outstanding; native Wi-Fi is not yet active. The current RAM boot stays available for the next supervised hardware stage.

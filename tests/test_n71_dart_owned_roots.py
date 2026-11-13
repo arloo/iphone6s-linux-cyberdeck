@@ -39,9 +39,14 @@ void wr(void*p,unsigned int off,unsigned int v){
 }
 int low(void*p){return ((struct ctx*)p)->low;}
 void tick(void*p){struct ctx*c=p;c->ticks++;if(c->mode==6)c->low=0;}
+int active(void*p){
+ struct ctx*c=p;assert(c->regs[3]==0x80 && c->regs[0]==0x102 && c->low);
+ for(int i=0;i<4;i++)assert(c->regs[16+i]==c->roots[i]);
+ return c->mode==12?-1:0;
+}
 void hold(void*p){
  struct ctx*c=p;
- const struct n71_dart_trial_ops o={.read=rd,.write=wr,.perst_low=low,.tick=tick};
+ const struct n71_dart_trial_ops o={.read=rd,.write=wr,.perst_low=low,.tick=tick,.active_hold=c->mode>=11?active:0};
  c->inner=n71_dart_owned_roots_trial(&o,c,c->roots,&c->last,&c->polls);
 }
 int main(int argc,char**argv){
@@ -64,6 +69,8 @@ int main(int argc,char**argv){
  if(c.mode==4)assert(rc==-3 && r==0 && c.inner==-1);
  if(c.mode==5)assert(rc==-3 && r==0 && c.inner==-3 && c.regs[3]==0x80);
  if(c.mode==6)assert(rc==-3 && r==0 && c.inner==-2);
+ if(c.mode==11)assert(rc==0 && z==1 && r==1 && c.inner==0);
+ if(c.mode==12)assert(rc==0 && z==1 && r==1 && c.inner==-1);
  if(c.mode==10)assert(rc==-2 && z==0 && r==1 && c.inner==-2);
  if(c.mode!=5)assert(c.regs[3]==0);
  for(int i=0;i<16;i++)assert(c.regs[16+i]==(c.mode==5 && i<4?c.roots[i]:c.saved[i]));
@@ -77,6 +84,6 @@ class Tests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as d:
    src=Path(d)/'test.c';src.write_text(C);exe=Path(d)/'test'
    subprocess.run([cc,'-std=c11','-O2','-I',str(ROOT/'experimental/port1'),str(src),'-o',str(exe)],check=True,capture_output=True)
-   for mode in range(11):
+   for mode in range(13):
     with self.subTest(mode=mode):subprocess.run([str(exe),str(mode)],check=True,capture_output=True)
 if __name__=='__main__':unittest.main()
