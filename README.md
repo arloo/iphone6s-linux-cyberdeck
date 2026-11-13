@@ -7,6 +7,10 @@ We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-
 > [!WARNING]
 > **Experimental hardware research, not a supported phone OS.** Booting custom kernels through checkm8/PongoOS can leave the device in DFU/Recovery or require manual recovery. This project's current tests are RAM-only and deliberately avoid writes to internal storage. Do not assume this eliminates all risks. Back up your device and proceed at your own risk.
 
+## Latest physical milestone — November 13, 2026 (N71/S8000)
+
+**REAL RAM-ONLY iPhone 6s boot with integrated Linux Wi-Fi software + original genuine BCM4350C5 `albarossa` firmware PASS.** [Full real-phone C5 boot and independent SHA-256 report](docs/N71_S8000_PHYSICAL_WIFI_C5_SOFTWARE_RAM_BOOT_2026_11_13.md). The owner booted the exact privately pinned **12,668,970-byte** RAM payload through DFU/checkm8/Pongo; the iPhone reenumerated as Linux USB `05ac:4142` and replied to **3/3** USB pings. The actual phone kernel exposes **`cfg80211` and `brcmfmac` sysmodules**, Z2 touch `PROTOCOL_READY`, and **all 17 genuine original Apple BCM4350C5 files in RAM**. An independent on-phone-to-Dell SHA-256 comparison confirmed **17/17 original firmware file contents**. A real on-phone public HTTPS URL via Dell's restricted Wi-Fi/USB proxy returned HTTP 200. **This is NOT native Wi-Fi:** the mandatory inert PCIe port1 block is preserved, physical PCI endpoints/IOMMU groups/native WLAN interfaces remain zero, the physical DART1 requester/SID is unproven, and no OTP/NVRAM variant was selected. No new on-phone PCIe/DART MMIO/DMA or iOS NAND operation was performed. The old-known-good RAM recovery payload remains privately available. The older November 11 table below is retained as historical baseline, not current WLAN Kconfig status.
+
 ## Verified hardware, November 11, 2026 — S8000/N71 only
 
 | Component | Observed result | Status |
