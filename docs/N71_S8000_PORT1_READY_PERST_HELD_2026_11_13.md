@@ -279,3 +279,10 @@ Verified markers: `REAL_PCI_DMA_API_PASS`, `NATIVE_REAL_PCI_ACTION rc=0 reset_re
 The first stage29 attempt failed cleanly with ENODEV because the map supplied one output cell to a provider declaring five. Correcting the map resolved PCI IOMMU attachment. Local OF node references are now released before removing the overlay.
 
 Reproduce using the existing native IOMMU builder with optional `--private-calibration` pointing to the owner's validated81-record header, then the private single-load runner stage29. The calibration is copied only into the private build directory. Remaining: actual endpoint DMA routing, interrupts, firmware startup, scan, association and traffic.
+
+
+## 14 November: WLAN AIC IRQ allocation physically PASS
+
+At uptime10346s, stage29 additionally created a Linux IRQ mapping for AIC IRQ264 (original private N71 ADT MSI offset256 plus WLAN vector base8). The exact AIC node and an initially absent mapping are required. `request_irq` uses `IRQF_NO_AUTOEN`; no interrupt is enabled, no controller MSI register is programmed and bus mastering stays OFF. The handler is freed and mapping disposed before PCI/DART teardown; absence is checked.
+
+Physical markers: `WLAN_MSI_AIC_ALLOCATION_PASS vector=264 IRQ_DISABLED no_MSI_delivery_test BUS_MASTER_OFF` and `WLAN_MSI_AIC_ALLOCATION_REMOVED mapping_absent=1`. Real PCI DMA API test and full teardown still pass; battery53%, USB/touch/Bluetooth preserved. This qualifies Linux IRQ allocation only, **not PCI MSI delivery**, firmware execution, endpoint DMA or Wi-Fi. Logs and the original ADT remain private.

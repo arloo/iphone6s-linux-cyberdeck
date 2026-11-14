@@ -55,7 +55,36 @@ done:
  n71_dma_result=rc;return rc;
 }
 static int n71_dma_probe(struct platform_device *pdev){return n71_dma_test_device(&pdev->dev);}
-static int n71_pci_dma_probe(struct pci_dev *pdev,const struct pci_device_id *id){return n71_dma_test_device(&pdev->dev);}
+/* Original N71 ADT: MSI offset256 + WLAN vector base8. This only
+ * qualifies Linux IRQ allocation; it neither programs nor tests MSI delivery. */
+#include <linux/interrupt.h>
+#include <linux/irqdomain.h>
+static irqreturn_t n71_disabled_irq_handler(int irq,void *data){return IRQ_NONE;}
+static int n71_pci_irq_allocation_test(struct pci_dev *pdev)
+{
+ struct device_node *np;struct irq_domain *domain;struct irq_fwspec spec={};
+ unsigned int irq;int rc;
+ if(!n71_dma_context_ok(&pdev->dev))return -EPERM;
+ np=of_find_node_by_path("/soc/interrupt-controller@20e100000");
+ if(!np)return -ENODEV;
+ domain=irq_find_host(np);
+ if(!domain||irq_find_mapping(domain,(1U<<16)|264)){rc=-EBUSY;goto out;}
+ spec.fwnode=of_fwnode_handle(np);spec.param_count=3;
+ spec.param[0]=0;spec.param[1]=264;spec.param[2]=IRQ_TYPE_LEVEL_HIGH;
+ irq=irq_create_fwspec_mapping(&spec);
+ if(!irq){rc=-ENXIO;goto out;}
+ rc=request_irq(irq,n71_disabled_irq_handler,IRQF_NO_AUTOEN,"n71-wlan-msi-allocation-only",pdev);
+ if(!rc){
+  pr_info("n71-perst-held: WLAN_MSI_AIC_ALLOCATION_PASS vector=264 IRQ_DISABLED no_MSI_delivery_test BUS_MASTER_OFF\n");
+  free_irq(irq,pdev);
+ }
+ irq_dispose_mapping(irq);
+ if(irq_find_mapping(domain,(1U<<16)|264))rc=-EIO;
+ if(!rc)pr_info("n71-perst-held: WLAN_MSI_AIC_ALLOCATION_REMOVED mapping_absent=1\n");
+out:
+ of_node_put(np);return rc;
+}
+static int n71_pci_dma_probe(struct pci_dev *pdev,const struct pci_device_id *id){int rc=n71_dma_test_device(&pdev->dev);return rc?rc:n71_pci_irq_allocation_test(pdev);}
 static const struct pci_device_id n71_pci_dma_ids[]={{PCI_DEVICE(0x14e4,0x43a3)},{}};
 static struct pci_driver n71_pci_dma_driver={.name="n71-native-pci-dma-test",.id_table=n71_pci_dma_ids,.probe=n71_pci_dma_probe};
 static int n71_native_pci_bind(struct pci_dev *ep)
