@@ -300,3 +300,10 @@ Physical run uptime11702s: `WLAN_MSI_PORT_REGISTER_TRIAL rc=0 restored=1 eight_v
 The original N71 ADT MSI address0xbffff000 overlaps the previous translated DMA window0x80000000..0xbfffffff. Reserve its entire16KiB CPU page by reducing the consumer and both PCI iommu-map lengths to0x3fffc000, ending at0xbfffc000 exclusive. The diagnostic also rejects a mapped buffer crossing that boundary before reporting success. This is an allocator exclusion, not a verified hardware MSI bypass mapping.
 
 Physical stage29 at uptime12150s passes both platform and actual Broadcom PCI DMA API mappings, AIC allocation/removal, MSI register roundtrip and full restored teardown. Bus mastering stays OFF, USB/touch/Bluetooth retained, battery57%. No actual endpoint DMA, MSI delivery or firmware execution has yet been tested. Private logs remain outside Git.
+
+
+## 14 November: bounded Broadcom EROM component inventory physically read
+
+Stage29 reads at most1024 words from the previously observed EROM pointer0x1810d000 through BAR0, restores config0x80, requires the exact EOT word and checks component pair tags plus Broadcom/ARM designer values. This is component descriptor discovery, not the full brcmfmac address/wrapper parser. Both physical runs complete, including the filtered run at uptime12362s. Thirteen component pairs were reported; notable IDs/revisions: ChipCommon0x800/47, D110x812/48, PCIe20x83c/11 and ARM CR40x83e/6. No claim is made that all descriptors are driver-supported cores or that their register bases have been decoded.
+
+`BRCM_EROM_INVENTORY rc=0 cores=13 eot=1 window_restored=1 BUS_MASTER_OFF no_OTP_no_core_reset`. Previous DMA API/IRQ/MSI register tests and full teardown pass, USB/touch/Bluetooth retained. No OTP read, core reset, firmware upload, real endpoint DMA or interrupt delivery. Original private logs remain on the owner's Dell.

@@ -107,7 +107,34 @@ static int n71_pci_irq_allocation_test(struct pci_dev *pdev)
 out:
  of_node_put(np);return rc;
 }
-static int n71_pci_dma_probe(struct pci_dev *pdev,const struct pci_device_id *id){int rc=n71_dma_test_device(&pdev->dev);return rc?rc:n71_pci_irq_allocation_test(pdev);}
+/* Bounded read-only EROM discovery. Never accesses the quarantined OTP. */
+static int n71_brcm_erom_inventory(struct pci_dev *pdev)
+{
+ struct n71_dart_trial_mmio *m=n71_pci_dma_context;
+ u32 saved,a,b;unsigned int i=0,cores=0;bool end=false;int rc=-EIO;
+ if(!n71_dma_context_ok(&pdev->dev))return -EPERM;
+ saved=readl((u8 __iomem *)m->endpoint+0x80);
+ writel(0x1810d000,(u8 __iomem *)m->endpoint+0x80);
+ if(readl((u8 __iomem *)m->endpoint+0x80)!=0x1810d000)goto restore;
+ while(i<1024){
+  a=readl((u8 __iomem *)m->bar0+4*i++);
+  if(a==0xffffffff)break;
+  if(a==15){end=true;break;}
+  if((a&15)!=1||((a>>20)!=0x4bf&&(a>>20)!=0x43b))continue;
+  if(i>=1024)break;
+  b=readl((u8 __iomem *)m->bar0+4*i++);
+  if((b&15)!=1)break;
+  cores++;
+  pr_info("n71-perst-held: BRCM_EROM_CORE id=%03x revision=%u master_wrappers=%u slave_wrappers=%u\n",(a>>8)&0xfff,b>>24,(b>>14)&31,(b>>19)&31);
+ }
+ if(end&&cores>0&&cores<64&&n71_dma_context_ok(&pdev->dev))rc=0;
+restore:
+ writel(saved,(u8 __iomem *)m->endpoint+0x80);
+ if(readl((u8 __iomem *)m->endpoint+0x80)!=saved)return -EIO;
+ pr_info("n71-perst-held: BRCM_EROM_INVENTORY rc=%d cores=%u eot=%u window_restored=1 BUS_MASTER_OFF no_OTP_no_core_reset\n",rc,cores,end);
+ return rc;
+}
+static int n71_pci_dma_probe(struct pci_dev *pdev,const struct pci_device_id *id){int rc=n71_dma_test_device(&pdev->dev);if(!rc)rc=n71_pci_irq_allocation_test(pdev);return rc?rc:n71_brcm_erom_inventory(pdev);}
 static const struct pci_device_id n71_pci_dma_ids[]={{PCI_DEVICE(0x14e4,0x43a3)},{}};
 static struct pci_driver n71_pci_dma_driver={.name="n71-native-pci-dma-test",.id_table=n71_pci_dma_ids,.probe=n71_pci_dma_probe};
 static int n71_native_pci_bind(struct pci_dev *ep)
