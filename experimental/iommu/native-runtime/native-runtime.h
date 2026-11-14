@@ -107,6 +107,32 @@ static int n71_pci_irq_allocation_test(struct pci_dev *pdev)
 out:
  of_node_put(np);return rc;
 }
+#ifdef N71_PRIVATE_FIRMWARE_TRIAL
+#include <linux/vmalloc.h>
+#include "n71-private-firmware.h"
+static int n71_firmware_write_trial(struct pci_dev *pdev)
+{
+ struct n71_dart_trial_mmio *m=n71_pci_dma_context;
+ void __iomem *ram;u8 *backup,*check;size_t size=0xc0000;int rc=-EIO;
+ bool verified=false,restored=false;
+ if(!n71_dma_context_ok(&pdev->dev)||readl((u8 __iomem *)m->endpoint+0x80)!=0x18002000)return -EPERM;
+ if(sizeof(n71_fw)+sizeof(n71_nvram)>=size)return -EFBIG;
+ backup=vmalloc(size);check=vmalloc(size);
+ if(!backup||!check){vfree(backup);vfree(check);return -ENOMEM;}
+ ram=ioremap(0x7c0580000ULL,size);
+ if(!ram){vfree(backup);vfree(check);return -ENOMEM;}
+ memcpy_fromio(backup,ram,size);
+ memcpy_toio(ram,n71_fw,sizeof(n71_fw));
+ memcpy_toio((u8 __iomem *)ram+size-sizeof(n71_nvram),n71_nvram,sizeof(n71_nvram));
+ memcpy_fromio(check,ram,size);
+ verified=!memcmp(check,n71_fw,sizeof(n71_fw))&&!memcmp(check+size-sizeof(n71_nvram),n71_nvram,sizeof(n71_nvram));
+ memcpy_toio(ram,backup,size);
+ memcpy_fromio(check,ram,size);restored=!memcmp(check,backup,size);
+ if(verified&&restored&&n71_dma_context_ok(&pdev->dev))rc=0;
+ pr_info("n71-perst-held: BRCM_FIRMWARE_NVRAM_WRITE_VERIFY_RESTORE rc=%d firmware_bytes=%zu nvram_bytes=%zu verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF no_firmware_start\n",rc,sizeof(n71_fw),sizeof(n71_nvram),verified,restored);
+ iounmap(ram);vfree(backup);vfree(check);return rc;
+}
+#endif
 /* Bounded read-only EROM discovery. Never accesses the quarantined OTP. */
 static int n71_brcm_erom_inventory(struct pci_dev *pdev)
 {
@@ -182,6 +208,10 @@ static int n71_brcm_erom_inventory(struct pci_dev *pdev)
      for(j=0;j<4;j++)writel(old[j],(u8 __iomem *)tcm+4*j);
      for(j=0;j<4;j++)if(readl((u8 __iomem *)tcm+4*j)!=old[j])restored=false;
      iounmap(tcm);
+#ifdef N71_PRIVATE_FIRMWARE_TRIAL
+     if(verified&&restored)rc=n71_firmware_write_trial(pdev);
+#endif
+
      if(!verified||!restored)rc=-EIO;
      pr_info("n71-perst-held: BRCM_TCM_WRITE_READ_RESTORE rc=%d bytes=16 verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF no_firmware_start\n",rc,verified,restored);
     }

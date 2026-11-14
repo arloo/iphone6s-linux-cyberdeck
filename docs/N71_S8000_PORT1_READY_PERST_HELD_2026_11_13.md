@@ -316,3 +316,12 @@ Address descriptors now skip upper-address and size payloads and distinguish reg
 CR4 wrapper IOCTL0x21 and resetctrl0 show CPUHALT already asserted and core reset deasserted. Capability0x524 gives four TCM-A and two TCM-B banks. With CPU halted, save bank selector, read each bank size using the upstream formula and restore/verify selector: total786432 bytes (768KiB). Genuine private C5 firmware585997 bytes fits, before NVRAM/footer accounting.
 
 Upstream brcmfmac uses absolute RAM base0x180000 within BAR2 for4350. At uptime13046s, map only the final16 bytes of the measured TCM aperture; save four original words, write a fixed diagnostic pattern, verify, restore and verify originals. `BRCM_TCM_WRITE_READ_RESTORE rc=0 bytes=16 verified=1 restored=1 CPU_HALTED BUS_MASTER_OFF no_firmware_start`. This is host MMIO into device RAM, **not endpoint DMA**. No firmware is loaded or started. Full PCI/DART/reset/power teardown passes; USB/touch/Bluetooth retained, battery57%. Private logs remain outside Git.
+
+
+## 14 November: full genuine C5 firmware/NVRAM write, readback and restore PASS
+
+Optional `N71_PRIVATE_FIRMWARE_TRIAL` includes an owner-private generated header, never tracked. Exact original C5 firmware and board NVRAM source hashes are rechecked locally. This single-profile ASCII NVRAM contains169 key/value lines, boardrev present, no device prefixes, embedded NUL or internal whitespace. Pack as NUL-separated entries plus final NUL, four-byte padding and the brcmfmac length/complement token:3704 bytes. Firmware585997 bytes. No generic board profile is substituted.
+
+At uptime13383s the CR4 remains halted, the measured768KiB TCM is backed up in host memory, firmware is written at RAM offset0 and packed NVRAM at the end. Read back the whole TCM and byte-compare both input ranges. Restore the complete original TCM and verify byte-for-byte. `BRCM_FIRMWARE_NVRAM_WRITE_VERIFY_RESTORE rc=0 firmware_bytes=585997 nvram_bytes=3704 verified=1 restored=1 CPU_HALTED BUS_MASTER_OFF no_firmware_start`. Complete teardown also passes, battery58%, USB/touch/Bluetooth retained.
+
+This proves full host-MMIO image transfer to device RAM. **The image is subsequently restored, not left executing.** Reset-vector programming, ARM release, firmware shared-memory handshake, real endpoint DMA and MSI delivery remain untested. The optional private header and resulting firmware-containing module remain on the owner's Dell outside public Git. Default public builds omit the trial unless explicitly enabled with a private header.
