@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: physical ChipCommon MMIO identifies BCM4350 revision8.** [Stage24](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) assigned/restored the BARs and read **0x17084350**, with bus mastering OFF and complete postflight. A later OTP trial lost USB before a result: stage25 is quarantined, cause and cleanup unknown, device reconnection required. Firmware naming for revision8 must use the4350 branch; native WLAN is still pending.
+
 **14 November 2026: physical BCM4350 Gen1 x1 link and BAR sizes verified.** [Stages22/23](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) read the endpoint PCIe capability and measured **32KiB register BAR0 + 4MiB TCM BAR2**, then restored both BAR pairs and bus routing. Command/decode/master remained OFF; all PCIe domains returned OFF and charging/USB/touch/Bluetooth survived. MMIO assignment, firmware startup and native WLAN remain pending.
 
 **14 November 2026: Broadcom WLAN endpoint responds to PCI config reads.** [Physical stages20/21](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md): port1 root bridge 106b:1004 and downstream BCM4350 endpoint **14e4:43a3**, network class0280 revision08, read on the real N71. Temporary bus routing and all experiment state restored; charging, USB, touch and Bluetooth intact. Kernel PCI registration, DMA/firmware startup and native WLAN association remain pending.

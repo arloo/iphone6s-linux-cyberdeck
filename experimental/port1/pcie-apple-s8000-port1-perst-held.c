@@ -14,6 +14,8 @@
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/io.h>
+#include <linux/ioport.h>
+#include <linux/debugfs.h>
 #include <linux/iopoll.h>
 #include <linux/gpio/consumer.h>
 #include <linux/regmap.h>
@@ -36,6 +38,8 @@
 #include "n71-port-endpoint-id-trial.h"
 #include "n71-endpoint-config-snapshot.h"
 #include "n71-endpoint-bar-size-trial.h"
+#include "n71-endpoint-mmio-trial.h"
+#include "n71-endpoint-otp-snapshot.h"
 #ifdef N71_PRIVATE_PORT1_CALIBRATION
 #include "n71-private-port1-calibration.h"
 #endif
@@ -58,7 +62,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=private OTP snapshot");
 
 static const struct {
     const char *name;
@@ -224,7 +228,7 @@ fail:
     return ret;
 }
 
-struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; void __iomem *root; void __iomem *port; void __iomem *phy; void __iomem *cfg; void __iomem *endpoint; bool calibration; struct gpio_desc *perst_gpio; bool gating; bool aux; bool release; bool local; bool dwell; bool pulse; bool flush; bool owned; const u32 *roots; int pulse_rc; };
+struct n71_dart_trial_mmio { void __iomem *dart; void __iomem *ap; void __iomem *root; void __iomem *port; void __iomem *phy; void __iomem *cfg; void __iomem *endpoint; void __iomem *bar0; bool calibration; struct gpio_desc *perst_gpio; bool gating; bool aux; bool release; bool local; bool dwell; bool pulse; bool flush; bool owned; const u32 *roots; int pulse_rc; };
 static unsigned int n71_trial_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->dart + off); }
 static void n71_trial_write(void *ctx, unsigned int off, unsigned int value)
@@ -304,6 +308,42 @@ static void n71_endpoint_bar_write(void *ctx, unsigned int off, unsigned int val
     struct n71_dart_trial_mmio *m = ctx;
     writel(value, (u8 __iomem *)m->endpoint + off);
 }
+static void n71_root_memory_write(void *ctx, unsigned int off, unsigned int value)
+{ struct n71_dart_trial_mmio *m = ctx; writel(value, (u8 __iomem *)m->cfg + off); }
+static void n71_root_command(void *ctx, unsigned int value)
+{ struct n71_dart_trial_mmio *m = ctx; writew(value, (u8 __iomem *)m->cfg + 4); }
+static void n71_endpoint_command(void *ctx, unsigned int value)
+{ struct n71_dart_trial_mmio *m = ctx; writew(value, (u8 __iomem *)m->endpoint + 4); }
+static unsigned int n71_chip_read(void *ctx)
+{ struct n71_dart_trial_mmio *m = ctx; return readl(m->bar0); }
+static u8 n71_otp_private[N71_OTP_MAX_BYTES];
+static struct debugfs_blob_wrapper n71_otp_blob;
+static struct dentry *n71_otp_file;
+static unsigned int n71_chipcommon_read(void *ctx, unsigned int off)
+{ struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->bar0 + off); }
+static int n71_otp_observe(void *ctx)
+{
+    const struct n71_otp_ops o = { .ready = n71_config_ready, .read = n71_chipcommon_read };
+    struct n71_otp_result r;
+    int rc;
+    if (stage < 25) return 0;
+    rc = n71_endpoint_otp_snapshot(&o, ctx, n71_otp_private, &r);
+    if (!rc) { n71_otp_blob.data = n71_otp_private; n71_otp_blob.size = r.bytes; }
+    pr_info("n71-perst-held: ENDPOINT_OTP_SNAPSHOT rc=%d capabilities=%08x erom=%08x bytes=%u reads=%u PRIVATE_BYTES_NOT_LOGGED\n", rc, r.capabilities, r.erom, r.bytes, r.reads);
+    return rc;
+}
+static int n71_mmio_observe(void *ctx)
+{
+    const struct n71_mmio_ops o = { .ready = n71_config_ready, .root_read = n71_config_read,
+      .endpoint_read = n71_endpoint_read, .root_write = n71_root_memory_write,
+      .endpoint_write = n71_endpoint_bar_write, .root_command = n71_root_command,
+      .endpoint_command = n71_endpoint_command, .chip_read = n71_chip_read, .observe = n71_otp_observe };
+    struct n71_mmio_result r;
+    int rc = n71_endpoint_mmio_trial(&o, ctx, &r);
+    pr_info("n71-perst-held: ENDPOINT_MMIO_TRIAL rc=%d chip=%08x chiprev=%u reads=%u restored=%u BUS_MASTER_NEVER_ENABLED\n",
+            rc, r.chip, (r.chip >> 16) & 15, r.reads, r.restored);
+    return rc;
+}
 static int n71_endpoint_bar_observe(void *ctx)
 {
     const struct n71_bar_ops o = { .ready = n71_config_ready, .read = n71_endpoint_read, .write = n71_endpoint_bar_write };
@@ -311,6 +351,7 @@ static int n71_endpoint_bar_observe(void *ctx)
     int rc = n71_endpoint_bar_size_trial(&o, ctx, &r);
     pr_info("n71-perst-held: ENDPOINT_BAR_SIZE_TRIAL rc=%d size0=%x size2=%x mask0=%08x:%08x mask2=%08x:%08x restored=%u COMMAND_UNCHANGED_NO_MMIO_DMA\n",
             rc, r.size[0], r.size[1], r.mask_hi[0], r.mask_lo[0], r.mask_hi[1], r.mask_lo[1], r.restored);
+    if (!rc && stage >= 24) rc = n71_mmio_observe(ctx);
     return rc;
 }
 static int n71_endpoint_extra_observe(void *ctx)
@@ -454,7 +495,8 @@ static int n71_microlease_probe(struct platform_device *pdev)
     struct device_node *ap_node;
     struct platform_device *ap_dev = NULL;
     struct regmap *map;
-    void __iomem *ap = NULL, *root = NULL, *dart1 = NULL, *port1 = NULL, *phy = NULL, *cfg = NULL, *endpoint = NULL;
+    void __iomem *ap = NULL, *root = NULL, *dart1 = NULL, *port1 = NULL, *phy = NULL, *cfg = NULL, *endpoint = NULL, *bar0 = NULL;
+    bool bar_region = false;
     u32 perst_saved, cached, protected_saved[ARRAY_SIZE(protected_pins)];
     u32 id1 = 0, id2 = 0, id3 = 0, id4 = 0, id5 = 0, after = 0;
     u32 lane_saved = 0, done_saved = 0, common_status = 0;
@@ -761,7 +803,13 @@ static int n71_microlease_probe(struct platform_device *pdev)
                         endpoint = ioremap(0x610100000ULL, 0x1000);
                         if (!endpoint) { ret = -ENOMEM; goto restore; }
                     }
-                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .root = root, .port = port1, .phy = phy, .cfg = cfg, .endpoint = endpoint, .calibration = stage >= 19, .perst_gpio = perst, .gating = stage == 18, .aux = stage == 17, .release = stage >= 16, .local = stage >= 15, .dwell = stage == 14, .pulse = stage == 11, .flush = stage == 12, .owned = stage >= 13, .roots = n71_tables.word };
+                    if (stage >= 24) {
+                        if (!request_mem_region(0x7c0000000ULL, 0x800000, "n71-wlan-mmio-trial")) { ret = -EBUSY; goto restore; }
+                        bar_region = true;
+                        bar0 = ioremap(0x7c0000000ULL, 0x8000);
+                        if (!bar0) { ret = -ENOMEM; goto restore; }
+                    }
+                    struct n71_dart_trial_mmio mm = { .dart = dart1, .ap = ap, .root = root, .port = port1, .phy = phy, .cfg = cfg, .endpoint = endpoint, .bar0 = bar0, .calibration = stage >= 19, .perst_gpio = perst, .gating = stage == 18, .aux = stage == 17, .release = stage >= 16, .local = stage >= 15, .dwell = stage == 14, .pulse = stage == 11, .flush = stage == 12, .owned = stage >= 13, .roots = n71_tables.word };
                     const struct n71_dart_trial_ops ops = {
                         .read = n71_trial_read, .write = n71_trial_write,
                         .perst_low = n71_trial_perst, .hold = n71_trial_hold,
@@ -890,6 +938,10 @@ out:
         gpiod_put(wlan);
     if (perst)
         gpiod_put(perst);
+    if (bar0)
+        iounmap(bar0);
+    if (bar_region)
+        release_mem_region(0x7c0000000ULL, 0x800000);
     if (endpoint)
         iounmap(endpoint);
     if (cfg)
@@ -934,7 +986,9 @@ static int __init n71_microlease_init(void)
     #ifndef N71_PRIVATE_PORT1_CALIBRATION
     if (stage >= 19) return -EOPNOTSUPP;
     #endif
-    if (stage > 23 || !n71_validate_nodes() ||
+    /* OTP capture lost USB before any verified result; quarantine pending console evidence. */
+    if (stage == 25) return -EOPNOTSUPP;
+    if (stage > 25 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);
@@ -970,6 +1024,8 @@ static int __init n71_microlease_init(void)
         return 0; /* pin module and table pages after failed rollback */
     if (ret)
         return ret;
+    if (n71_otp_blob.size)
+        n71_otp_file = debugfs_create_blob("n71-wlan-otp-private", 0400, NULL, &n71_otp_blob);
     pr_info("n71-status-snapshot: synthetic DT added/removed, armed=%d, result=%d\n",
             armed, n71_probe_result);
     return 0;
@@ -978,6 +1034,8 @@ static int __init n71_microlease_init(void)
 static void __exit n71_microlease_exit(void)
 {
     int ret;
+    debugfs_remove(n71_otp_file);
+    memzero_explicit(n71_otp_private, sizeof(n71_otp_private));
 
     if (n71_driver_registered)
         platform_driver_unregister(&n71_triplet_driver);
