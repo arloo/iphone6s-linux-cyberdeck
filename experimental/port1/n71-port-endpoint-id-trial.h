@@ -6,9 +6,11 @@ struct n71_endpoint_ops {
     unsigned int (*root_read)(void *, unsigned int);
     void (*root_bus_write)(void *, unsigned int);
     unsigned int (*endpoint_read)(void *, unsigned int);
+    int (*observe)(void *);
 };
 struct n71_endpoint_result { unsigned int id, command, class_rev, saved_bus, restored, reads; };
-/* No command/BAR/window writes, enumeration, DMA or driver registration.
+/* This routing/ID helper writes no command/BAR/window and registers no driver.
+ * An optional observer runs before route rollback; its actions are separate.
  * Assign bus1 only while this port's downstream link and empty DART guard hold.
  */
 static int n71_endpoint_id_trial(const struct n71_endpoint_ops *o, void *ctx,
@@ -30,6 +32,7 @@ static int n71_endpoint_id_trial(const struct n71_endpoint_ops *o, void *ctx,
         if (!i && (words[0] & 0xffff) != 0x14e4) { rc = -2; goto restore; }
     }
     rc = o->ready(ctx) ? 0 : -1;
+    if (!rc && o->observe) rc = o->observe(ctx);
 restore:
     r->id = words[0]; r->command = words[1]; r->class_rev = words[2];
     o->root_bus_write(ctx, saved);

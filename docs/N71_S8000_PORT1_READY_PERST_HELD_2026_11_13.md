@@ -192,3 +192,16 @@ No command/BAR/window writes, bus-master enable, endpoint firmware upload or sub
 Public build rejects stages19..21 before hardware access without the owner-private calibration build. The root header helper has no write API; the endpoint helper exposes only root bus-number writes and reads, restores the original DWORD after negative reads/guard loss, and never accesses other root slots. Fake-I/O tests cover missing guards, wrong IDs/classes, ignored route writes, restore failure and callback error/reset cleanup. Config requests are CPU-issued PCI transactions, not a validation of endpoint requester-to-DART SID or DMA fault isolation.
 
 Next: integrate a port1-only host/config lifecycle, resource assignment and a correctly scoped IOMMU path before enabling brcmfmac's DMA/firmware startup. The actual WLAN driver is not bound, and /sys/bus/pci/devices remains empty after this bounded experiment.
+
+
+## 14 November: endpoint capabilities and physical BAR sizing, stages22/23
+
+Stage22, uptime2893s: read-only snapshot under the restored temporary bus1 route returned header0, BAR DWORDs[4,0,4,0,0,0], four conventional PCI capabilities and PCIe capability at0xac. Endpoint Link Control/Status DWORD0x10110000 means Link Status0x1011: **Gen1, x1**, training clear. Both memory BARs are64-bit and unassigned. Module SHA256 `42957ce0e20a64146156164682bab41ad0c645105375040801fdea899aad188f`.
+
+Stage23, uptime2998s: with endpoint Command low16 bits0 (decode and bus mastering OFF), sized only the two known64-bit BAR pairs at config0x10/0x14 and0x18/0x1c. Per-pair all-ones probe writes were followed by high-then-low restoration. Read masks **0xffffffff:ffff8004** and **0xffffffff:ffc00004** give **BAR0=0x8000 (32KiB)** and **BAR2=0x400000 (4MiB)**. Both pairs read back their originals (4,0), bus route restored, command unchanged. No address assignment, bridge memory-window enablement, endpoint MMIO, firmware transfer or submitted DMA. The source driver's get_resource path uses PCI resource0 for registers and resource2 for TCM; assigning and accessing those remains a later task. Physical module SHA256 `31d8bffc1244f27d046c9565af1c213e0a322a9f59ab222075d88e79532ca977`.
+
+Both unarmed and armed cycles passed. All calibration/DART/GPIO/control cleanup checks passed, all seven PCIe domains OFF afterward, no module/overlay left. USB/touch/HCI present, HCI errors0. Post-stage23 battery Charging36%, +43mA,31.9C. Kernel PCI devices remain unregistered and native WLAN remains unavailable.
+
+Software coverage adds bounded capability-list cycle/alignment/type/guard checks and64-bit BAR ignored-write/invalid-mask/restore-failure/guard-loss cases, plus success/failure observer route rollback. Stage23's inherited ID-phase log still contained the old label no_command_BAR_or_DMA; that phase's separate observer did the explicitly documented BAR sizing writes. The current source label is corrected to command_untouched_DMA_not_submitted. The physical candidate hashes above precede this log-only wording correction.
+
+Next: derive a WLAN-only address assignment from the original host aperture/ranges, preserve command and bridge-window restoration, and read an identified Broadcom register with bus mastering still OFF. Driver/DMA/IOMMU integration and firmware startup remain untested.
