@@ -111,7 +111,7 @@ out:
 static int n71_brcm_erom_inventory(struct pci_dev *pdev)
 {
  struct n71_dart_trial_mmio *m=n71_pci_dma_context;
- u32 saved,a,b;unsigned int i=0,cores=0;bool end=false;int rc=-EIO;
+ u32 saved,a,b,id=0,base=0,wrap=0,wt=0;unsigned int i=0,cores=0;bool end=false,pcie=false,arm=false;int rc=-EIO;
  if(!n71_dma_context_ok(&pdev->dev))return -EPERM;
  saved=readl((u8 __iomem *)m->endpoint+0x80);
  writel(0x1810d000,(u8 __iomem *)m->endpoint+0x80);
@@ -120,14 +120,77 @@ static int n71_brcm_erom_inventory(struct pci_dev *pdev)
   a=readl((u8 __iomem *)m->bar0+4*i++);
   if(a==0xffffffff)break;
   if(a==15){end=true;break;}
-  if((a&15)!=1||((a>>20)!=0x4bf&&(a>>20)!=0x43b))continue;
-  if(i>=1024)break;
-  b=readl((u8 __iomem *)m->bar0+4*i++);
-  if((b&15)!=1)break;
-  cores++;
-  pr_info("n71-perst-held: BRCM_EROM_CORE id=%03x revision=%u master_wrappers=%u slave_wrappers=%u\n",(a>>8)&0xfff,b>>24,(b>>14)&31,(b>>19)&31);
+  if((a&15)==1){
+   if(i>=1024||((a>>20)!=0x4bf&&(a>>20)!=0x43b))break;
+   b=readl((u8 __iomem *)m->bar0+4*i++);
+   if((b&15)!=1)break;
+   id=(a>>8)&0xfff;base=wrap=0;wt=((b>>4)&31)?3:2;
+   cores++;
+   pr_info("n71-perst-held: BRCM_EROM_CORE id=%03x revision=%u master_wrappers=%u slave_wrappers=%u\n",id,b>>24,(b>>14)&31,(b>>19)&31);
+  } else if((a&7)==5){
+   u32 size=(a>>4)&3,type=(a>>6)&3;
+   if(a&8){if(i>=1024)break;i++;}
+   if(size==3){
+    if(i>=1024)break;
+    b=readl((u8 __iomem *)m->bar0+4*i++);
+    if(b&8){if(i>=1024)break;i++;}
+   }
+   if(size>1)continue;
+   if(!base&&type==0)base=a&0xfffff000;
+   if(!wrap&&type==wt)wrap=a&0xfffff000;
+   if(base&&wrap){
+    pr_info("n71-perst-held: BRCM_EROM_CORE_MAP id=%03x base=%08x wrapper=%08x\n",id,base,wrap);
+    if(id==0x83c)pcie=true;
+    if(id==0x83e)arm=true;
+   }
+  }
  }
- if(end&&cores>0&&cores<64&&n71_dma_context_ok(&pdev->dev))rc=0;
+ if(end&&cores>0&&cores<64&&pcie&&arm&&n71_dma_context_ok(&pdev->dev))rc=0;
+ if(!rc){
+  u32 control,reset,cap;
+  writel(0x18102000,(u8 __iomem *)m->endpoint+0x80);
+  if(readl((u8 __iomem *)m->endpoint+0x80)!=0x18102000){rc=-EIO;goto restore;}
+  control=readl((u8 __iomem *)m->bar0+0x408);
+  reset=readl((u8 __iomem *)m->bar0+0x800);
+  pr_info("n71-perst-held: BRCM_CR4_STATE ioctl=%08x resetctrl=%08x cpu_halt=%u reset_asserted=%u\n",control,reset,!!(control&0x20),!!(reset&1));
+  if(!(reset&1)&&control!=0xffffffff){
+   writel(0x18002000,(u8 __iomem *)m->endpoint+0x80);
+   if(readl((u8 __iomem *)m->endpoint+0x80)!=0x18002000){rc=-EIO;goto restore;}
+   cap=readl((u8 __iomem *)m->bar0+4);
+   if(cap==0xffffffff){rc=-EIO;goto restore;}
+   pr_info("n71-perst-held: BRCM_CR4_CAP cap=%08x tcm_a_banks=%u tcm_b_banks=%u READ_ONLY\n",cap,cap&15,(cap>>4)&15);
+   if((control&0x20)&&((cap&15)+((cap>>4)&15))<=16){
+    u32 idx,info,total=0,banks=(cap&15)+((cap>>4)&15);
+    u32 saved_idx=readl((u8 __iomem *)m->bar0+0x40);
+    for(idx=0;idx<banks;idx++){
+     writel(idx,(u8 __iomem *)m->bar0+0x40);
+     info=readl((u8 __iomem *)m->bar0+0x44);
+     if(info==0xffffffff){rc=-EIO;break;}
+     total+=((info&0x7f)+1)*((info&0x200)?1024:8192);
+    }
+    writel(saved_idx,(u8 __iomem *)m->bar0+0x40);
+    if(readl((u8 __iomem *)m->bar0+0x40)!=saved_idx)rc=-EIO;
+    if(!total||total>0x400000)rc=-EINVAL;
+    pr_info("n71-perst-held: BRCM_CR4_RAM_SIZE rc=%d banks=%u bytes=%u index_restored=%u CPU_HALTED no_RAM_write\n",rc,banks,total,readl((u8 __iomem *)m->bar0+0x40)==saved_idx);
+    if(!rc&&total==0xc0000&&n71_dma_context_ok(&pdev->dev)){
+     void __iomem *tcm=ioremap(0x7c0400000ULL+0x180000+total-16,16);
+     u32 old[4],j;bool verified=true,restored=true;
+     if(!tcm){rc=-ENOMEM;goto restore;}
+     for(j=0;j<4;j++)old[j]=readl((u8 __iomem *)tcm+4*j);
+     for(j=0;j<4;j++)writel(0x4e373100U+j,(u8 __iomem *)tcm+4*j);
+     for(j=0;j<4;j++)if(readl((u8 __iomem *)tcm+4*j)!=0x4e373100U+j)verified=false;
+     for(j=0;j<4;j++)writel(old[j],(u8 __iomem *)tcm+4*j);
+     for(j=0;j<4;j++)if(readl((u8 __iomem *)tcm+4*j)!=old[j])restored=false;
+     iounmap(tcm);
+     if(!verified||!restored)rc=-EIO;
+     pr_info("n71-perst-held: BRCM_TCM_WRITE_READ_RESTORE rc=%d bytes=16 verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF no_firmware_start\n",rc,verified,restored);
+    }
+
+   }
+
+  }
+ }
+
 restore:
  writel(saved,(u8 __iomem *)m->endpoint+0x80);
  if(readl((u8 __iomem *)m->endpoint+0x80)!=saved)return -EIO;

@@ -307,3 +307,12 @@ Physical stage29 at uptime12150s passes both platform and actual Broadcom PCI DM
 Stage29 reads at most1024 words from the previously observed EROM pointer0x1810d000 through BAR0, restores config0x80, requires the exact EOT word and checks component pair tags plus Broadcom/ARM designer values. This is component descriptor discovery, not the full brcmfmac address/wrapper parser. Both physical runs complete, including the filtered run at uptime12362s. Thirteen component pairs were reported; notable IDs/revisions: ChipCommon0x800/47, D110x812/48, PCIe20x83c/11 and ARM CR40x83e/6. No claim is made that all descriptors are driver-supported cores or that their register bases have been decoded.
 
 `BRCM_EROM_INVENTORY rc=0 cores=13 eot=1 window_restored=1 BUS_MASTER_OFF no_OTP_no_core_reset`. Previous DMA API/IRQ/MSI register tests and full teardown pass, USB/touch/Bluetooth retained. No OTP read, core reset, firmware upload, real endpoint DMA or interrupt delivery. Original private logs remain on the owner's Dell.
+
+
+## 14 November: component addresses, halted CR4, RAM geometry and reversible TCM write PASS
+
+Address descriptors now skip upper-address and size payloads and distinguish regular slaves from master/slave wrappers following brcmfmac chip.c. Physical N71 reports ARM CR40x83e at0x18002000/wrapper0x18102000 and PCIe20x83c at0x18003000/wrapper0x18103000. Other component descriptors are retained as descriptors, without claiming driver support.
+
+CR4 wrapper IOCTL0x21 and resetctrl0 show CPUHALT already asserted and core reset deasserted. Capability0x524 gives four TCM-A and two TCM-B banks. With CPU halted, save bank selector, read each bank size using the upstream formula and restore/verify selector: total786432 bytes (768KiB). Genuine private C5 firmware585997 bytes fits, before NVRAM/footer accounting.
+
+Upstream brcmfmac uses absolute RAM base0x180000 within BAR2 for4350. At uptime13046s, map only the final16 bytes of the measured TCM aperture; save four original words, write a fixed diagnostic pattern, verify, restore and verify originals. `BRCM_TCM_WRITE_READ_RESTORE rc=0 bytes=16 verified=1 restored=1 CPU_HALTED BUS_MASTER_OFF no_firmware_start`. This is host MMIO into device RAM, **not endpoint DMA**. No firmware is loaded or started. Full PCI/DART/reset/power teardown passes; USB/touch/Bluetooth retained, battery57%. Private logs remain outside Git.
