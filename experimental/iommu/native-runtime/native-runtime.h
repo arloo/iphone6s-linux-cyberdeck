@@ -112,6 +112,15 @@ out:
 #include <linux/fs.h>
 #include "n71-private-firmware.h"
 #ifdef N71_PRIVATE_FIRMWARE_BOOT_TRIAL
+#ifndef N71_FW_BOOT_POLLS
+#define N71_FW_BOOT_POLLS 100
+#endif
+#ifndef N71_FW_BOOT_POLL_MS
+#define N71_FW_BOOT_POLL_MS 50
+#endif
+#if N71_FW_BOOT_POLLS < 1 || N71_FW_BOOT_POLLS > 100 || N71_FW_BOOT_POLL_MS < 1 || N71_FW_BOOT_POLL_MS > 50
+#error Invalid bounded firmware observation interval
+#endif
 /* CR4-only bounded reset sequence from brcmfmac chip.c. BME remains OFF. */
 static int n71_cr4_cycle(struct n71_dart_trial_mmio *m,bool halt)
 {
@@ -155,8 +164,8 @@ static int n71_firmware_boot_trial(struct pci_dev *pdev,void __iomem *ram)
  rc=n71_cr4_cycle(m,false);
  if(!rc){
   rc=-ETIMEDOUT;
-  for(i=0;i<100;i++){
-   msleep(50);shared=readl((u8 __iomem *)ram+0xbfffc);
+  for(i=0;i<N71_FW_BOOT_POLLS;i++){
+   msleep(N71_FW_BOOT_POLL_MS);shared=readl((u8 __iomem *)ram+0xbfffc);
    if(!n71_dma_context_ok(&pdev->dev)){rc=-EIO;break;}
    if(shared!=token&&shared>=0x180000&&shared<0x23fffc&&!(shared&3)){
     flags=readl((u8 __iomem *)ram+shared-0x180000);rc=0;break;
