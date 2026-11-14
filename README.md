@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: S5L8960X page-table format fix verified on phone CPU.** [Native table test](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) confirms the old backend emits incompatible table flags; attributed patch0018 uses flags3 and the legacy leaf format, corroborated by the original N71 Apple driver. Four-root allocation/map/translate/unmap/free comparisons pass on the real phone without programming DART. Hardware DMA/domain integration and Wi-Fi remain pending.
+
 **14 November 2026: native Linux PCI enumeration PASS.** [Stage27](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) creates/removes real PCI bridge and BCM4350 device objects with the correct32KiB/4MiB resources, binding disallowed and bus mastering OFF. Complete teardown and postflight pass; DART/IOMMU, interrupts and firmware startup remain pending.
 
 **14 November 2026 recovery: ChipCommon metadata PASS; exact iOS firmware/NVRAM selected.** [Stage26](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) reads capabilities and the EROM pointer with complete restoration; no OTP retried. The original iOS capture names the exact C5 firmware/NVRAM profile. Eight4350-rev8 firmware aliases verified in phone RAM (8/8 hashes). PCI/IOMMU/DMA integration, firmware execution and native WLAN remain pending.

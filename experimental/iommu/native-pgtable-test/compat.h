@@ -1,0 +1,4 @@
+#include <linux/bits.h>
+#ifndef IO_PGTABLE_QUIRK_APPLE_DART_S5L8960X
+#define IO_PGTABLE_QUIRK_APPLE_DART_S5L8960X BIT(10)
+#endif
