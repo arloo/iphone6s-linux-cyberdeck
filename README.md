@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: Broadcom WLAN endpoint responds to PCI config reads.** [Physical stages20/21](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md): port1 root bridge 106b:1004 and downstream BCM4350 endpoint **14e4:43a3**, network class0280 revision08, read on the real N71. Temporary bus routing and all experiment state restored; charging, USB, touch and Bluetooth intact. Kernel PCI registration, DMA/firmware startup and native WLAN association remain pending.
+
 **14 November 2026: stage19 positive port1 link indicator, reproduced twice.** [Physical trial](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md): applying and restoring 81 original private tuning records changed the final local status from0x4 to0x5 (bit0 set). Both bounded trials restored PERST/DART/registers and all PCIe domains OFF; charging, USB, touch and Bluetooth remain operational. Endpoint enumeration and native Wi-Fi remain pending.
 
 **13 November 2026: real charging under Linux PASS.** [N71 SN2400 input-limit fix](experimental/power/README.md): 90 mA input gave -150 mA battery discharge; 300 mA gave +100..+112 mA charge; automatic restoration returned to -142 mA. A monitored temporary session lease is available. Boot integration and full-charge durability remain pending.

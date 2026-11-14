@@ -8,6 +8,7 @@ struct n71_port_trial_ops {
     void (*set_perst)(void *, int);
     int (*dart_ready)(void *);
     void (*delay)(void *);
+    int (*observe)(void *);
 };
 /* Exact original port-local control bit; status meaning qualified separately.
  * Cleanup reasserts reset before returning to the enclosing DART transaction.
@@ -38,6 +39,7 @@ static int n71_port_local_trial(const struct n71_port_trial_ops *o, void *ctx,
         *status = o->read(ctx, 0x88);
         *samples = i + 1;
     }
+    if (!ret && release && o->observe) ret = o->observe(ctx);
 restore:
     if (attempted) o->set_perst(ctx, 0);
     if (o->perst_level(ctx) != 0) return -3;

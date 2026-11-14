@@ -177,3 +177,18 @@ The unarmed stage19 cycle passed without power/GPIO/MMIO actions. Two subsequent
 Both cycles restored DART TCR/TTBR, invalidated the selected TLB and released the still-zero owned roots after restoration. Root/common and protected-port controls restored, GPIO10 returned LOW, PERST raw state restored, module/overlay absent, and all seven PCIe domains OFF. USB/touch/HCI remain present, HCI errors0, battery Charging29% (+44mA after first cycle, +58mA after repeat). No PCI config transaction, PCI enumeration, endpoint DMA, firmware upload or native WLAN association occurred. No original tuning values, proprietary firmware or owner identifiers are published.
 
 Next: qualify a bounded read-only PCI configuration transaction for the WLAN downstream bus while retaining the working calibrated-link sequence and empty DART guard. Read vendor/device identifiers before attempting driver binding, BAR configuration or DMA. Physical requester-to-SID isolation remains unverified.
+
+
+## 14 November: real WLAN endpoint config identity, stages20/21
+
+Original AppleEmbeddedPCIE address-transform opcodes and its 32-bit config load were checked against the retained original text. Together with the original iOS port1 reg cell0x800, they select ECAM offset0x8000 (root BDF00:01.0) within original resource0. This is separate from the local controller aperture.
+
+Stage20, physical uptime1815s: fixed four-DWORD root header reads returned ID0x1004106b (Apple106b:1004), command/status0x00100000, class/revision0x06040001, bus numbers0. No config writes or downstream transactions in that stage. Module SHA256 `2590066bea5f49bbcbd4c5c9ff8bc22457cdd61d4a4da5ddfd1d1ca4c11efd36`.
+
+Stage21, physical uptime1951s: under the same calibrated positive link and owned empty SID0 roots, temporarily set only port1's root bus-number DWORD from0 to0x00010100 (primary0, secondary1, subordinate1). Three downstream DWORD reads at BDF01:00.0 returned **ID0x43a314e4 (Broadcom14e4:43a3), command/status0x00100000, class/revision0x02800008**. The running kernel source defines BRCM_PCIE_4350_DEVICE_ID as0x43a3 and includes it in brcmfmac's PCI table. This physically identifies the BCM4350 WLAN endpoint through config transactions. It is not a Linux PCI device registration or a working WLAN interface. The bus-number DWORD was restored to0 before reset reassertion. Module SHA256 `baadbee9176abcd0d7ac72f42c0da83d18875683202a087149d45e213fcb0d23`.
+
+No command/BAR/window writes, bus-master enable, endpoint firmware upload or submitted DMA. Both observed command registers have low16 bits0. All restoration checks passed: original tuning81/81, PERST and GPIO10, selected DART state/owned roots, protected root controls, seven PCIe domains OFF, no residual module/overlay. USB/touch/HCI preserved; HCI RX/TX errors0. Battery Charging34%, +60mA,31.9C at stage21 postflight.
+
+Public build rejects stages19..21 before hardware access without the owner-private calibration build. The root header helper has no write API; the endpoint helper exposes only root bus-number writes and reads, restores the original DWORD after negative reads/guard loss, and never accesses other root slots. Fake-I/O tests cover missing guards, wrong IDs/classes, ignored route writes, restore failure and callback error/reset cleanup. Config requests are CPU-issued PCI transactions, not a validation of endpoint requester-to-DART SID or DMA fault isolation.
+
+Next: integrate a port1-only host/config lifecycle, resource assignment and a correctly scoped IOMMU path before enabling brcmfmac's DMA/firmware startup. The actual WLAN driver is not bound, and /sys/bus/pci/devices remains empty after this bounded experiment.
