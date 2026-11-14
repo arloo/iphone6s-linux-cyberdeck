@@ -109,6 +109,7 @@ out:
 }
 #ifdef N71_PRIVATE_FIRMWARE_TRIAL
 #include <linux/vmalloc.h>
+#include <linux/fs.h>
 #include "n71-private-firmware.h"
 #ifdef N71_PRIVATE_FIRMWARE_BOOT_TRIAL
 /* CR4-only bounded reset sequence from brcmfmac chip.c. BME remains OFF. */
@@ -132,10 +133,25 @@ static int n71_cr4_cycle(struct n71_dart_trial_mmio *m,bool halt)
 static int n71_firmware_boot_trial(struct pci_dev *pdev,void __iomem *ram)
 {
  struct n71_dart_trial_mmio *m=n71_pci_dma_context;
- void __iomem *vec;u32 old,token,shared=0,flags=0;int rc,i,stop;
+ void __iomem *vec;u32 old,token,shared=0,flags=0,d11io,d11reset;int rc,i,stop;
  vec=ioremap(0x7c0400000ULL,4);if(!vec)return -ENOMEM;
  old=readl(vec);token=readl((u8 __iomem *)ram+0xbfffc);
+ /* Match brcmf_chip_cr4_set_passive: D11 PHY reset/clock flags, then
+  * leave D11 in reset for firmware to enable. Exact EROM wrapper only. */
+ writel(0x18101000,(u8 __iomem *)m->endpoint+0x80);
+ if(readl((u8 __iomem *)m->endpoint+0x80)!=0x18101000){iounmap(vec);return -EIO;}
+ d11io=readl((u8 __iomem *)m->bar0+0x408);d11reset=readl((u8 __iomem *)m->bar0+0x800);
+ if(d11io==0xffffffff||d11reset>1){iounmap(vec);return -EIO;}
+ if(!d11reset){
+  writel(0xf,(u8 __iomem *)m->bar0+0x408);readl((u8 __iomem *)m->bar0+0x408);
+  writel(1,(u8 __iomem *)m->bar0+0x800);udelay(20);
+ }
+ writel(7,(u8 __iomem *)m->bar0+0x408);readl((u8 __iomem *)m->bar0+0x408);
+ if(readl((u8 __iomem *)m->bar0+0x800)!=1){iounmap(vec);return -EHWPOISON;}
+ pr_info("n71-perst-held: BRCM_D11_PASSIVE prepared=1 old_ioctl=%08x old_reset=%08x reset_held=1\n",d11io,d11reset);
+
  writel((u32)n71_fw[0]|((u32)n71_fw[1]<<8)|((u32)n71_fw[2]<<16)|((u32)n71_fw[3]<<24),vec);readl(vec);
+ pr_info("n71-perst-held: BRCM_RESET_VECTOR verified=%u\n",readl(vec)==((u32)n71_fw[0]|((u32)n71_fw[1]<<8)|((u32)n71_fw[2]<<16)|((u32)n71_fw[3]<<24)));
  rc=n71_cr4_cycle(m,false);
  if(!rc){
   rc=-ETIMEDOUT;
@@ -147,8 +163,22 @@ static int n71_firmware_boot_trial(struct pci_dev *pdev,void __iomem *ram)
    }
   }
  }
+ writel(0x18102000,(u8 __iomem *)m->endpoint+0x80);
+ pr_info("n71-perst-held: BRCM_CR4_AFTER_EXEC ioctl=%08x reset=%08x\n",readl((u8 __iomem *)m->bar0+0x408),readl((u8 __iomem *)m->bar0+0x800));
  stop=n71_cr4_cycle(m,true);
  if(!stop){writel(old,vec);readl(vec);}
+ if(!stop){
+  writel(0x18101000,(u8 __iomem *)m->endpoint+0x80);
+  if(readl((u8 __iomem *)m->endpoint+0x80)!=0x18101000)stop=-EIO;
+  else{
+   writel(d11reset,(u8 __iomem *)m->bar0+0x800);usleep_range(40,60);
+   writel(d11io,(u8 __iomem *)m->bar0+0x408);
+   if(readl((u8 __iomem *)m->bar0+0x800)!=d11reset||readl((u8 __iomem *)m->bar0+0x408)!=d11io)stop=-EIO;
+  }
+  writel(0x18002000,(u8 __iomem *)m->endpoint+0x80);
+  pr_info("n71-perst-held: BRCM_D11_PASSIVE_RESTORE rc=%d\n",stop);
+ }
+
  pr_info("n71-perst-held: BRCM_FIRMWARE_BOOT_TRIAL rc=%d shared=%08x flags=%08x cpu_rehalted=%u BUS_MASTER_OFF no_endpoint_DMA\n",rc,shared,flags,!stop);
  iounmap(vec);
  return stop?-EHWPOISON:rc;
@@ -174,6 +204,20 @@ static int n71_firmware_write_trial(struct pci_dev *pdev)
  if(verified){
   rc=n71_firmware_boot_trial(pdev,ram);
   if(rc==-EHWPOISON){iounmap(ram);vfree(backup);vfree(check);return rc;}
+  {size_t j;unsigned int changes=0;u32 expected;
+   for(j=0;j<size;j+=4){memcpy(&expected,check+j,4);if(readl((u8 __iomem *)ram+j)!=expected)changes++;}
+   pr_info("n71-perst-held: BRCM_EXEC_RAM_CHANGED_WORDS count=%u total=%zu\n",changes,size/4);
+   {struct file *dump;loff_t pos=0;ssize_t written;
+    memcpy_fromio(check,ram,size);
+    dump=filp_open("/tmp/n71-wlan-fw-ram-private.bin",O_WRONLY|O_CREAT|O_TRUNC,0600);
+    if(!IS_ERR(dump)){
+     written=kernel_write(dump,check,size,&pos);filp_close(dump,NULL);
+     pr_info("n71-perst-held: BRCM_PRIVATE_RAM_CAPTURE bytes=%zd expected=%zu\n",written,size);
+    }
+   }
+
+  }
+
  }else rc=-EIO;
 #endif
  memcpy_toio(ram,backup,size);

@@ -334,3 +334,12 @@ Optional `N71_PRIVATE_FIRMWARE_BOOT_TRIAL` adds a CR4-only reset/release followi
 Physical attempt at uptime18077..18083s: `BRCM_FIRMWARE_BOOT_TRIAL rc=-110 shared=fc62039d flags=00000000 cpu_rehalted=1`. The final word stays at the packed NVRAM length/complement token; no valid shared-memory pointer is observed. Firmware/NVRAM readback and complete TCM restoration pass. PCI removal reports ENODEV because the diagnostic driver probe failed; all seven PCIe domains are OFF, original DART state restored, USB/touch/Bluetooth remain available. Battery56%.
 
 **No firmware initialization success is claimed.** No `SMAR` RAM-size override appears in the exact genuine C5 image, so there is no supported firmware-header RAM-size adjustment to apply. The reduced test omits other brcmfmac initialization, including D11 passive-core handling; investigate that difference and device-internal startup state before repeating. Native Wi-Fi, endpoint DMA and MSI delivery remain unproven. Private build header, firmware-containing module and logs remain outside Git.
+
+
+## 14 November: D11 passive handling and firmware execution diagnostics
+
+Match the upstream CR4 passive sequence by placing the EROM-identified D11 wrapper0x18101000 in reset with PHY clock flag; preserve and restore original IOCTL/reset. Physical old state is IOCTL0/reset1. This does not resolve the five-second shared-pointer timeout.
+
+Instrumented attempts at uptime21129s and21197s verify reset-vector readback, observe CR4 IOCTL1/reset0 after the execution interval and count95246 changed TCM words out of196608 compared with the just-loaded image. This is strong evidence of execution/initialization activity, **not a completed firmware handshake or Wi-Fi success**. ARM is rehalted, D11 wrapper registers and TCM restored, PCI objects removed and seven PCIe domains OFF; USB/touch/Bluetooth retained.
+
+An optional boot diagnostic captures the786432-byte TCM to a0600 file in the phone RAM filesystem after rehalting. The dump was transferred to a0600 owner-private Dell file. It is never tracked or published. Offline comparison finds changed data regions and preserved middle code regions; no new diagnostic console text was identified by a bounded printable-string comparison. A heuristic pointer scan yields many false candidates and is not proof of a shared structure. The image identifies itself as4350c5 PCIe, not SDIO. Root cause remains unresolved; investigate startup state/firmware host protocol using the private snapshot rather than repeat the same timeout.
