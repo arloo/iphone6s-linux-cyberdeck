@@ -286,3 +286,10 @@ Reproduce using the existing native IOMMU builder with optional `--private-calib
 At uptime10346s, stage29 additionally created a Linux IRQ mapping for AIC IRQ264 (original private N71 ADT MSI offset256 plus WLAN vector base8). The exact AIC node and an initially absent mapping are required. `request_irq` uses `IRQF_NO_AUTOEN`; no interrupt is enabled, no controller MSI register is programmed and bus mastering stays OFF. The handler is freed and mapping disposed before PCI/DART teardown; absence is checked.
 
 Physical markers: `WLAN_MSI_AIC_ALLOCATION_PASS vector=264 IRQ_DISABLED no_MSI_delivery_test BUS_MASTER_OFF` and `WLAN_MSI_AIC_ALLOCATION_REMOVED mapping_absent=1`. Real PCI DMA API test and full teardown still pass; battery53%, USB/touch/Bluetooth preserved. This qualifies Linux IRQ allocation only, **not PCI MSI delivery**, firmware execution, endpoint DMA or Wi-Fi. Logs and the original ADT remain private.
+
+
+## 14 November: port-local MSI configuration roundtrip PASS
+
+Original AppleS800xPCIe code at text offsets0xbcc..0xc88 selects0x31 for eight MSI vectors at port offset0x124, then writes base OR(base<<16) at0x128. The original N71 ADT assigns WLAN base8. A stage29 extension rejects an inherited enabled route, saves both registers, writes base0x00080008 and configuration0x31, checks readback, then restores and verifies both originals while endpoint bus mastering remains OFF and AIC264 remains disabled.
+
+Physical run uptime11702s: `WLAN_MSI_PORT_REGISTER_TRIAL rc=0 restored=1 eight_vectors=1 BUS_MASTER_OFF no_MSI_delivery_test`. Real PCI DMA API, AIC allocation/disposal and complete PCI/DART/reset/power teardown also pass; USB/touch/Bluetooth retained, battery56%. No MSI address or endpoint MSI capability is programmed by this test; no MSI delivery, endpoint DMA, firmware execution or WLAN connection is established. Original disassembly and full logs remain private.

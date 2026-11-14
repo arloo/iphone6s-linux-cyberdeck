@@ -60,6 +60,27 @@ static int n71_dma_probe(struct platform_device *pdev){return n71_dma_test_devic
 #include <linux/interrupt.h>
 #include <linux/irqdomain.h>
 static irqreturn_t n71_disabled_irq_handler(int irq,void *data){return IRQ_NONE;}
+/* AppleS800xPCIe original implementation: eight vectors ->0x31 at
+ * port0x124, base OR(base<<16) at0x128. No endpoint MSI/BME writes. */
+static int n71_wlan_msi_register_trial(struct pci_dev *pdev)
+{
+ void __iomem *port;u32 cfg,base;int rc=0;
+ if(!n71_dma_context_ok(&pdev->dev)||!n71_pci_dma_context->port)return -EPERM;
+ port=n71_pci_dma_context->port;
+ cfg=readl((u8 __iomem *)port+0x124);base=readl((u8 __iomem *)port+0x128);
+ /* Do not replace an inherited active MSI route. */
+ if(cfg&1)return -EBUSY;
+ writel(0x00080008,(u8 __iomem *)port+0x128);
+ if(readl((u8 __iomem *)port+0x128)!=0x00080008){rc=-EIO;goto restore;}
+ writel(0x31,(u8 __iomem *)port+0x124);
+ if(readl((u8 __iomem *)port+0x124)!=0x31||!n71_dma_context_ok(&pdev->dev))rc=-EIO;
+restore:
+ writel(cfg,(u8 __iomem *)port+0x124);
+ writel(base,(u8 __iomem *)port+0x128);
+ if(readl((u8 __iomem *)port+0x124)!=cfg||readl((u8 __iomem *)port+0x128)!=base)return -EIO;
+ pr_info("n71-perst-held: WLAN_MSI_PORT_REGISTER_TRIAL rc=%d restored=1 eight_vectors=1 BUS_MASTER_OFF no_MSI_delivery_test\n",rc);
+ return rc;
+}
 static int n71_pci_irq_allocation_test(struct pci_dev *pdev)
 {
  struct device_node *np;struct irq_domain *domain;struct irq_fwspec spec={};
@@ -76,6 +97,7 @@ static int n71_pci_irq_allocation_test(struct pci_dev *pdev)
  rc=request_irq(irq,n71_disabled_irq_handler,IRQF_NO_AUTOEN,"n71-wlan-msi-allocation-only",pdev);
  if(!rc){
   pr_info("n71-perst-held: WLAN_MSI_AIC_ALLOCATION_PASS vector=264 IRQ_DISABLED no_MSI_delivery_test BUS_MASTER_OFF\n");
+  rc=n71_wlan_msi_register_trial(pdev);
   free_irq(irq,pdev);
  }
  irq_dispose_mapping(irq);
