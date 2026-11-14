@@ -62,7 +62,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=private OTP snapshot");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only");
 
 static const struct {
     const char *name;
@@ -326,7 +326,18 @@ static int n71_otp_observe(void *ctx)
     const struct n71_otp_ops o = { .ready = n71_config_ready, .read = n71_chipcommon_read };
     struct n71_otp_result r;
     int rc;
-    if (stage < 25) return 0;
+    if (stage == 26) {
+        unsigned int caps, erom;
+        if (!n71_config_ready(ctx)) return -EIO;
+        pr_info("n71-perst-held: CHIPCOMMON_METADATA_BEGIN no_OTP_access\n");
+        caps = n71_chipcommon_read(ctx, 4);
+        pr_info("n71-perst-held: CHIPCOMMON_CAPABILITIES_READ value=%08x\n", caps);
+        if (!n71_config_ready(ctx)) return -EIO;
+        erom = n71_chipcommon_read(ctx, 0xfc);
+        pr_info("n71-perst-held: CHIPCOMMON_METADATA_COMPLETE capabilities=%08x erom=%08x no_OTP_access\n", caps, erom);
+        return n71_config_ready(ctx) ? 0 : -EIO;
+    }
+    if (stage != 25) return 0;
     rc = n71_endpoint_otp_snapshot(&o, ctx, n71_otp_private, &r);
     if (!rc) { n71_otp_blob.data = n71_otp_private; n71_otp_blob.size = r.bytes; }
     pr_info("n71-perst-held: ENDPOINT_OTP_SNAPSHOT rc=%d capabilities=%08x erom=%08x bytes=%u reads=%u PRIVATE_BYTES_NOT_LOGGED\n", rc, r.capabilities, r.erom, r.bytes, r.reads);
@@ -988,7 +999,7 @@ static int __init n71_microlease_init(void)
     #endif
     /* OTP capture lost USB before any verified result; quarantine pending console evidence. */
     if (stage == 25) return -EOPNOTSUPP;
-    if (stage > 25 || !n71_validate_nodes() ||
+    if (stage > 26 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);
