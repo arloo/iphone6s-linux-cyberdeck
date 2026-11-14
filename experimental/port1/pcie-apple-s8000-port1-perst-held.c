@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 /* N71/S8000: bounded PERST-low WLAN/PMGR/ID3 experiment.
  * Stages <=15 hold PERST LOW; stages16/18 are bounded release/reassert trials.
- * No PCI enumeration or DMA submission; selected DART state only.
+ * Stages<=26 avoid native PCI enumeration; stage27 scans only WLAN without binding.
+ * No submitted endpoint DMA; selected DART state only.
  * Stage8 only reads the original DART1 packed TCR once under endpoint reset.
  * Source and physical test are board-specific; no analog voltage claim.
  */
@@ -16,6 +17,7 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/debugfs.h>
+#include <linux/pci.h>
 #include <linux/iopoll.h>
 #include <linux/gpio/consumer.h>
 #include <linux/regmap.h>
@@ -62,7 +64,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only,27=native PCI enumeration without binding");
 
 static const struct {
     const char *name;
@@ -321,11 +323,13 @@ static struct debugfs_blob_wrapper n71_otp_blob;
 static struct dentry *n71_otp_file;
 static unsigned int n71_chipcommon_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->bar0 + off); }
+#include "n71-pci-core-enumerate.h"
 static int n71_otp_observe(void *ctx)
 {
     const struct n71_otp_ops o = { .ready = n71_config_ready, .read = n71_chipcommon_read };
     struct n71_otp_result r;
     int rc;
+    if (stage == 27) return n71_pci_core_enumerate(ctx);
     if (stage == 26) {
         unsigned int caps, erom;
         if (!n71_config_ready(ctx)) return -EIO;
@@ -970,8 +974,8 @@ out:
     if (ap_dev)
         put_device(&ap_dev->dev);
     n71_probe_result = ret;
-    pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; RESET_RELEASE_TEST=%u DART_TTBR_WRITE_TEST=%u no DMA/PCI scan\n",
-            ret, stage, poll_rc == 0, poll_rc, stage >= 16, stage >= 10);
+    pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; RESET_RELEASE_TEST=%u DART_TTBR_WRITE_TEST=%u native_pci_scan=%u no_submitted_DMA\n",
+            ret, stage, poll_rc == 0, poll_rc, stage >= 16, stage >= 10, stage >= 27);
     return -ENODEV;
 }
 
@@ -999,7 +1003,7 @@ static int __init n71_microlease_init(void)
     #endif
     /* OTP capture lost USB before any verified result; quarantine pending console evidence. */
     if (stage == 25) return -EOPNOTSUPP;
-    if (stage > 26 || !n71_validate_nodes() ||
+    if (stage > 27 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);

@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: native Linux PCI enumeration PASS.** [Stage27](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) creates/removes real PCI bridge and BCM4350 device objects with the correct32KiB/4MiB resources, binding disallowed and bus mastering OFF. Complete teardown and postflight pass; DART/IOMMU, interrupts and firmware startup remain pending.
+
 **14 November 2026 recovery: ChipCommon metadata PASS; exact iOS firmware/NVRAM selected.** [Stage26](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) reads capabilities and the EROM pointer with complete restoration; no OTP retried. The original iOS capture names the exact C5 firmware/NVRAM profile. Eight4350-rev8 firmware aliases verified in phone RAM (8/8 hashes). PCI/IOMMU/DMA integration, firmware execution and native WLAN remain pending.
 
 **14 November 2026: physical ChipCommon MMIO identifies BCM4350 revision8.** [Stage24](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) assigned/restored the BARs and read **0x17084350**, with bus mastering OFF and complete postflight. A later OTP trial lost USB before a result: stage25 is quarantined, cause and cleanup unknown, device reconnection required. Firmware naming for revision8 must use the4350 branch; native WLAN is still pending.

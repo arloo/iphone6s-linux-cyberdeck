@@ -18,3 +18,6 @@ obj-m += pcie-apple-s8000-port1-id3-id2-id4-stage.o
 obj-m += n71-s8000-wlan-pmu-regon-microlease.o
 obj-m += pcie-apple-s8000-wlan-regon-gpiolib-microlease.o
 obj-m += pcie-apple-s8000-port1-perst-held.o
+
+# Native PCI diagnostic uses binding-state inline helpers from this exact kernel.
+ccflags-y += -I$(srctree)
