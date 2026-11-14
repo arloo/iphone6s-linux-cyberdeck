@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: genuine C5 firmware startup handshake PASS.** Supplying the missing NVRAM `macaddr` with a private temporary local unicast address resolves the initial fatal path. Real N71 publishes shared pointer and PCIe protocol version6; CPU rehalt and full RAM restoration pass. **Native Wi-Fi remains pending:** endpoint DMA, MSI delivery, driver rings and connection are not yet qualified.
+
 **14 November 2026: real Broadcom PCI device + Linux DMA API PASS.** Stage29 binds an exact diagnostic driver to BCM4350 `14e4:43a3`, maps/verifies/unmaps a16KiB buffer in the same translated DART domain as the platform consumer, then removes PCI objects and restores reset, registers and power. Bus mastering stays OFF: endpoint DMA, IRQs, firmware execution and native Wi-Fi remain pending.
 
 **14 November 2026: native DART/IOMMU + Linux DMA API PASS under reset.** [Stage28](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) creates a translated domain and maps/verifies/unmaps a16KiB buffer using Linux DMA APIs on the real phone, twice including a reproducible public build. Only SID0 touched; complete teardown;45% battery charging. The consumer is diagnostic, not yet the PCI Broadcom; endpoint DMA, interrupts and native WLAN remain pending.
