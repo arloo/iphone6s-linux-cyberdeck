@@ -17,6 +17,7 @@ def check_sources(source):
 def main():
  p=argparse.ArgumentParser(description=__doc__)
  for name in ['kernel-source','kernel-build','patched-source','output']:p.add_argument('--'+name,required=True,type=Path)
+ p.add_argument("--private-calibration",type=Path)
  a=p.parse_args();out=a.output.resolve();src=a.patched_source.resolve();pins=check_sources(src)
  if out==ROOT or ROOT in out.parents:raise ValueError('Output must be outside the public source tree')
  release=(a.kernel_build/'include/config/kernel.release').read_text().strip()
@@ -29,6 +30,11 @@ def main():
  subprocess.run(['git','apply','--unidiff-zero',str(TEMPLATE/'native-driver-adapter.patch')],cwd=out,check=True)
  backend=(src/'drivers/iommu/io-pgtable-dart.c').read_text().replace('io_pgtable_apple_dart_init_fns','n71_pgtable_init_fns')
  (out/'n71-pgtable-backend.c').write_text(backend)
+ if a.private_calibration:
+  data=a.private_calibration.read_bytes()
+  if b'n71_private_calibration' not in data:raise ValueError('Invalid owner calibration header')
+  (out/'n71-private-port1-calibration.h').write_bytes(data)
+  with (out/'Makefile').open('a') as f:f.write('\nccflags-y += -DN71_PRIVATE_PORT1_CALIBRATION\n')
  subprocess.run(['dtc','-I','dts','-O','dtb','-o',str(out/'native.dtbo'),str(out/'native.dts')],check=True,capture_output=True)
  b=(out/'native.dtbo').read_bytes()
  if b'__symbols__' in b or b'__local_fixups__' not in b:raise ValueError('Require local-only phandle fixups for live N71 DT')

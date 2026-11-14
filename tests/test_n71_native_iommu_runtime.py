@@ -68,4 +68,12 @@ class Tests(unittest.TestCase):
   self.assertIn('domain->type!=IOMMU_DOMAIN_DMA',s)
   self.assertIn('n71_port_perst_level(&n71_owner_copy)==0',s)
   self.assertIn('n71_dma_retained_buffer=buffer;buffer=0;',s)
+ def test_real_pci_probe_uses_override_before_binding(self):
+  s=(T/'native-runtime.h').read_text()
+  start=s.index('static int n71_native_pci_bind(');body=s[start:s.index('static struct platform_driver',start)]
+  self.assertLess(body.index('device_set_driver_override'),body.index('pci_bus_add_device(ep)'))
+  self.assertIn('n71-native-pci-dma-test',body)
+  self.assertIn('domain!=n71_platform_domain',s)
+  self.assertIn('!(n71_config_read(n71_pci_dma_context,4)&4)',s)
+  self.assertIn('!(n71_endpoint_read(n71_pci_dma_context,4)&4)',s)
 if __name__=='__main__':unittest.main()

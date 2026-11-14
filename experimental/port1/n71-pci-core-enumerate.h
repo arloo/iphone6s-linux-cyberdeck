@@ -3,6 +3,10 @@
 #define N71_PCI_CORE_ENUMERATE_H
 #include <drivers/pci/pci.h>
 #include "n71-pci-config-policy.h"
+#ifdef N71_NATIVE_IOMMU_RUNTIME
+static struct device *n71_native_pci_parent;
+static int n71_native_pci_bind(struct pci_dev *);
+#endif
 static unsigned int n71_pci_reads,n71_pci_writes,n71_pci_denied;
 static int n71_pci_config_read(struct pci_bus *bus,unsigned int devfn,int where,int size,u32 *value)
 {
@@ -47,7 +51,12 @@ static int n71_pci_core_enumerate(void *ctx)
  if(pci_find_bus(0,0)){rc=-EBUSY;goto out;}
  pci_add_resource_offset(&resources,&mem,0x700000000ULL);
  pci_add_resource(&resources,&buses);
- root=pci_create_root_bus(NULL,0,&n71_pci_core_ops,ctx,&resources);
+#ifdef N71_NATIVE_IOMMU_RUNTIME
+ root=pci_create_root_bus(stage==29?n71_native_pci_parent:NULL,0,
+#else
+ root=pci_create_root_bus(NULL,0,
+#endif
+&n71_pci_core_ops,ctx,&resources);
  if(!root)goto out;
  rp=pci_scan_single_device(root,PCI_DEVFN(1,0));
  if(!rp||rp->vendor!=0x106b||rp->device!=0x1004||rp->driver||!pci_dev_binding_disallowed(rp))goto remove;
@@ -60,6 +69,9 @@ static int n71_pci_core_enumerate(void *ctx)
  rc=0;
  pr_info("n71-perst-held: PCI_CORE_ENDPOINT_FOUND vendor=%04x device=%04x class=%06x revision=%02x BAR0_BYTES=%llx BAR2_BYTES=%llx binding_disallowed=1 driver_bound=0 BUS_MASTER_OFF\n",
  ep->vendor,ep->device,ep->class,ep->revision,(unsigned long long)pci_resource_len(ep,0),(unsigned long long)pci_resource_len(ep,2));
+#ifdef N71_NATIVE_IOMMU_RUNTIME
+ if(stage==29)rc=n71_native_pci_bind(ep);
+#endif
 remove:
  pci_stop_root_bus(root);pci_remove_root_bus(root);
  pr_info("n71-perst-held: PCI_CORE_REMOVED rc=%d reads=%u writes=%u denied=%u before_reset_and_DART_teardown=1\n",rc,n71_pci_reads,n71_pci_writes,n71_pci_denied);

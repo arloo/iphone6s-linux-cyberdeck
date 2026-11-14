@@ -64,7 +64,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only,27=native PCI enumeration without binding,28=native IOMMU DMA API under reset");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only,27=native PCI enumeration without binding,28=native IOMMU DMA API under reset,29=real PCI DMA API with mastering OFF");
 
 static const struct {
     const char *name;
@@ -332,7 +332,7 @@ static int n71_otp_observe(void *ctx)
     const struct n71_otp_ops o = { .ready = n71_config_ready, .read = n71_chipcommon_read };
     struct n71_otp_result r;
     int rc;
-    if (stage == 27) return n71_pci_core_enumerate(ctx);
+    if (stage == 27 || stage == 29) return n71_pci_core_enumerate(ctx);
     if (stage == 26) {
         unsigned int caps, erom;
         if (!n71_config_ready(ctx)) return -EIO;
@@ -482,6 +482,44 @@ static int n71_port_active_hold(void *ctx)
     pr_info("n71-perst-held: PORT1_LOCAL_CONTROL_TRIAL rc=%d status88=%08x samples=%u restored=%u RESET_REASSERTED release_test=%u\n", rc, status, samples, restored, m->release);
     return rc;
 }
+#ifdef N71_NATIVE_IOMMU_RUNTIME
+static int n71_native_pci_action(struct device *parent,struct gpio_desc *perst,void __iomem *ap,void __iomem *root,void __iomem *dart)
+{
+#ifdef N71_PRIVATE_PORT1_CALIBRATION
+ struct n71_dart_trial_mmio mm={.ap=ap,.root=root,.dart=dart,.perst_gpio=perst,.calibration=true,.release=true};
+ struct device_node *hn=NULL;struct platform_device *host=NULL;
+ u32 roots[4];bool region=false;unsigned int i;int rc=-ENODEV;
+ for(i=0;i<4;i++)roots[i]=readl((u8 __iomem *)dart+0x40+4*i);
+ mm.roots=roots;
+ if(!n71_port_dart_ready(&mm)||n71_port_perst_level(&mm)!=0)goto out;
+ hn=of_find_node_by_path("/soc/n71-native-iommu-lease/pci-host");if(!hn)goto out;
+ host=n71_make_device("n71-native-pci-host",hn,parent,false);
+ if(IS_ERR(host)){rc=PTR_ERR(host);host=NULL;goto out;}
+ n71_native_pci_parent=&host->dev;
+ mm.port=ioremap(0x602000000ULL,0x4000);mm.phy=ioremap(0x600008000ULL,0x4000);
+ mm.cfg=ioremap(0x610008000ULL,0x1000);mm.endpoint=ioremap(0x610100000ULL,0x1000);
+ if(!mm.port||!mm.phy||!mm.cfg||!mm.endpoint){rc=-ENOMEM;goto out;}
+ if(!request_mem_region(0x7c0000000ULL,0x800000,"n71-native-pci-dma")){rc=-EBUSY;goto out;}
+ region=true;mm.bar0=ioremap(0x7c0000000ULL,0x8000);if(!mm.bar0){rc=-ENOMEM;goto out;}
+ n71_pci_dma_context=&mm;
+ rc=n71_port_active_hold(&mm);
+ if(!n71_port_dart_ready(&mm)||n71_port_perst_level(&mm)!=0)rc=-EIO;
+ pr_info("n71-perst-held: NATIVE_REAL_PCI_ACTION rc=%d reset_reasserted=%d native_roots_preserved=1\n",rc,n71_port_perst_level(&mm)==0);
+out:
+ n71_pci_dma_context=NULL;n71_native_pci_parent=NULL;
+ if(mm.bar0)iounmap(mm.bar0);
+ if(region)release_mem_region(0x7c0000000ULL,0x800000);
+ if(mm.endpoint)iounmap(mm.endpoint);
+ if(mm.cfg)iounmap(mm.cfg);
+ if(mm.phy)iounmap(mm.phy);
+ if(mm.port)iounmap(mm.port);
+ if(host)platform_device_unregister(host);
+ of_node_put(hn);return rc;
+#else
+ return -EOPNOTSUPP;
+#endif
+}
+#endif
 static void n71_trial_hold(void *ctx)
 {
     struct n71_dart_trial_mmio *m = ctx;
@@ -802,9 +840,9 @@ static int n71_microlease_probe(struct platform_device *pdev)
                         goto restore;
                     }
                 }
-                if (stage == 28) {
+                if (stage == 28 || stage == 29) {
 #ifdef N71_NATIVE_IOMMU_RUNTIME
-                    ret = n71_native_iommu_trial(&pdev->dev, ap, root, dart1);
+                    ret = n71_native_iommu_trial(&pdev->dev, ap, root, dart1, perst);
                     if (ret == -EHWPOISON) {
                         n71_roots_quarantined = true; __module_get(THIS_MODULE);
                         n71_probe_result = ret;
@@ -994,7 +1032,7 @@ out:
         put_device(&ap_dev->dev);
     n71_probe_result = ret;
     pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; RESET_RELEASE_TEST=%u DART_TTBR_WRITE_TEST=%u native_pci_scan=%u no_submitted_DMA\n",
-            ret, stage, poll_rc == 0, poll_rc, stage >= 16 && stage <= 27, stage >= 10, stage == 27);
+            ret, stage, poll_rc == 0, poll_rc, (stage >= 16 && stage <= 27) || stage == 29, stage >= 10, stage == 27 || stage == 29);
     return -ENODEV;
 }
 
@@ -1026,7 +1064,7 @@ static int __init n71_microlease_init(void)
     #endif
     /* OTP capture lost USB before any verified result; quarantine pending console evidence. */
     if (stage == 25) return -EOPNOTSUPP;
-    if (stage > 28 || !n71_validate_nodes() ||
+    if (stage > 29 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);

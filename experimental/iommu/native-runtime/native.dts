@@ -8,6 +8,12 @@
     reg=<0x6 0x02008000 0 0x4000>;
     #iommu-cells=<5>;
    };
+   pci-host {
+    device_type="pci";#address-cells=<3>;#size-cells=<2>;bus-range=<0 1>;
+    ranges=<0x02000000 0 0xc0000000 0x7 0xc0000000 0 0x800000>;
+    iommu-map=<8 &native_dart 0 0 0x80000000 0 0x40000000 1
+               0x100 &native_dart 0 0 0x80000000 0 0x40000000 1>;
+   };
    dma-probe {iommus=<&native_dart 0 0 0x80000000 0 0x40000000>;};
   };
  };};

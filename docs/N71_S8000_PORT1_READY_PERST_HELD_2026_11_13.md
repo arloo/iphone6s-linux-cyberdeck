@@ -266,3 +266,16 @@ Teardown disables SID0 before device/domain table teardown, then removes consume
 The first two earlier loader attempts were rejected before native provider activation: ELF blob alignment4 failed fdt_check_header, then generated __symbols__ required symbols absent from the live tree. The final build forces8-byte alignment and local-only phandle fixups without __symbols__; both rejection cycles completed existing rollback. Public tests exercise the actual adapted SID0 reset body against injected owner/type/stream/TCR/TTBR failures and compile-check local FDT references. The builder requires exact source hashes and the tested batt2 ABI and does not load the module. No private calibration header is needed for this reset-held diagnostic; older private tuning stages remain guarded.
 
 Next: connect this provider/domain to the real PCI Broadcom consumer, implement IRQ delivery or a verified polling transport, and validate firmware execution, scan, association and data transfer. Native DMA APIs now work with DART; physical endpoint requester/SID routing and actual device DMA are not established by a CPU mapping check.
+
+
+## 14 November: real Broadcom PCI Linux DMA API PASS, stage29
+
+Physical N71/S8000, same running batt2 kernel, uptime 9324s. A temporary PCI host references the scoped native DART provider with explicit five-cell iommu-map specifiers for bridge RID8 and endpoint RID0x100. An exact driver override selects only `n71-native-pci-dma-test`; brcmfmac does not probe. The real BCM4350 PCI device shares the translated domain with the diagnostic platform consumer.
+
+Linux DMA APIs successfully map, verify both physical endpoints and unmap one16KiB buffer using the real PCI device. Bus mastering remains OFF throughout; this verifies software/domain integration, **not a hardware DMA transaction**.
+
+Verified markers: `REAL_PCI_DMA_API_PASS`, `NATIVE_REAL_PCI_ACTION rc=0 reset_reasserted=1 native_roots_preserved=1`, `NATIVE_IOMMU_TRIAL rc=0 restored=1`. PCI objects are removed before reset/DART teardown, all seven PCIe PMGR domains return OFF; USB, touch and Bluetooth remain present with zero HCI errors. Battery51%. Private logs and original calibration stay outside Git.
+
+The first stage29 attempt failed cleanly with ENODEV because the map supplied one output cell to a provider declaring five. Correcting the map resolved PCI IOMMU attachment. Local OF node references are now released before removing the overlay.
+
+Reproduce using the existing native IOMMU builder with optional `--private-calibration` pointing to the owner's validated81-record header, then the private single-load runner stage29. The calibration is copied only into the private build directory. Remaining: actual endpoint DMA routing, interrupts, firmware startup, scan, association and traffic.
