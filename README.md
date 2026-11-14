@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: stage19 positive port1 link indicator, reproduced twice.** [Physical trial](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md): applying and restoring 81 original private tuning records changed the final local status from0x4 to0x5 (bit0 set). Both bounded trials restored PERST/DART/registers and all PCIe domains OFF; charging, USB, touch and Bluetooth remain operational. Endpoint enumeration and native Wi-Fi remain pending.
+
 **13 November 2026: real charging under Linux PASS.** [N71 SN2400 input-limit fix](experimental/power/README.md): 90 mA input gave -150 mA battery discharge; 300 mA gave +100..+112 mA charge; automatic restoration returned to -142 mA. A monitored temporary session lease is available. Boot integration and full-charge durability remain pending.
 
 **13 November 2026 diagnostic reboot:** [Battery telemetry and complete PCIe postflight](docs/N71_BATTERY_BUILTIN_RAM_KERNEL_2026_11_13.md) now pass on the `n71-batt1` kernel. The gauge reports 20% then 19% and net discharge while connected to Dell USB; sustained charging remains unverified. Bluetooth build 0825 is UP with zero HCI errors. The PERST-held READY experiment passed with complete restoration and all PCIe domains OFF afterward. Native Wi-Fi remains pending.
