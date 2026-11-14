@@ -37,7 +37,8 @@ static int n71_dma_test_device(struct device *dev)
  phys=virt_to_phys((void*)buffer);
  dma=dma_map_single(dev,(void*)buffer,PAGE_SIZE,DMA_BIDIRECTIONAL);
  if(dma_mapping_error(dev,dma)){dma=DMA_MAPPING_ERROR;rc=-EIO;goto done;}
- if(!n71_dma_context_ok(dev)||iommu_iova_to_phys(domain,dma)!=phys||
+ if(dma<0x80000000ULL||dma+PAGE_SIZE>0xbfffc000ULL||
+   !n71_dma_context_ok(dev)||iommu_iova_to_phys(domain,dma)!=phys||
    iommu_iova_to_phys(domain,dma+PAGE_SIZE-1)!=phys+PAGE_SIZE-1){rc=-EFAULT;goto done;}
  dma_unmap_single(dev,dma,PAGE_SIZE,DMA_BIDIRECTIONAL);
  if(iommu_iova_to_phys(domain,dma)){n71_dma_retained_buffer=buffer;buffer=0;dma=DMA_MAPPING_ERROR;rc=-EIO;goto done;}

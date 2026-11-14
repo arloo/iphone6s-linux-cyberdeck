@@ -293,3 +293,10 @@ Physical markers: `WLAN_MSI_AIC_ALLOCATION_PASS vector=264 IRQ_DISABLED no_MSI_d
 Original AppleS800xPCIe code at text offsets0xbcc..0xc88 selects0x31 for eight MSI vectors at port offset0x124, then writes base OR(base<<16) at0x128. The original N71 ADT assigns WLAN base8. A stage29 extension rejects an inherited enabled route, saves both registers, writes base0x00080008 and configuration0x31, checks readback, then restores and verifies both originals while endpoint bus mastering remains OFF and AIC264 remains disabled.
 
 Physical run uptime11702s: `WLAN_MSI_PORT_REGISTER_TRIAL rc=0 restored=1 eight_vectors=1 BUS_MASTER_OFF no_MSI_delivery_test`. Real PCI DMA API, AIC allocation/disposal and complete PCI/DART/reset/power teardown also pass; USB/touch/Bluetooth retained, battery56%. No MSI address or endpoint MSI capability is programmed by this test; no MSI delivery, endpoint DMA, firmware execution or WLAN connection is established. Original disassembly and full logs remain private.
+
+
+## 14 November: exclude original MSI address from DMA allocation
+
+The original N71 ADT MSI address0xbffff000 overlaps the previous translated DMA window0x80000000..0xbfffffff. Reserve its entire16KiB CPU page by reducing the consumer and both PCI iommu-map lengths to0x3fffc000, ending at0xbfffc000 exclusive. The diagnostic also rejects a mapped buffer crossing that boundary before reporting success. This is an allocator exclusion, not a verified hardware MSI bypass mapping.
+
+Physical stage29 at uptime12150s passes both platform and actual Broadcom PCI DMA API mappings, AIC allocation/removal, MSI register roundtrip and full restored teardown. Bus mastering stays OFF, USB/touch/Bluetooth retained, battery57%. No actual endpoint DMA, MSI delivery or firmware execution has yet been tested. Private logs remain outside Git.
