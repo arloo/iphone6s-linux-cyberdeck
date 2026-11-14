@@ -325,3 +325,12 @@ Optional `N71_PRIVATE_FIRMWARE_TRIAL` includes an owner-private generated header
 At uptime13383s the CR4 remains halted, the measured768KiB TCM is backed up in host memory, firmware is written at RAM offset0 and packed NVRAM at the end. Read back the whole TCM and byte-compare both input ranges. Restore the complete original TCM and verify byte-for-byte. `BRCM_FIRMWARE_NVRAM_WRITE_VERIFY_RESTORE rc=0 firmware_bytes=585997 nvram_bytes=3704 verified=1 restored=1 CPU_HALTED BUS_MASTER_OFF no_firmware_start`. Complete teardown also passes, battery58%, USB/touch/Bluetooth retained.
 
 This proves full host-MMIO image transfer to device RAM. **The image is subsequently restored, not left executing.** Reset-vector programming, ARM release, firmware shared-memory handshake, real endpoint DMA and MSI delivery remain untested. The optional private header and resulting firmware-containing module remain on the owner's Dell outside public Git. Default public builds omit the trial unless explicitly enabled with a private header.
+
+
+## 14 November: first bounded firmware execution attempt times out
+
+Optional `N71_PRIVATE_FIRMWARE_BOOT_TRIAL` adds a CR4-only reset/release following brcmfmac's AI reset sequence, writes the first firmware word to the BAR2 reset-vector aperture, and polls the final TCM word100 times at50ms. Before teardown it resets/rehalts CR4, restores the vector and full TCM. Endpoint bus mastering stays OFF. This diagnostic does not implement the complete brcmfmac attach/passive-core sequence.
+
+Physical attempt at uptime18077..18083s: `BRCM_FIRMWARE_BOOT_TRIAL rc=-110 shared=fc62039d flags=00000000 cpu_rehalted=1`. The final word stays at the packed NVRAM length/complement token; no valid shared-memory pointer is observed. Firmware/NVRAM readback and complete TCM restoration pass. PCI removal reports ENODEV because the diagnostic driver probe failed; all seven PCIe domains are OFF, original DART state restored, USB/touch/Bluetooth remain available. Battery56%.
+
+**No firmware initialization success is claimed.** No `SMAR` RAM-size override appears in the exact genuine C5 image, so there is no supported firmware-header RAM-size adjustment to apply. The reduced test omits other brcmfmac initialization, including D11 passive-core handling; investigate that difference and device-internal startup state before repeating. Native Wi-Fi, endpoint DMA and MSI delivery remain unproven. Private build header, firmware-containing module and logs remain outside Git.

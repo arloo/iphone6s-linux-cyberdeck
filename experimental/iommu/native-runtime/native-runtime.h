@@ -110,6 +110,50 @@ out:
 #ifdef N71_PRIVATE_FIRMWARE_TRIAL
 #include <linux/vmalloc.h>
 #include "n71-private-firmware.h"
+#ifdef N71_PRIVATE_FIRMWARE_BOOT_TRIAL
+/* CR4-only bounded reset sequence from brcmfmac chip.c. BME remains OFF. */
+static int n71_cr4_cycle(struct n71_dart_trial_mmio *m,bool halt)
+{
+ unsigned int i;void __iomem *w=m->bar0;
+ writel(0x18102000,(u8 __iomem *)m->endpoint+0x80);
+ if(readl((u8 __iomem *)m->endpoint+0x80)!=0x18102000)return -EIO;
+ writel(0x23,(u8 __iomem *)w+0x408);readl((u8 __iomem *)w+0x408);
+ writel(1,(u8 __iomem *)w+0x800);udelay(20);
+ if(readl((u8 __iomem *)w+0x800)!=1)return -EIO;
+ writel((halt?0x20:0)|3,(u8 __iomem *)w+0x408);readl((u8 __iomem *)w+0x408);
+ for(i=0;i<50;i++){
+  writel(0,(u8 __iomem *)w+0x800);usleep_range(40,60);
+  if(!(readl((u8 __iomem *)w+0x800)&1))break;
+ }
+ if(i==50)return -EIO;
+ writel((halt?0x20:0)|1,(u8 __iomem *)w+0x408);
+ return readl((u8 __iomem *)w+0x408)==((halt?0x20:0)|1)?0:-EIO;
+}
+static int n71_firmware_boot_trial(struct pci_dev *pdev,void __iomem *ram)
+{
+ struct n71_dart_trial_mmio *m=n71_pci_dma_context;
+ void __iomem *vec;u32 old,token,shared=0,flags=0;int rc,i,stop;
+ vec=ioremap(0x7c0400000ULL,4);if(!vec)return -ENOMEM;
+ old=readl(vec);token=readl((u8 __iomem *)ram+0xbfffc);
+ writel((u32)n71_fw[0]|((u32)n71_fw[1]<<8)|((u32)n71_fw[2]<<16)|((u32)n71_fw[3]<<24),vec);readl(vec);
+ rc=n71_cr4_cycle(m,false);
+ if(!rc){
+  rc=-ETIMEDOUT;
+  for(i=0;i<100;i++){
+   msleep(50);shared=readl((u8 __iomem *)ram+0xbfffc);
+   if(!n71_dma_context_ok(&pdev->dev)){rc=-EIO;break;}
+   if(shared!=token&&shared>=0x180000&&shared<0x23fffc&&!(shared&3)){
+    flags=readl((u8 __iomem *)ram+shared-0x180000);rc=0;break;
+   }
+  }
+ }
+ stop=n71_cr4_cycle(m,true);
+ if(!stop){writel(old,vec);readl(vec);}
+ pr_info("n71-perst-held: BRCM_FIRMWARE_BOOT_TRIAL rc=%d shared=%08x flags=%08x cpu_rehalted=%u BUS_MASTER_OFF no_endpoint_DMA\n",rc,shared,flags,!stop);
+ iounmap(vec);
+ return stop?-EHWPOISON:rc;
+}
+#endif
 static int n71_firmware_write_trial(struct pci_dev *pdev)
 {
  struct n71_dart_trial_mmio *m=n71_pci_dma_context;
@@ -126,10 +170,20 @@ static int n71_firmware_write_trial(struct pci_dev *pdev)
  memcpy_toio((u8 __iomem *)ram+size-sizeof(n71_nvram),n71_nvram,sizeof(n71_nvram));
  memcpy_fromio(check,ram,size);
  verified=!memcmp(check,n71_fw,sizeof(n71_fw))&&!memcmp(check+size-sizeof(n71_nvram),n71_nvram,sizeof(n71_nvram));
+#ifdef N71_PRIVATE_FIRMWARE_BOOT_TRIAL
+ if(verified){
+  rc=n71_firmware_boot_trial(pdev,ram);
+  if(rc==-EHWPOISON){iounmap(ram);vfree(backup);vfree(check);return rc;}
+ }else rc=-EIO;
+#endif
  memcpy_toio(ram,backup,size);
  memcpy_fromio(check,ram,size);restored=!memcmp(check,backup,size);
+#ifndef N71_PRIVATE_FIRMWARE_BOOT_TRIAL
  if(verified&&restored&&n71_dma_context_ok(&pdev->dev))rc=0;
- pr_info("n71-perst-held: BRCM_FIRMWARE_NVRAM_WRITE_VERIFY_RESTORE rc=%d firmware_bytes=%zu nvram_bytes=%zu verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF no_firmware_start\n",rc,sizeof(n71_fw),sizeof(n71_nvram),verified,restored);
+#else
+ if(!restored||!n71_dma_context_ok(&pdev->dev))rc=-EIO;
+#endif
+ pr_info("n71-perst-held: BRCM_FIRMWARE_NVRAM_WRITE_VERIFY_RESTORE rc=%d firmware_bytes=%zu nvram_bytes=%zu verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF trial_completed\n",rc,sizeof(n71_fw),sizeof(n71_nvram),verified,restored);
  iounmap(ram);vfree(backup);vfree(check);return rc;
 }
 #endif
@@ -213,7 +267,7 @@ static int n71_brcm_erom_inventory(struct pci_dev *pdev)
 #endif
 
      if(!verified||!restored)rc=-EIO;
-     pr_info("n71-perst-held: BRCM_TCM_WRITE_READ_RESTORE rc=%d bytes=16 verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF no_firmware_start\n",rc,verified,restored);
+     pr_info("n71-perst-held: BRCM_TCM_WRITE_READ_RESTORE rc=%d bytes=16 verified=%u restored=%u CPU_HALTED BUS_MASTER_OFF trial_completed\n",rc,verified,restored);
     }
 
    }
