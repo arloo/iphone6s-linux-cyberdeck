@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
+**14 November 2026: native DART/IOMMU + Linux DMA API PASS under reset.** [Stage28](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) creates a translated domain and maps/verifies/unmaps a16KiB buffer using Linux DMA APIs on the real phone, twice including a reproducible public build. Only SID0 touched; complete teardown;45% battery charging. The consumer is diagnostic, not yet the PCI Broadcom; endpoint DMA, interrupts and native WLAN remain pending.
+
 **14 November 2026: S5L8960X page-table format fix verified on phone CPU.** [Native table test](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) confirms the old backend emits incompatible table flags; attributed patch0018 uses flags3 and the legacy leaf format, corroborated by the original N71 Apple driver. Four-root allocation/map/translate/unmap/free comparisons pass on the real phone without programming DART. Hardware DMA/domain integration and Wi-Fi remain pending.
 
 **14 November 2026: native Linux PCI enumeration PASS.** [Stage27](docs/N71_S8000_PORT1_READY_PERST_HELD_2026_11_13.md) creates/removes real PCI bridge and BCM4350 device objects with the correct32KiB/4MiB resources, binding disallowed and bus mastering OFF. Complete teardown and postflight pass; DART/IOMMU, interrupts and firmware startup remain pending.

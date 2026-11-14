@@ -1,0 +1,137 @@
+--- a/n71-apple-dart-runtime.c
++++ b/n71-apple-dart-runtime.c
+@@ -0,0 +1,9 @@
++/* N71 diagnostic adaptation: exact DART1 aperture, SID0 only, reset held.
++ * No IRQ registration, endpoint DMA or replacement of the built-in driver.
++ */
++extern int n71_runtime_owner_ok(void);
++int n71_native_driver_register(void);
++void n71_native_driver_unregister(void);
++#include <linux/io-pgtable.h>
++extern struct io_pgtable_ops *n71_alloc_io_pgtable_ops(enum io_pgtable_fmt,struct io_pgtable_cfg *,void *);
++extern void n71_free_io_pgtable_ops(struct io_pgtable_ops *);
+@@ -471 +480 @@
+-static void
++static void __maybe_unused
+@@ -632 +641 @@
+-static bool apple_dart_s8000_unqualified_global_reset(struct apple_dart *dart)
++static bool __maybe_unused apple_dart_s8000_unqualified_global_reset(struct apple_dart *dart)
+@@ -642,46 +651,12 @@
+-	u32 config;
+-	struct apple_dart_stream_map stream_map;
+-	int i;
+-
+-	/* Fail before reading the DART lock register or writing any stream. */
+-	if (apple_dart_s8000_unqualified_global_reset(dart)) {
+-		dev_warn(dart->dev,
+-			 "S8000 unqualified all-stream DART reset blocked\n");
+-		return -EOPNOTSUPP;
+-	}
+-
+-	config = readl(dart->regs + dart->hw->lock);
+-	if (config & dart->hw->lock_bit) {
+-		dev_err(dart->dev, "DART is locked down until reboot: %08x\n",
+-			config);
+-		return -EINVAL;
+-	}
+-
+-	stream_map.dart = dart;
+-	bitmap_zero(stream_map.sidmap, DART_MAX_STREAMS);
+-	bitmap_set(stream_map.sidmap, 0, dart->num_streams);
+-	apple_dart_hw_disable_dma(&stream_map);
+-	apple_dart_hw_clear_all_ttbrs(&stream_map);
+-
+-	/* enable all streams globally since TCR is used to control isolation */
+-	if (dart->hw->enable_streams)
+-		for (i = 0; i < BITS_TO_U32(dart->num_streams); i++)
+-			writel(U32_MAX, dart->regs + dart->hw->enable_streams + 4 * i);
+-
+-	/* clear any pending errors before the interrupt is unmasked */
+-	writel(readl(dart->regs + dart->hw->error), dart->regs + dart->hw->error);
+-
+-	if (dart->hw->type == DART_T8110)
+-		writel(0,  dart->regs + DART_T8110_ERROR_MASK);
+-
+-	/*
+-	 * S5L8960X DART only supports TLB invalidation if translation is
+-	 * enabled.
+-	 */
+-	if (dart->hw->type == DART_S5L8960X) {
+-		apple_dart_s5l8960x_set_reflector(dart);
+-		apple_dart_s5l8960x_set_configs(dart);
+-		return 0;
+-	}
+-
+-	return dart->hw->invalidate_tlb(&stream_map);
++    struct apple_dart_stream_map m={.dart=dart};
++    unsigned int i;
++    if(!n71_runtime_owner_ok() || dart->hw->type!=DART_S5L8960X || dart->num_streams!=4)
++        return -EOPNOTSUPP;
++    if(readl(dart->regs+0xc)&0xffffff00U)return -EBUSY;
++    bitmap_zero(m.sidmap,DART_MAX_STREAMS);set_bit(0,m.sidmap);
++    apple_dart_hw_disable_dma(&m);
++    if(readl(dart->regs+0xc))return -EIO;
++    for(i=0;i<4;i++)apple_dart_hw_clear_ttbr(&m,i);
++    for(i=0;i<4;i++)if(readl(dart->regs+0x40+4*i))return -EIO;
++    dev_info(dart->dev,"N71_NATIVE_SCOPED_RESET sid=0 other_streams_untouched=1\n");
++    return 0;
+@@ -956 +931 @@
+-	dart_domain->pgtbl_ops = alloc_io_pgtable_ops(dart->hw->fmt, &pgtbl_cfg,
++	dart_domain->pgtbl_ops = n71_alloc_io_pgtable_ops(dart->hw->fmt, &pgtbl_cfg,
+@@ -1138 +1113 @@
+-	free_io_pgtable_ops(dart_domain->pgtbl_ops);
++	n71_free_io_pgtable_ops(dart_domain->pgtbl_ops);
+@@ -1576,14 +1551,6 @@
+-	struct resource *res;
+-
+-	if (!of_machine_is_compatible("apple,n71") ||
+-	    !of_machine_is_compatible("apple,s8000"))
+-		return false;
+-
+-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	if (res && res->end < res->start)
+-		return true; /* Malformed descriptor: never risk a live MMIO map. */
+-
+-	return res && res->start <= 0x60200bfffULL &&
+-	       res->end >= 0x602008000ULL;
+-}
+-
++    struct resource *r=platform_get_resource(pdev,IORESOURCE_MEM,0);
++    return !n71_runtime_owner_ok() || strcmp(pdev->name,"n71-native-dart-provider") ||
++      !r || r->start!=0x602008000ULL || resource_size(r)!=0x4000;
++}
++
++static const struct apple_dart_hw apple_dart_hw_s5l8960x;
+@@ -1610 +1577 @@
+-	dart->hw = of_device_get_match_data(dev);
++	dart->hw = &apple_dart_hw_s5l8960x;
+@@ -1623,3 +1590 @@
+-	dart->irq = platform_get_irq(pdev, 0);
+-	if (dart->irq < 0)
+-		return -ENODEV;
++	dart->irq = -1; /* CPU DMA-API diagnostic only; no endpoint DMA or IRQ. */
+@@ -1688,2 +1653 @@
+-	ret = request_irq(dart->irq, dart->hw->irq_handler, IRQF_SHARED,
+-			  "apple-dart fault handler", dart);
++	ret = 0; /* No hardware IRQ in reset-held diagnostic. */
+@@ -1714 +1678 @@
+-	free_irq(dart->irq, dart);
++	if (dart->irq >= 0) free_irq(dart->irq, dart);
+@@ -1728 +1692 @@
+-	free_irq(dart->irq, dart);
++	if (dart->irq >= 0) free_irq(dart->irq, dart);
+@@ -1923 +1887 @@
+-MODULE_DEVICE_TABLE(of, apple_dart_of_match);
++
+@@ -1927,2 +1891,2 @@
+-		.name			= "apple-dart",
+-		.of_match_table		= apple_dart_of_match,
++		.name			= "n71-native-dart-provider",
++		.of_match_table		= NULL,
+@@ -1930 +1894 @@
+-		.pm			= pm_sleep_ptr(&apple_dart_pm_ops),
++		.pm			= NULL,
+@@ -1936 +1900,2 @@
+-module_platform_driver(apple_dart_driver);
++int n71_native_driver_register(void){return platform_driver_register(&apple_dart_driver);}
++void n71_native_driver_unregister(void){platform_driver_unregister(&apple_dart_driver);}

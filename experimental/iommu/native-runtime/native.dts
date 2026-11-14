@@ -1,0 +1,14 @@
+/dts-v1/;
+/plugin/;
+/ {
+ fragment@0 {target-path="/soc"; __overlay__ {
+  n71-native-iommu-lease {
+   #address-cells=<2>;#size-cells=<2>;ranges;
+   native_dart: dart@602008000 {
+    reg=<0x6 0x02008000 0 0x4000>;
+    #iommu-cells=<5>;
+   };
+   dma-probe {iommus=<&native_dart 0 0 0x80000000 0 0x40000000>;};
+  };
+ };};
+};

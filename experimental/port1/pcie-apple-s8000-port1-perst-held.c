@@ -35,7 +35,6 @@
 #include "n71-port-local-trial.h"
 #include "n71-port-aux-trial.h"
 #include "n71-port-gating-trial.h"
-#include "n71-port-calibration-trial.h"
 #include "n71-port-config-readonly.h"
 #include "n71-port-endpoint-id-trial.h"
 #include "n71-endpoint-config-snapshot.h"
@@ -43,6 +42,7 @@
 #include "n71-endpoint-mmio-trial.h"
 #include "n71-endpoint-otp-snapshot.h"
 #ifdef N71_PRIVATE_PORT1_CALIBRATION
+#include "n71-port-calibration-trial.h"
 #include "n71-private-port1-calibration.h"
 #endif
 
@@ -64,7 +64,7 @@ static bool n71_probed;
 module_param(armed, bool, 0400);
 module_param(stage, uint, 0400);
 MODULE_PARM_DESC(armed, "exclusive PERST-low test, default false");
-MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only,27=native PCI enumeration without binding");
+MODULE_PARM_DESC(stage, "0=PERST only,1=add WLAN,2=add PMGR status,3=ID3 status,4=ID2 enable,5=common init only,6=common+ID2,7=stable 250ms,8=add read-only DART1 TCR,9=read TTBR/command/fault,10=SID0 TTBR zero/restore,11=add TCR0 pulse under reset,12=SID0 TLB invalidate,13=owned empty roots,14=250ms owned-root dwell,15=port-local control,16=bounded PERST release/reassert,17=root aux diagnostic,18=REFCLK gating with release,19=owner original tuning,20=read-only port1 root PCI header,21=temporary WLAN bus1 endpoint ID,22=endpoint BAR/capability snapshot,23=bounded BAR sizing with decode OFF,24=memory-only chip ID read,25=quarantined OTP snapshot,26=ChipCommon metadata only,27=native PCI enumeration without binding,28=native IOMMU DMA API under reset");
 
 static const struct {
     const char *name;
@@ -324,6 +324,9 @@ static struct dentry *n71_otp_file;
 static unsigned int n71_chipcommon_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->bar0 + off); }
 #include "n71-pci-core-enumerate.h"
+#ifdef N71_NATIVE_IOMMU_RUNTIME
+#include "native-runtime.h"
+#endif
 static int n71_otp_observe(void *ctx)
 {
     const struct n71_otp_ops o = { .ready = n71_config_ready, .read = n71_chipcommon_read };
@@ -415,6 +418,7 @@ static void n71_aux_write(void *ctx, unsigned int off, unsigned int value)
     writel(value, (u8 __iomem *)m->root + off);
     pr_info("n71-perst-held: ROOT_AUX_WRITE off=%x before=%08x write=%08x after=%08x\n", off, before, value, readl((u8 __iomem *)m->root + off));
 }
+#ifdef N71_PRIVATE_PORT1_CALIBRATION
 static unsigned int n71_calibration_read(void *ctx, unsigned int bank, unsigned int off)
 {
     struct n71_dart_trial_mmio *m = ctx;
@@ -439,6 +443,7 @@ static int n71_calibration_run(void *ctx, unsigned int *status, unsigned int *sa
     pr_info("n71-perst-held: PORT1_CALIBRATED_GATING rc=%d restored=%u\n", rc, gate_restored);
     return rc;
 }
+#endif
 static int n71_port_active_hold(void *ctx)
 {
     struct n71_dart_trial_mmio *m = ctx;
@@ -797,6 +802,20 @@ static int n71_microlease_probe(struct platform_device *pdev)
                         goto restore;
                     }
                 }
+                if (stage == 28) {
+#ifdef N71_NATIVE_IOMMU_RUNTIME
+                    ret = n71_native_iommu_trial(&pdev->dev, ap, root, dart1);
+                    if (ret == -EHWPOISON) {
+                        n71_roots_quarantined = true; __module_get(THIS_MODULE);
+                        n71_probe_result = ret;
+                        pr_err("n71-perst-held: NATIVE_IOMMU_QUARANTINED reset/power/maps retained; reboot recovery required\n");
+                        return -ENODEV;
+                    }
+ #else
+                    ret = -EOPNOTSUPP;
+ #endif
+                    goto restore;
+                }
                 if (stage >= 10) {
                     if (stage >= 15) {
                         port1 = ioremap(0x602000000ULL, 0x4000);
@@ -975,7 +994,7 @@ out:
         put_device(&ap_dev->dev);
     n71_probe_result = ret;
     pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; RESET_RELEASE_TEST=%u DART_TTBR_WRITE_TEST=%u native_pci_scan=%u no_submitted_DMA\n",
-            ret, stage, poll_rc == 0, poll_rc, stage >= 16, stage >= 10, stage >= 27);
+            ret, stage, poll_rc == 0, poll_rc, stage >= 16 && stage <= 27, stage >= 10, stage == 27);
     return -ENODEV;
 }
 
@@ -999,11 +1018,15 @@ static int __init n71_microlease_init(void)
     int ret, roll;
 
     #ifndef N71_PRIVATE_PORT1_CALIBRATION
+    #ifdef N71_NATIVE_IOMMU_RUNTIME
+    if (stage >= 19 && stage != 28) return -EOPNOTSUPP;
+    #else
     if (stage >= 19) return -EOPNOTSUPP;
+    #endif
     #endif
     /* OTP capture lost USB before any verified result; quarantine pending console evidence. */
     if (stage == 25) return -EOPNOTSUPP;
-    if (stage > 27 || !n71_validate_nodes() ||
+    if (stage > 28 || !n71_validate_nodes() ||
         sizeof(n71_status_snapshot_dtbo) != n71_status_snapshot_dtbo_len)
         return -ENODEV;
     existing = of_find_node_by_path(N71_STATUS_SNAPSHOT_NODE);
