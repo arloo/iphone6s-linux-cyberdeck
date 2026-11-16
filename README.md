@@ -1,6 +1,6 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
-**14 November 2026: genuine C5 firmware startup handshake PASS.** Supplying the missing NVRAM `macaddr` with a private temporary local unicast address resolves the initial fatal path. Real N71 publishes shared pointer and PCIe protocol version6; CPU rehalt and full RAM restoration pass. **Native Wi-Fi remains pending:** endpoint DMA, MSI delivery, driver rings and connection are not yet qualified.
+**16 November 2026: real C5 PCIe/DART protocol6 control exchange PASS.** On the physical N71/S8000, a bounded `GET_VERSION` request received ACK type10 and completion type12, status0, length4, version2, through the translated SID0 domain. Publishing the firmware DMA scratch and ring-update buffers before the doorbell resolved the malformed transfer. Two successful physical runs; BME disabled afterward, pending transactions drained, descriptors/RAM/DART restored. **Native Wi-Fi remains pending:** persistent driver integration, MSI delivery, RF initialization, scan, association and traffic are not qualified.
 
 **14 November 2026: real Broadcom PCI device + Linux DMA API PASS.** Stage29 binds an exact diagnostic driver to BCM4350 `14e4:43a3`, maps/verifies/unmaps a16KiB buffer in the same translated DART domain as the platform consumer, then removes PCI objects and restores reset, registers and power. Bus mastering stays OFF: endpoint DMA, IRQs, firmware execution and native Wi-Fi remain pending.
 

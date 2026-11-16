@@ -190,7 +190,7 @@ static int n71_firmware_boot_trial(struct pci_dev *pdev,void __iomem *ram)
   pr_info("n71-perst-held: BRCM_D11_PASSIVE_RESTORE rc=%d\n",stop);
  }
 
- pr_info("n71-perst-held: BRCM_FIRMWARE_BOOT_TRIAL rc=%d shared=%08x flags=%08x cpu_rehalted=%u BUS_MASTER_OFF no_endpoint_DMA\n",rc,shared,flags,!stop);
+ pr_info("n71-perst-held: BRCM_FIRMWARE_BOOT_TRIAL rc=%d shared=%08x flags=%08x cpu_rehalted=%u BUS_MASTER_OFF DMA_trial_scope=protocol6\n",rc,shared,flags,!stop);
  iounmap(vec);
  return stop?-EHWPOISON:rc;
 }
@@ -408,7 +408,7 @@ cleanup:
  if(!restored)rc=-EIO;
  of_node_put(cn);of_node_put(dn);
  if(overlay){err=of_overlay_remove(&id);if(err)rc=err;}
- pr_info("n71-perst-held: NATIVE_IOMMU_TRIAL rc=%d restored=%u stream0_only=1 PERST_LOW no_endpoint_DMA\n",rc,restored);
+ pr_info("n71-perst-held: NATIVE_IOMMU_TRIAL rc=%d restored=%u stream0_only=1 PERST_LOW DMA_trial_scope=diagnostic\n",rc,restored);
 done:
  n71_native_active=false;return rc;
 }

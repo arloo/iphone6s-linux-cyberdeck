@@ -358,7 +358,7 @@ static int n71_mmio_observe(void *ctx)
       .endpoint_command = n71_endpoint_command, .chip_read = n71_chip_read, .observe = n71_otp_observe };
     struct n71_mmio_result r;
     int rc = n71_endpoint_mmio_trial(&o, ctx, &r);
-    pr_info("n71-perst-held: ENDPOINT_MMIO_TRIAL rc=%d chip=%08x chiprev=%u reads=%u restored=%u BUS_MASTER_NEVER_ENABLED\n",
+    pr_info("n71-perst-held: ENDPOINT_MMIO_TRIAL rc=%d chip=%08x chiprev=%u reads=%u restored=%u BUS_MASTER_OFF_AT_RETURN\n",
             rc, r.chip, (r.chip >> 16) & 15, r.reads, r.restored);
     return rc;
 }
@@ -1031,7 +1031,7 @@ out:
     if (ap_dev)
         put_device(&ap_dev->dev);
     n71_probe_result = ret;
-    pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; RESET_RELEASE_TEST=%u DART_TTBR_WRITE_TEST=%u native_pci_scan=%u no_submitted_DMA\n",
+    pr_info("n71-perst-held: COMPLETE rc=%d stage=%u ID5_READY=%u POLL_RC=%d; RESET_RELEASE_TEST=%u DART_TTBR_WRITE_TEST=%u native_pci_scan=%u DMA_policy=diagnostic\n",
             ret, stage, poll_rc == 0, poll_rc, (stage >= 16 && stage <= 27) || stage == 29, stage >= 10, stage == 27 || stage == 29);
     return -ENODEV;
 }
