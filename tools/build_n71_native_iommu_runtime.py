@@ -24,7 +24,7 @@ def main():
  if not release.startswith('7.3.0-rc1-n71-batt2-'):raise ValueError('Use the tested batt2 build/ABI')
  out.mkdir(parents=True,exist_ok=True)
  for f in (ROOT/'experimental/port1').glob('*.h'):shutil.copy2(f,out/f.name)
- for name in ['Makefile','native-runtime.h','n71-protocol6-rings.h','native.dts','n71-pgtable-private.c','compat.h']:shutil.copy2(TEMPLATE/name,out/name)
+ for name in ['Makefile','native-runtime.h','n71-protocol6-rings.h','n71-protocol6-msi.h','native.dts','n71-pgtable-private.c','compat.h']:shutil.copy2(TEMPLATE/name,out/name)
  shutil.copy2(ROOT/'experimental/port1/pcie-apple-s8000-port1-perst-held.c',out/'main.c')
  shutil.copy2(src/'drivers/iommu/apple-dart.c',out/'n71-apple-dart-runtime.c')
  subprocess.run(['git','apply','--unidiff-zero',str(TEMPLATE/'native-driver-adapter.patch')],cwd=out,check=True)
