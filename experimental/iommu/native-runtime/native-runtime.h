@@ -121,6 +121,7 @@ out:
 #if N71_FW_BOOT_POLLS < 1 || N71_FW_BOOT_POLLS > 100 || N71_FW_BOOT_POLL_MS < 1 || N71_FW_BOOT_POLL_MS > 50
 #error Invalid bounded firmware observation interval
 #endif
+#include "n71-protocol6-rings.h"
 /* CR4-only bounded reset sequence from brcmfmac chip.c. BME remains OFF. */
 static int n71_cr4_cycle(struct n71_dart_trial_mmio *m,bool halt)
 {
@@ -174,6 +175,7 @@ static int n71_firmware_boot_trial(struct pci_dev *pdev,void __iomem *ram)
  }
  writel(0x18102000,(u8 __iomem *)m->endpoint+0x80);
  pr_info("n71-perst-held: BRCM_CR4_AFTER_EXEC ioctl=%08x reset=%08x\n",readl((u8 __iomem *)m->bar0+0x408),readl((u8 __iomem *)m->bar0+0x800));
+ if(!rc)rc=n71_protocol6_ring_trial(pdev,ram,shared);
  stop=n71_cr4_cycle(m,true);
  if(!stop){writel(old,vec);readl(vec);}
  if(!stop){

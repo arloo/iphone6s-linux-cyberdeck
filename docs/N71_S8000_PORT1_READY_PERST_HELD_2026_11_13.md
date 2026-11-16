@@ -370,3 +370,14 @@ Unwinding the100ms snapshot through verified saved register frames locates attac
 Physical run uptime34764s: `BRCM_FIRMWARE_BOOT_TRIAL rc=0 shared=001de29c flags=00010006 cpu_rehalted=1 BUS_MASTER_OFF no_endpoint_DMA`. The shared pointer falls inside measured TCM; low flags byte6 matches Linux's supported PCIe protocol version. Polling observed readiness after approximately150ms, rather than timing out at5s. Firmware image585997 bytes and packed NVRAM verified; full TCM restoration verified; D11 wrapper restored; PCI/DART/reset/power teardown passes. USB/touch/Bluetooth retained, battery39%.
 
 This establishes initial firmware readiness in the diagnostic lifecycle. It does NOT establish real endpoint DMA, MSI delivery, rings, WLAN interface, scan or association. The firmware is rehalted and RAM restored after the test. The private random MAC and all original calibration/firmware/RAM remain outside Git. Next: qualify native driver ring/DMA and IRQ integration with this missing-input fix retained.
+
+
+## 16 November: fresh Linux boot and protocol6 coherent ring preparation PASS
+
+Owner rebooted the pinned batt2 payload through Pongo. Real USB Linux shell, kernel ABI, touch and Bluetooth verified; battery23..24% with charging seen before the trial. Reusing the missing-MAC fix reproduces the genuine C5 startup handshake on this fresh boot.
+
+`n71-protocol6-rings.h` uses the protocol6 layout and common-ring geometry from the locally pinned brcmfmac pcie.c/msgbuf.h. It validates every TCM pointer and table range, flow/submission/completion limits, and the shared-domain identity. Firmware reports40 flow rings,43 submissions,4 completions and DMA-index capability. Five coherent buffers are allocated through the real Broadcom PCI device; all covered4KiB translations and IOVA bounds excluding the MSI page are checked. Buffers are zeroed; ring depth/item size/64-bit DMA addresses are published and read back. Descriptors are restored before freeing buffers. No producer index, doorbell or endpoint BME write occurs.
+
+Physical uptime235..236s: `BRCM_PROTOCOL6_RING_METADATA_PASS` and `BRCM_PROTOCOL6_RING_TRIAL rc=0 rings=5 descriptors_restored=1 buffers_freed=1 BUS_MASTER_OFF no_endpoint_DMA`. Firmware rehalt/full TCM restore, D11 restore, PCI removal, original DART restoration and all seven PCIe domains OFF pass. USB/touch/Bluetooth postflight retained. A delayed remote output response was resolved by reading the completed private log; no hardware retry was performed.
+
+This qualifies coherent ring allocation and shared-memory control-plane preparation only. Actual endpoint DMA, physical SID routing, MSI delivery, driver activation and WLAN association remain pending. Proprietary images/private logs stay on the owner Dell.
