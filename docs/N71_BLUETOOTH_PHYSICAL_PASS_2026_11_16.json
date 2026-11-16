@@ -1,0 +1,25 @@
+{
+  "classic_Dell_discovered": true,
+  "paired": true,
+  "bonded": true,
+  "server_bytes": 65536,
+  "server_packets": 256,
+  "server_security_level": 2,
+  "controlled_peer_matched": true,
+  "echo_pass": true,
+  "HCI_transport_errors_zero": true,
+  "WiFi_still_completed": true,
+  "WiFi_Internet_during_BT": true,
+  "errors": [],
+  "device": "iPhone 6s N71 / Samsung S8000",
+  "date": "2026-11-16",
+  "le_scan_devices_seen": 12,
+  "scope": "Current RAM Linux session; no reboot persistence qualification",
+  "not_tested": [
+    "HID keyboard or mouse input",
+    "A2DP audio playback",
+    "Suspend and resume",
+    "Automatic restoration after reboot"
+  ],
+  "security_note": "BT_SECURITY_MEDIUM requires encryption; does not prove authenticated MITM protection."
+}

@@ -29,3 +29,8 @@ test:
 	python3 -m unittest discover -s tests -v
 	python3 tools/touch/hbpp_cal_audit.py
 	python3 scripts/validate_project.py
+
+# Controlled encrypted BR/EDR data test; never embeds a peer address.
+build/n71-bt-l2cap-echo-aarch64: tools/n71-bt-l2cap-echo.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -I$(BLUEZ_HEADERS) -o $@ $<
