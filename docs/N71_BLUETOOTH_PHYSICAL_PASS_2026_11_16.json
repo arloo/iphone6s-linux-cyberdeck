@@ -22,8 +22,10 @@
     "Automatic restoration after reboot"
   ],
   "security_note": "BT_SECURITY_MEDIUM requires encryption; does not prove authenticated MITM protection.",
-  "successful_controlled_trials_same_RAM_session": 2,
+  "successful_controlled_trials_same_RAM_session": 3,
   "bytes_per_trial": 65536,
-  "service_restart_between_trials": false,
-  "reboot_between_trials": false
+  "service_restart_between_trials": true,
+  "reboot_between_trials": false,
+  "daemon_restart_recovery_tested": true,
+  "bond_state_reloaded_after_service_restart": true
 }

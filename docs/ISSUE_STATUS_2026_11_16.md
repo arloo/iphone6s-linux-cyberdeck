@@ -27,3 +27,7 @@ The original issues remain open because each contains real uncompleted qualifica
 Priority is to prepare integration/recovery and the minimal usable console, then qualify a measured Kali subset. HID testing resumes when a real peripheral is available. S8003 remains outside active hardware experiments.
 
 Versioned records: [reviewed issue bodies](../manifests/issue-alignment-2026-11-16.json), [applied remote issue map](../manifests/issue-live-state-2026-11-16.json). These are dated snapshots; future remote edits require a new review, not an assumption that this snapshot is live forever.
+
+## Later current-session progress
+
+Issues #3, #4, #6 and #8 now also record verified service recovery/bond reload, the running native UI/PTY and the measured display/resource profile. The integrated candidate is built but remains unbooted, and manual finger typing is pending. See [session evidence](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md) and [applied issue progress](../manifests/issue-session-finalization-2026-11-16.json).

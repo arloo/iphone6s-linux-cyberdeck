@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "test_id": "native_ui_and_session_service_recovery",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md",
+  "summary": "Native dashboard/PTY running, synthetic-key actual-phone command test and controlled four-daemon recovery passed. New UI human typing, full integrated RAM boot and endurance remain unqualified."
+}

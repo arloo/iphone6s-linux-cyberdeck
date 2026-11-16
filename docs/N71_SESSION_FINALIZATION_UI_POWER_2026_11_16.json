@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-16",
+  "device": "N71/S8000",
+  "scope": "Current RAM session; integrated candidate NOT BOOTED",
+  "UI": {
+    "native_AArch64_selftest_pass": true,
+    "local_PTY_command_roundtrip_pass": true,
+    "synthetic_keyboard_hit_dispatch_pass": true,
+    "framebuffer_and_evdev_probe_pass": true,
+    "dashboard_running_on_phone": true,
+    "framebuffer_readback_reviewed": true,
+    "new_UI_optical_confirmation": false,
+    "manual_touch_typing_acceptance": false,
+    "terminal_mode": "ASCII / TERM=dumb / 48 columns x 24 rows; no full VT emulation or scrollback UI",
+    "binary_sha256": "ec4052411611197eee3ec71fbefff663325955435507ef50b680c9acfe6e5a2d"
+  },
+  "services": {
+    "two_consecutive_idempotent_runs_pass": true,
+    "four_owned_daemons_preserved_during_idempotence": true,
+    "four_owned_daemons_stopped_and_recovered": true,
+    "fresh_DHCP_state_after_recovery": true,
+    "WPA_COMPLETED_after_recovery": true,
+    "encrypted_Dell_L2CAP_echo_after_recovery_bytes": 65536,
+    "Bluetooth_transport_errors_zero": true,
+    "full_reboot_restoration_tested": false
+  },
+  "performance": {
+    "date": "2026-11-16",
+    "observation_window_seconds": 15,
+    "system_busy_percent": 0.96,
+    "UI_share_total_CPU_percent": 0.31,
+    "UI_RSS_KiB": 8832,
+    "capacity_percent": 40,
+    "temperature_C": 33.7,
+    "battery_current_mA": -13.0,
+    "brightness": 1023,
+    "brightness_max": 2047,
+    "CPU_governor": "schedutil",
+    "WiFi_power_save": "on",
+    "scope": "Short current-session observation; not a battery-life or endurance benchmark"
+  },
+  "network": {
+    "date": "2026-11-16",
+    "native_WLAN_transfer_bytes": 4194304,
+    "transfer_SHA256_verified": true,
+    "native_WLAN_peer_verified": true,
+    "WiFi_power_save_on": true,
+    "ping_packets_sent": 6,
+    "ping_packets_received": 6,
+    "ping_average_ms": 10.06,
+    "Bluetooth_transport_errors_zero": true,
+    "UI_remained_alive": true,
+    "test_window_seconds": 6.16,
+    "scope": "Current balanced session after service recovery; no sustained-throughput or endurance claim"
+  },
+  "display": {
+    "original_brightness": 1505,
+    "balanced_brightness": 1023,
+    "maximum": 2047,
+    "original_value_retained_for_restore": true,
+    "power_saving_percent_measured": false
+  },
+  "CPU": {
+    "governor_preserved": "schedutil",
+    "minimum_kHz": 300000,
+    "maximum_kHz": 1800000,
+    "overclock_applied": false
+  },
+  "integrated_candidate": {
+    "bytes": 25066924,
+    "private_runtime_files": 55,
+    "m1n1_bootargs_both_DTBS_kernel_unchanged": true,
+    "original_CPIO_entries_unchanged_except_init": true,
+    "immutable_runtime_hashes_verified": true,
+    "physically_booted": false,
+    "Pongo_transfer_qualified": false,
+    "private_credentials_and_bonds_included": true
+  },
+  "unqualified": [
+    "Manual touch typing on the new UI",
+    "Fresh integrated RAM boot",
+    "Long-duration charging/autonomy",
+    "HID mouse or keyboard",
+    "A2DP/GATT applications",
+    "Suspend/resume",
+    "Kali tool installation and actual tool tests"
+  ]
+}

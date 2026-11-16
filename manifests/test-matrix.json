@@ -45,13 +45,22 @@
         "docs/N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json",
         "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
         "docs/N71_BLUETOOTH_RUNTIME_2026_11_16.md",
-        "docs/PROJECT_STATE_2026_11_16.md"
+        "docs/PROJECT_STATE_2026_11_16.md",
+        "docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md"
       ],
       "qualification_scope": {
         "touch_evdev_multitouch": "Physical single and simultaneous two-finger EVDEV; endurance/edge/latency unqualified",
         "wifi_network": "Current managed RAM session; 2.4 GHz WPA2/DHCP/DNS/Internet/1 MiB checked transfer; no reboot/suspend/5 GHz qualification",
         "bluetooth_scan": "LE discovery and controlled classic Dell inquiry; no GATT profile claim",
         "bluetooth_pairing": "Controlled Dell pairing and bonding, encrypted L2CAP echo; no HID/audio or reboot persistence claim"
+      },
+      "runtime_followup": {
+        "native_dashboard_running": true,
+        "native_PTY_synthetic_keyboard_selftest_passed": true,
+        "manual_UI_touch_typing_tested": false,
+        "userspace_service_recovery_passed": true,
+        "integrated_RAM_candidate_built": true,
+        "integrated_RAM_candidate_booted": false
       }
     },
     {

@@ -72,7 +72,7 @@ This builds only the static ARM64 echo client. A controlled peer must already ru
 
 ## Boot integration status
 
-The existing qualified payload has automatic touchscreen setup and a monitored charging/HCI startup path. The new [connectivity startup candidate](../scripts/n71_connectivity_autostart.sh) is prepared source only. It expects a private hash manifest and staged runtime paths; it is not self-contained and has not been installed or physically tested. Its guards/ordering must be tested before inclusion in a candidate.
+The existing qualified payload has automatic touchscreen setup and a monitored charging/HCI startup path. The new [connectivity startup candidate](../scripts/n71_connectivity_autostart.sh) is installed in the current RAM session and passed consecutive idempotent calls plus four-daemon recovery. It expects a private hash manifest and staged runtime paths. The separate integrated candidate bundles these inputs, but its new-boot behavior is not yet physically qualified.
 
 Keep the known-good payload immutable. Record m1n1, both DTBs, kernel, initramfs and final payload hashes; inspect differences and image size before a supervised Pongo transfer. Preserve USB recovery on partial startup failure. The older n71-batt2 smoke script is tied to its dated payload and does not automatically select a newer image.
 
@@ -87,3 +87,7 @@ The existing USB Telnet shell is bench-only and unauthenticated. [SSH migration]
 For a new result, record board/foundry, source commit, exact private payload hash, selected experimental mode, bounded test, independent positive/negative observations and postflight. Publish only reviewed summaries without addresses, keys, credentials, raw captures, firmware or calibration. Keep historical failures and uncertain root causes attributed to the payload that produced them.
 
 Use the [issue map](ISSUE_STATUS_2026_11_16.md) to choose current work instead of restarting already solved bring-up steps. The optional Kali tool environment has its own [integration and smoke-test gates](KALI_ARM64_INTEGRATION.md).
+
+## Integrated candidate and native UI follow-up
+
+See [current-session finalization](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md) for the 25,066,924-byte owner-private candidate, unchanged base components, current UI build/test commands and exact acceptance limits. The private handoff command defaults to status and refuses sending while the known-good RAM Linux is online. Transfer and new-boot qualification still need physical owner DFU/Pongo preparation.

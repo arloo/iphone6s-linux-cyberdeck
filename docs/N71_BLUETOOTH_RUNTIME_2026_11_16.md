@@ -34,3 +34,7 @@ Client headers came from bluez-5.87.tar.xz, SHA256 26bdcf2cebd7310c6f598850606b0
 The private bus uses an owner-only Unix directory and EXTERNAL authentication. BlueZ state contains private bond keys and must never be committed. A successful bond in this RAM session does not imply persistence across a reboot.
 
 The daemon logged a rejected optional privacy-setting request; Bluetooth address privacy has not been qualified.
+
+## Current-session recovery follow-up
+
+A later third controlled trial followed an identity-guarded restart of the private BlueZ/D-Bus services. Paired/Bonded state and the encrypted 65,536-byte Dell echo passed again with zero transport errors and native Wi-Fi intact. This qualifies daemon restart/bond reload in RAM, not a new kernel boot. See [session finalization](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md).

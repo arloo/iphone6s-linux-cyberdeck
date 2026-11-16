@@ -15,9 +15,9 @@ The initial project also envisaged a fullscreen cyberpunk interface, pinned proj
 | Recovery/build workstation | Pinned sources, cross-build, private asset staging, checksummed RAM payload, recovery | Dell workflow exists | Reproduce the complete integrated candidate and qualify a new boot |
 | N71 kernel and device support | Touch/display, USB, native WLAN, Bluetooth transport, battery | Major hardware functions physically demonstrated | Boot recovery, endurance and power-state qualification |
 | Minimal recovery userspace | Emergency console and diagnostics, independent of Kali | BusyBox/USB shell works | Authenticated SSH cutover, retained recovery path |
-| Connectivity services | Managed brcmfmac, WPA, DHCP/DNS, private BlueZ/D-Bus | Running in the tested RAM session | Automatic ordered startup, idempotence, restart/reboot tests |
+| Connectivity services | Managed brcmfmac, WPA, DHCP/DNS, private BlueZ/D-Bus | Current-session startup/idempotence and four-daemon recovery passed | New integrated RAM boot qualification |
 | Kali ARM64 environment | Curated command-line tools and isolated dependency tree | Planned; no on-phone Kali smoke test | Signed package manifest, ARM64 ABI check, measured resources and controlled tool tests |
-| Cyberdeck shell/UI | Touch launcher, terminal, keyboard, jobs/status and private results | Framebuffer proof of concept plus real touch | End-to-end touch-only command execution and result review |
+| Cyberdeck shell/UI | Touch launcher, terminal, keyboard, jobs/status and private results | Native dashboard/ASCII PTY/on-screen keyboard running; native dispatch selftest passed | End-to-end touch-only command execution and result review |
 | Optional companion services | Heavy analysis, private project/briefing integrations | Design direction | Explicit service contracts, authentication and offline behavior |
 
 ## Runtime topology
@@ -41,7 +41,7 @@ A Bluetooth keyboard is useful but must not be required for the first usable han
 | Screen/workflow | Required behavior | Current status |
 |---|---|---|
 | Home/status | Battery percentage, charging state, temperature, USB recovery, WLAN and Bluetooth state | UI requirement; telemetry exists |
-| Terminal | Readable local shell, scrollback, copyable private results and an on-screen keyboard | Not integrated |
+| Terminal | Readable local shell, scrollback, copyable private results and an on-screen keyboard | Native PTY/keyboard present; manual touch typing and full terminal features pending |
 | Network | Select an owned WLAN, show connection/DHCP state without exposing secrets in public logs | CLI runtime proven; touch workflow not built |
 | Bluetooth | Show controller, pair intended peripherals, reconnect and forget selected bonds | Dell CLI test passed; touch workflow not built |
 | Tools | Launch a bounded job with an explicit interface/target and a visible stop action | Planned |
@@ -85,3 +85,7 @@ Hardware bring-up is the foundation of this gate. Its completion does not by its
 - Personal dashboard integrations until the local console and security boundary are usable.
 
 See [current hardware](HARDWARE_STATUS.md), [engineering state](PROJECT_STATE_2026_11_16.md), [roadmap](ROADMAP.md) and [issue alignment](ISSUE_STATUS_2026_11_16.md).
+
+## 2026-11-16 implementation follow-up
+
+The native UI and current-session service-recovery layers have advanced beyond the earlier framebuffer proof. [Session evidence](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md) distinguishes actual native execution from synthetic keyboard tests and uncompleted manual/boot acceptance. The product gate remains open; Kali packages and a full VT terminal are not present.

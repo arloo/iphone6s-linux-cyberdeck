@@ -20,9 +20,13 @@ Physical target: **iPhone 6s N71, Samsung A9 / S8000**. Kernel: `7.3.0-rc1-n71-b
 | Battery | Gauge telemetry; guarded 300 mA USB input lease; charging observed | PASS for monitored charging; lease is finite (3600 s) |
 | Storage/baseband | Outside experiments | No persistent storage or telephony support claim |
 | Suspend/resume | No qualification | NOT TESTED |
-| New-boot connectivity | Startup source being prepared | NOT TESTED |
+| New-boot connectivity | Current-session idempotence and four-daemon recovery PASS; private integrated candidate built | New boot NOT TESTED |
 | N71m / S8003 | No compatible hardware | NOT TESTED across all subsystems |
 
 Bluetooth security level 2 requires encryption; it does not prove MITM-authenticated pairing. The optional BlueZ privacy-setting request was rejected; controller address privacy remains unqualified. Pairing keys are private RAM state and have not been proven to survive a new boot.
 
 Evidence: [Wi-Fi](N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json), [Bluetooth](N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json), [Bluetooth runtime](N71_BLUETOOTH_RUNTIME_2026_11_16.md), [touch](N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md), [engineering assessment](PROJECT_STATE_2026_11_16.md). The [older hardware snapshot](history/HARDWARE_STATUS_BEFORE_2026_11_16_REFRESH.md) is historical only.
+
+## Current-session UI and recovery follow-up
+
+The native shell dashboard/PTY/keyboard is running with reviewed framebuffer readback and a passed native synthetic-key/real-PTY selftest. Human typing acceptance remains open. Current-session service recovery passed, including private Bluetooth bond reload and a verified 4 MiB WLAN transfer. Display brightness is 1023/2047; schedutil and WLAN power save remain active. See [detailed evidence and limits](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md).

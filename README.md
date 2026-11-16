@@ -2,7 +2,7 @@
 
 A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation, Wi-Fi and Bluetooth, a local terminal and a targeted Kali ARM64 tool environment. The intended experience is a fullscreen touch-first console for diagnostics, authorized security assessments and selected companion workflows.
 
-**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The integrated handheld console, automatic connectivity restoration after reboot and Kali tool environment still need implementation or qualification. This remains a RAM-only research system, not a supported persistent phone OS.
+**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The native shell/dashboard 0.2 now runs on the phone with a PTY and on-screen keyboard; manual touch typing acceptance, automatic connectivity restoration after reboot and the Kali environment remain open. This remains a RAM-only research system, not a supported persistent phone OS.
 
 A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
 
@@ -31,7 +31,7 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 |---|---|---|
 | Boot chain | checkm8 → PongoOS → m1n1 → Linux | Physical RAM boot PASS; persistent installation unqualified |
 | Running kernel | 7.3.0-rc1-n71-batt2-g68aadac820d0-dirty, AArch64 | Specific tested build; kernel presence does not qualify other images |
-| Display | 750 × 1334, 32-bpp framebuffer; CYBERDECK proof of concept rendered | Display PASS; full interactive launcher/terminal not complete |
+| Display/UI | Native dashboard, 48 × 24 ASCII PTY console and on-screen keyboard running on 750 × 1334 fbdev | Native execution/readback PASS; new UI human touch typing and optical acceptance pending |
 | Touch | Automatic Z2 initialization and real single/two-finger EVDEV events | Functional PASS; edge/latency/endurance/resume open |
 | USB networking | NCM recovery link and interactive shell | Working; key-only SSH migration still open |
 | Wi-Fi transport | Real BCM4350C5 PCIe 14e4:43a3, brcmfmac binding | Managed native runtime PASS |
@@ -41,7 +41,7 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 | Radio coexistence | Wi-Fi Internet traffic during Bluetooth transfer | Short concurrent test PASS; no sustained benchmark |
 | Battery/charging | Gauge telemetry and positive net charge using guarded USB input lease | Monitored charging PASS; autonomous/full-charge policy open |
 | Kali ARM64 userspace | Curated package profiles and integration gates defined | Planned, not built or physically qualified here |
-| Touch terminal/jobs | Product architecture defined; framebuffer proof exists | Not yet integrated |
+| Touch terminal/jobs | Real local PTY/keyboard dispatch selftest passed on phone; Home/System/Tools views running | Manual typing, full VT/scrollback and Kali job integration remain open |
 | Internal storage/baseband | Outside the current experiments | No NAND installation or telephony claim |
 | S8003 / N71m | No compatible physical device available | All hardware results NOT TESTED |
 
@@ -75,7 +75,7 @@ Automatic new-boot restoration, AP-loss reconnect, 5 GHz, suspend/resume and lon
 
 ## Bluetooth: what was proved
 
-The current RAM-local BlueZ/D-Bus services use the already working BCM4350C5 HCI UART/patchram path. LE discovery saw 12 devices; classic inquiry discovered the intended Dell. Pairing and Bonded state succeeded, followed by an exact encrypted L2CAP echo: 256 packets × 256 bytes, totaling 65,536 bytes per trial. The controlled test passed twice in the same RAM session.
+The current RAM-local BlueZ/D-Bus services use the already working BCM4350C5 HCI UART/patchram path. LE discovery saw 12 devices; classic inquiry discovered the intended Dell. Pairing and Bonded state succeeded, followed by an exact encrypted L2CAP echo: 256 packets × 256 bytes, totaling 65,536 bytes per trial. Two initial same-session trials passed; a later third trial passed after controlled BlueZ/private-bus restart.
 
 Both the echo client and Dell listener require encryption; the listener checks the expected peer. The observed security level 2 does not establish MITM-authenticated pairing. HCI transport errors remained zero and native Wi-Fi Internet traffic worked during the Bluetooth test. Temporary Dell discoverability was restored afterward.
 
@@ -84,7 +84,7 @@ Both the echo client and Dell listener require encryption; the listener checks t
 - [Encrypted ARM64 echo client](tools/n71-bt-l2cap-echo.c)
 - [Current Bluetooth issue #3](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/3)
 
-Bond keys currently live in private RAM state. No service restart or reboot occurred between the two trials. HID input, A2DP, BLE GATT applications, address privacy and power-state recovery remain separate qualifications. A rejected optional privacy-setting request is documented rather than treated as passed.
+Bond keys currently live in private RAM state. The follow-up verified service restart and bond reload, but no new kernel boot has been tested. HID input, A2DP, BLE GATT applications, address privacy and power-state recovery remain separate qualifications. A rejected optional privacy-setting request is documented rather than treated as passed.
 
 ## Targeted Kali ARM64 direction
 
@@ -104,6 +104,14 @@ The physical phone has about 2 GiB RAM, shared with the kernel, tmpfs, unpacked 
 
 Read the [complete build/provenance/resource and K0–K7 test plan](docs/KALI_ARM64_INTEGRATION.md). This is not an official iPhone Kali/Android NetHunter port, and no distribution package can enable missing kernel/radio capabilities by itself.
 
+## Current-session finalization and power profile
+
+[Native shell UI 0.2](examples/cyberdeck-shell/) is running on the phone. Its actual ARM64 selftest executed a controlled command through the PTY using simulated keyboard hit dispatch. Framebuffer readback was reviewed; operator touch typing and optical confirmation of the new application are still pending. The console is ASCII/TERM=dumb, with no full VT emulation or scrollback browser.
+
+The display is now at 1023/2047 (about 50% of its register range), with the previous 1505 value retained for restoration. Existing schedutil CPU scaling and Wi-Fi power saving were preserved. A short observation measured 8,832 KiB UI RSS and 0.31% aggregate CPU utilization; this is not a battery-life benchmark. An independently verified 4 MiB WLAN transfer passed with the UI active after service recovery.
+
+The separate integrated boot candidate carries private runtime/configuration/bonds and this UI while preserving m1n1, DTBs and kernel. It requires a supervised physical DFU/Pongo boot before any reboot-restoration claim. See [session finalization evidence](docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md), [readable observations](docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.json) and the [new boot hook](scripts/n71_integrated_ram_startup.sh).
+
 ## Remaining release work and live issues
 
 | Priority/workstream | Concrete next result | Issue |
@@ -115,7 +123,7 @@ Read the [complete build/provenance/resource and K0–K7 test plan](docs/KALI_AR
 | Peripheral qualification | Touch precision, WLAN reconnect/endurance, Bluetooth recovery/profiles | [#1](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/1), [#2](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/2), [#3](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/3) |
 | Power | Temperature-aware finite charging policy, idle/resume/endurance | [#8](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/8) |
 
-The new connectivity startup script is prepared source only. It requires private files and a hash manifest, has not been installed in the known-good boot image and has not passed physical startup tests. See [operations](docs/OPERATIONS_AND_REPRODUCIBILITY.md) before treating a code path as an executable boot recipe.
+The connectivity startup is installed in the current RAM session. Consecutive calls preserved all four daemon PIDs; controlled restart of BlueZ/D-Bus/WPA/DHCP restored networking and private bond state. A separate 25,066,924-byte integrated RAM candidate is hash-verified but has NOT been transferred/booted. The running recovery image remains unchanged. See [operations](docs/OPERATIONS_AND_REPRODUCIBILITY.md) before treating a code path as an executable boot recipe.
 
 ## Reproduce source and build checks
 
@@ -130,7 +138,7 @@ make all BLUEZ_HEADERS=/path/to/isolated/bluez-include
 make build/n71-bt-l2cap-echo-aarch64 BLUEZ_HEADERS=/path/to/isolated/bluez-include
 ```
 
-The preceding state refresh passed 1,581 offline tests, the HBPP audit and project validation. Each later check must be reported for its own revision. Local regression/build checks do not qualify hardware. The [GitHub Actions template](ci/verify.yml) is prepared but not activated remotely; no completed cloud CI run is claimed.
+The current finalization checks passed 1,584 offline tests, the HBPP audit and project validation. Each later check must be reported for its own revision. Local regression/build checks do not qualify hardware. The [GitHub Actions template](ci/verify.yml) is prepared but not activated remotely; no completed cloud CI run is claimed.
 
 The public builder needs independent pinned source/build inputs and private calibration, and writes outside the public tree. The [operational guide](docs/OPERATIONS_AND_REPRODUCIBILITY.md) explains prerequisites and includes an offline build template. Private images, proprietary files and credentials are not published for convenience.
 

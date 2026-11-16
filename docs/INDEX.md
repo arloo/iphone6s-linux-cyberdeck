@@ -4,6 +4,8 @@ Reviewed 2026-11-16. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
+- [Session finalization: native shell UI, service recovery and balanced display](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md)
+
 - [Cyberdeck product vision and architecture](CYBERDECK_VISION_AND_ARCHITECTURE.md)
 - [Hardware status — reviewed 2026-11-16](HARDWARE_STATUS.md)
 - [Engineering assessment — 2026-11-16](PROJECT_STATE_2026_11_16.md)

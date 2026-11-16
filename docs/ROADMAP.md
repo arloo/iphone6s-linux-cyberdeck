@@ -46,3 +46,7 @@ The target remains the handheld cyberdeck described in [product architecture](CY
 The Kali environment retains the tested N71 kernel. Package installation, monitor mode, injection, USB host accessories and HID gadget capability have distinct prerequisites and must never be inferred from each other. See [Kali gates](KALI_ARM64_INTEGRATION.md) and [proposed package profiles](../manifests/kali-tool-profiles.json).
 
 The original touch/Wi-Fi/Bluetooth issues [#1–#3](ISSUE_STATUS_2026_11_16.md) now track remaining qualification, with completed bring-up explicitly checked. Optional projects/notes/briefing integrations remain later companion/UI work after the local console is usable.
+
+## Current-session progress after the product review
+
+Startup idempotence and controlled recovery of four userspace daemons now pass. The native dashboard/PTY/on-screen keyboard runs on the phone, with native selftest and framebuffer-readback checks; real finger typing remains an acceptance task. A separate integrated RAM candidate is built and pinned, not booted. Display reduction and a short resource/network observation are recorded in [session evidence](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md). No Kali, SSH cutover, endurance or suspend qualification is implied.

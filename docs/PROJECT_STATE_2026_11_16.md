@@ -9,7 +9,7 @@ The N71 / Samsung S8000 has reached the initial hardware connectivity milestone:
 | Touch | Real EVDEV single-contact and simultaneous two-finger tracking after automatic Z2 initialization | Latest presence check is not a new human-input test; edge precision, latency and endurance remain open |
 | Native Wi-Fi | BCM4350C5 PCIe bound to brcmfmac; WPA_COMPLETED, DHCP, WLAN default route, DNS, Internet, SHA-256-checked 1 MiB transfer | Current managed RAM session, 2412 MHz; reboot restoration, 5 GHz and suspend/resume unqualified |
 | Bluetooth | LE scan saw 12 devices; classic inquiry found Dell; Paired/Bonded; exact encrypted L2CAP echo | Controlled Dell peer, not a keyboard/mouse or audio-profile test |
-| Repeat Bluetooth trial | Two successful controlled trials in the same RAM session, each 256 packets × 256 bytes, security level 2 | No service restart or reboot occurred between the trials |
+| Repeat Bluetooth trial | Two initial same-session trials, then a third encrypted 65,536-byte echo after controlled service restart | Current RAM bond reload passed; no new kernel boot |
 | Radio coexistence | Native Wi-Fi remained authenticated; Internet ping succeeded during Bluetooth transfer | Short trial, not an endurance or throughput benchmark |
 | Charging | Most recent check: Charging, 40%, 34.2 °C, +47 mA battery current | Snapshot under load; 300 mA USB input setting is a finite guarded lease, not guaranteed net battery current |
 
@@ -27,7 +27,7 @@ Public source, bounded experiments, build inputs and sanitized results are commi
 
 The Wi-Fi and Bluetooth results were saved in commits `001966d` and `570cb87`. This review updates the public entry points and machine-readable matrix, which still contained historical blockers despite newer evidence. Historical documents remain available and are labeled as snapshots. Physical evidence is separate from offline tests and cross-compilation checks.
 
-The connectivity startup script is **prepared source only**. It is not installed into the verified boot image and has not yet been physically qualified. A private image manifest and service-restart/new-boot tests are required before claiming automatic restoration. Existing USB recovery remains available.
+The connectivity startup script has since been installed and qualified for idempotence and four-daemon recovery in the current RAM session. It is not integrated into the running boot image. A separately built integrated candidate is hash-verified but not transferred/booted. A private image manifest and service-restart/new-boot tests are required before claiming automatic restoration. Existing USB recovery remains available.
 
 ## Next acceptance gates
 
@@ -46,3 +46,7 @@ Evidence: [Wi-Fi result](N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json), [Blueto
 The hardware milestone advances the original cyberdeck objective rather than replacing it. The remaining product includes touch-operated terminal input, on-screen keyboard, bounded tool jobs/results and a curated Kali ARM64 environment. The optional companion/personal-dashboard direction remains separate future integration work.
 
 The three original GitHub issues were reviewed with all existing comments and updated remotely to reflect physical successes and remaining acceptance. Five new workstreams now cover boot, Kali, UI, SSH and power. See [applied issue map](ISSUE_STATUS_2026_11_16.md), [detailed architecture](CYBERDECK_VISION_AND_ARCHITECTURE.md), [Kali integration](KALI_ARM64_INTEGRATION.md) and [reproducibility guide](OPERATIONS_AND_REPRODUCIBILITY.md). No new hardware pass is claimed by this documentation/issue review.
+
+## Finalization/UI/power follow-up
+
+[Detailed current-session follow-up](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md) records the running dashboard/local PTY/on-screen keyboard, actual native selftest, reviewed framebuffer, controlled service recovery, post-recovery radio tests, reversible display reduction and short resource measurements. No physical finger typing or new-boot pass is claimed. The integrated candidate preserves the original bootloader/DTBs/kernel and requires physical owner DFU/Pongo preparation. Kali, authenticated recovery access and endurance remain open.
