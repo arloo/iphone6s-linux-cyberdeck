@@ -1,59 +1,155 @@
-# iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
+# iPhone 6s Linux Cyberdeck — N71 / Apple A9
 
-**16 November 2026: touchscreen, native Wi-Fi and encrypted Bluetooth data transport have passed physical tests on iPhone 6s N71 / Samsung S8000.** This is a RAM-only Linux research system. Automatic restoration after reboot and peripheral-specific Bluetooth profiles are still being qualified.
+A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation, Wi-Fi and Bluetooth, a local terminal and a targeted Kali ARM64 tool environment. The intended experience is a fullscreen touch-first console for diagnostics, authorized security assessments and selected companion workflows.
 
-## Current physical status
+**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The integrated handheld console, automatic connectivity restoration after reboot and Kali tool environment still need implementation or qualification. This remains a RAM-only research system, not a supported persistent phone OS.
 
-| Component | Observed result | Remaining qualification |
+A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
+
+## Start here
+
+| Reader/task | Document |
+|---|---|
+| Understand the intended cyberdeck and operator workflows | [Product vision and architecture](docs/CYBERDECK_VISION_AND_ARCHITECTURE.md) |
+| Inspect what genuinely works on the phone | [Hardware state](docs/HARDWARE_STATUS.md) and [engineering assessment](docs/PROJECT_STATE_2026_11_16.md) |
+| Understand build/runtime/recovery boundaries | [Operations and reproducibility](docs/OPERATIONS_AND_REPRODUCIBILITY.md) |
+| Plan Kali and select tool packages | [Kali ARM64 integration](docs/KALI_ARM64_INTEGRATION.md) and [profile manifest](manifests/kali-tool-profiles.json) |
+| Choose current work | [Roadmap](docs/ROADMAP.md) and [GitHub issue map](docs/ISSUE_STATUS_2026_11_16.md) |
+| Review historical reverse engineering | [Driver worklog](docs/DRIVER_WORKLOG.md), dated reports and [historical README](docs/history/README_BEFORE_2026_11_16_REFRESH.md) |
+
+## Product objective
+
+The goal is a usable handheld cyberdeck, beyond successful hardware detection. An operator should be able to open a local terminal, enter a command with an on-screen keyboard, launch a selected tool against an explicit lab target, stop a job and review its private output directly on the phone. A Bluetooth keyboard is optional; no keyboard/mouse is currently at hand, so genuine HID tests are deferred rather than silently passed.
+
+The original fullscreen cyberpunk/dashboard direction remains in scope. Pinned projects/notes and optional personal briefings may later use authenticated companion services. They are future product workflows, separate from the already demonstrated framebuffer UI. No mail/calendar/personal-data integration is claimed by this repository's current hardware results.
+
+The Dell serves as build/recovery workstation, controlled Bluetooth/network test peer and optional heavy-workload companion. Native Wi-Fi now provides actual phone radio networking; Dell-assisted execution and USB-forwarded Internet must remain labeled separately from phone-local operation.
+
+## Current hardware and software matrix
+
+| Component | Observed on N71/S8000 | Status and exact limit |
 |---|---|---|
-| Boot and display | checkm8 → PongoOS → m1n1 → Linux; 750 × 1334 framebuffer UI | Standalone persistent installation is outside the current RAM-only scope |
-| Touch | Automatic Z2 initialization; real single-contact and simultaneous two-finger EVDEV input | Long-duration stability, edge accuracy and latency |
-| Native Wi-Fi | BCM4350C5 PCIe on brcmfmac; WPA2, DHCP, default route, DNS, Internet and SHA-256-verified 1 MiB WLAN transfer | New-boot restoration, 5 GHz association, suspend/resume, endurance |
-| Bluetooth | LE discovery (12 devices), classic Dell discovery, pairing and bonding; 65,536-byte encrypted L2CAP echo | HID keyboard/mouse, A2DP audio, suspend/resume and new-boot restoration |
-| Charging | Guarded 300 mA USB input lease; charging observed with battery telemetry | Full-charge durability and autonomous long-term power management |
-| Remote shell | USB recovery shell operational | Authenticated SSH replacement remains open; do not expose unauthenticated Telnet |
-| S8003 / N71m | No compatible test device available | All hardware results remain NOT TESTED |
+| Boot chain | checkm8 → PongoOS → m1n1 → Linux | Physical RAM boot PASS; persistent installation unqualified |
+| Running kernel | 7.3.0-rc1-n71-batt2-g68aadac820d0-dirty, AArch64 | Specific tested build; kernel presence does not qualify other images |
+| Display | 750 × 1334, 32-bpp framebuffer; CYBERDECK proof of concept rendered | Display PASS; full interactive launcher/terminal not complete |
+| Touch | Automatic Z2 initialization and real single/two-finger EVDEV events | Functional PASS; edge/latency/endurance/resume open |
+| USB networking | NCM recovery link and interactive shell | Working; key-only SSH migration still open |
+| Wi-Fi transport | Real BCM4350C5 PCIe 14e4:43a3, brcmfmac binding | Managed native runtime PASS |
+| Wi-Fi networking | Scan, WPA2, DHCP, native route/DNS, Internet and checked 1 MiB transfer | PASS at 2412 MHz; 5 GHz/reboot/resume/endurance open |
+| Bluetooth transport | BCM UART HCI, genuine private patchram build 0825 | Enabled with zero observed transport errors |
+| Bluetooth discovery/data | LE scan (12 devices), classic Dell pairing/bonding and encrypted L2CAP echo | Two controlled same-session trials PASS; HID/audio/GATT/reboot open |
+| Radio coexistence | Wi-Fi Internet traffic during Bluetooth transfer | Short concurrent test PASS; no sustained benchmark |
+| Battery/charging | Gauge telemetry and positive net charge using guarded USB input lease | Monitored charging PASS; autonomous/full-charge policy open |
+| Kali ARM64 userspace | Curated package profiles and integration gates defined | Planned, not built or physically qualified here |
+| Touch terminal/jobs | Product architecture defined; framebuffer proof exists | Not yet integrated |
+| Internal storage/baseband | Outside the current experiments | No NAND installation or telephony claim |
+| S8003 / N71m | No compatible physical device available | All hardware results NOT TESTED |
 
-The Dell is the controlled Bluetooth peer. A keyboard or mouse is currently unavailable; HID testing is explicitly deferred until one is available. Bonded state has been observed in the current RAM filesystem, not proven persistent across a reboot.
+The machine-readable [test matrix](manifests/test-matrix.json) covers established hardware acceptance tasks. The [Kali profile manifest](manifests/kali-tool-profiles.json) is a proposed package allowlist, not an installation/version lockfile.
 
-See the [current engineering assessment](docs/PROJECT_STATE_2026_11_16.md), [hardware status](docs/HARDWARE_STATUS.md), [roadmap](docs/ROADMAP.md) and [machine-readable test matrix](manifests/test-matrix.json).
+## Touchscreen: what was proved
 
-## Evidence and implementation
+The N71 Z2 path includes private board firmware/calibration, the S5L SPI2 controller and board-specific power/clock/protocol initialization. After an attended RAM boot, the public autostart logic completed runtime setup without operator-issued manual touch sysfs commands.
 
-- [Native Wi-Fi physical result](docs/N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json): actual phone radio traffic, not Dell USB Internet forwarding.
-- [Bluetooth physical result](docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json) and [runtime notes](docs/N71_BLUETOOTH_RUNTIME_2026_11_16.md): controlled pairing and encrypted L2CAP transport with Wi-Fi active.
-- [Automatic touchscreen multitouch evidence](docs/N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md) and [framebuffer UI](docs/N71_LIVE_FBDEV_CYBERDECK_POC_2026_11_11.md).
-- [Native runtime builder](tools/build_n71_native_iommu_runtime.py), [managed runtime cleanup](scripts/n71_native_wlan_runtime_stop.sh), [Wi-Fi userspace](experimental/wifi-userspace/), [Bluetooth echo client](tools/n71-bt-l2cap-echo.c).
-- [Driver worklog](docs/DRIVER_WORKLOG.md), [firmware policy](docs/FIRMWARE_POLICY.md), [source/CI reproducibility](docs/CI_REPRODUCIBILITY.md).
+A bounded physical input sample captured 4,096 events, reconstructed 581 SYN_REPORT frames and contained 138 frames with two simultaneous contacts. Earlier contact tests verified movement and release. A capture ending at its event cap cannot independently prove that all contacts were released afterward, and observed XY range is not a calibrated edge-accuracy measurement.
 
-Native Wi-Fi uses translated SID0 DART mappings and the Linux MSI hierarchy (message 8 / AIC 264). Controlled unbind/unload was verified to restore all seven PCIe power domains while preserving USB, touch and Bluetooth. The active managed runtime remains running until explicitly stopped.
+- [Automatic startup and physical multitouch evidence](docs/N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md)
+- [Simultaneous two-finger test](docs/N71_SIMULTANEOUS_TWO_FINGER_EVDEV_PASS_2026_11_11.md)
+- [Framebuffer cyberdeck proof of concept](docs/N71_LIVE_FBDEV_CYBERDECK_POC_2026_11_11.md)
+- [Current touch issue #1](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/1)
 
-The optional [connectivity startup candidate](scripts/n71_connectivity_autostart.sh) is source preparation only: no automatic boot claim, no new physical boot, and no implicit integration into the known-good image. It requires a privately assembled, hash-pinned runtime and is not a standalone installation script.
+## Native Wi-Fi: what changed
 
-## Build and verification
+Bring-up progressed through original resource/firmware identification, bounded port-1 power/link experiments, PCI enumeration, translated DMA, interrupts and genuine brcmfmac operation. The current managed runtime uses SID0 DART mappings and the standard Linux MSI hierarchy (message 8 / AIC 264).
+
+This is native phone Wi-Fi: the tested interface is attached to the physical PCIe Broadcom endpoint, obtains DHCP and its own default route, resolves DNS and transfers traffic through the phone radio. A controlled 1 MiB payload was checked by SHA-256, independently of supplicant status. It is distinct from the earlier Dell-to-phone USB proxy experiment.
+
+The runtime stays active until explicitly stopped. Controlled platform unbind and module unload restored all seven PCIe power domains and removed the temporary objects while preserving USB, touch and Bluetooth presence. Plain rmmod while active IOMMU consumers pin the module is not the verified shutdown procedure.
+
+- [Sanitized physical result](docs/N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json)
+- [Managed runtime builder](tools/build_n71_native_iommu_runtime.py) and [phone-side teardown](scripts/n71_native_wlan_runtime_stop.sh)
+- [Pinned WPA/iw sources, minimal configuration and compatibility notes](experimental/wifi-userspace/README.md)
+- [Current Wi-Fi issue #2](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/2)
+
+Automatic new-boot restoration, AP-loss reconnect, 5 GHz, suspend/resume and long-duration performance are not yet qualified. Managed connectivity does not establish monitor mode, AP mode or frame injection.
+
+## Bluetooth: what was proved
+
+The current RAM-local BlueZ/D-Bus services use the already working BCM4350C5 HCI UART/patchram path. LE discovery saw 12 devices; classic inquiry discovered the intended Dell. Pairing and Bonded state succeeded, followed by an exact encrypted L2CAP echo: 256 packets × 256 bytes, totaling 65,536 bytes per trial. The controlled test passed twice in the same RAM session.
+
+Both the echo client and Dell listener require encryption; the listener checks the expected peer. The observed security level 2 does not establish MITM-authenticated pairing. HCI transport errors remained zero and native Wi-Fi Internet traffic worked during the Bluetooth test. Temporary Dell discoverability was restored afterward.
+
+- [Sanitized physical result](docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json)
+- [Runtime versions, packaging and security scope](docs/N71_BLUETOOTH_RUNTIME_2026_11_16.md)
+- [Encrypted ARM64 echo client](tools/n71-bt-l2cap-echo.c)
+- [Current Bluetooth issue #3](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/3)
+
+Bond keys currently live in private RAM state. No service restart or reboot occurred between the two trials. HID input, A2DP, BLE GATT applications, address privacy and power-state recovery remain separate qualifications. A rejected optional privacy-setting request is documented rather than treated as passed.
+
+## Targeted Kali ARM64 direction
+
+Keep the custom hardware-qualified N71 kernel and add a measured ARM64 userspace/tool subset. The first integration candidate is a minimal native command-line environment, with explicit mounts/lifecycle and a retained recovery path. A chroot shares the existing kernel and is not a security sandbox.
+
+| Proposed profile | Examples | Intended workflow |
+|---|---|---|
+| Base | bash, tmux, Python, SSH client, iproute2 | Local shell, scripting and authenticated companion access |
+| Network diagnostics | Nmap, tcpdump, DNS utilities, curl/OpenSSL, iperf3 | Controlled inventory, bounded capture and network/TLS checks |
+| Optional protocol/web lab | TShark, WhatWeb, Nikto, sqlmap | Selected private capture analysis or explicitly scoped test application |
+| Bluetooth diagnostics | BlueZ clients | Controlled adapter inspection using the existing service |
+| Wireless research | iw, Aircrack-ng | Capability inventory/offline analysis; RF modes require their own proof |
+
+These packages are planned, not installed/validated on the phone. Resolve exact ARM64 versions, signed package metadata, dependency closure and memory/storage cost before staging. Larger desktop/database/cracking/reverse-engineering workloads initially belong on the Dell as an authenticated companion.
+
+The physical phone has about 2 GiB RAM, shared with the kernel, tmpfs, unpacked tools and active jobs. Do not infer a usable rootfs budget from archive size alone. Do not mix Kali repositories into the Dell's Kubuntu configuration or replace the tested recovery userspace indiscriminately.
+
+Read the [complete build/provenance/resource and K0–K7 test plan](docs/KALI_ARM64_INTEGRATION.md). This is not an official iPhone Kali/Android NetHunter port, and no distribution package can enable missing kernel/radio capabilities by itself.
+
+## Remaining release work and live issues
+
+| Priority/workstream | Concrete next result | Issue |
+|---|---|---|
+| Integrated boot | Private pinned candidate; idempotent startup and new-boot verification | [#4](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/4) |
+| Recovery security | Key-only USB SSH, refusal tests and verified Telnet cutover | [#7](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/7) |
+| Handheld usability | Local terminal/on-screen keyboard, job launch/stop/results | [#6](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/6) |
+| Kali subset | Signed measured ARM64 build and real-phone controlled tool tests | [#5](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/5) |
+| Peripheral qualification | Touch precision, WLAN reconnect/endurance, Bluetooth recovery/profiles | [#1](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/1), [#2](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/2), [#3](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/3) |
+| Power | Temperature-aware finite charging policy, idle/resume/endurance | [#8](https://github.com/arloo/iphone6s-linux-cyberdeck/issues/8) |
+
+The new connectivity startup script is prepared source only. It requires private files and a hash manifest, has not been installed in the known-good boot image and has not passed physical startup tests. See [operations](docs/OPERATIONS_AND_REPRODUCIBILITY.md) before treating a code path as an executable boot recipe.
+
+## Reproduce source and build checks
 
 ```sh
-# Offline public-source checks; no phone or proprietary firmware required.
+# Public-source-only verification; no phone or proprietary firmware required.
 make test
 python3 scripts/validate_project.py
+python3 tools/security/check_git_privacy.py
 
-# AArch64 tools; use isolated BlueZ headers to avoid host libc header mixing.
+# Requires the AArch64 cross compiler and isolated BlueZ headers.
 make all BLUEZ_HEADERS=/path/to/isolated/bluez-include
 make build/n71-bt-l2cap-echo-aarch64 BLUEZ_HEADERS=/path/to/isolated/bluez-include
 ```
 
-The latest completed verification before this documentation refresh passed 1,581 offline tests, the HBPP audit and the project manifest/evidence check. Local checks are distinct from hardware evidence. The [GitHub Actions template](ci/verify.yml) remains prepared but is not activated remotely; no completed cloud CI run is claimed.
+The preceding state refresh passed 1,581 offline tests, the HBPP audit and project validation. Each later check must be reported for its own revision. Local regression/build checks do not qualify hardware. The [GitHub Actions template](ci/verify.yml) is prepared but not activated remotely; no completed cloud CI run is claimed.
 
-## Scope and privacy
+The public builder needs independent pinned source/build inputs and private calibration, and writes outside the public tree. The [operational guide](docs/OPERATIONS_AND_REPRODUCIBILITY.md) explains prerequisites and includes an offline build template. Private images, proprietary files and credentials are not published for convenience.
 
-Active hardware target: **N71 / S8000 (Samsung A9)** only. No S8003 result may be inferred from it. Current kernel: `7.3.0-rc1-n71-batt2-g68aadac820d0-dirty`.
+## Safety, power and data handling
 
-Experiments are RAM-only and avoid internal NAND writes. Original Apple firmware, device calibration, NVRAM, controller addresses, network credentials, pairing keys and raw device logs stay private. Public evidence contains aggregate results and source/build provenance. The privacy hook checks Git identity/history before pushes.
+Current experiments are RAM-only and avoid internal NAND writes. Preserve the known-good recovery payload and inspect candidate hashes/component differences before another supervised boot. A RAM-only design can still lose a session or require physical recovery.
 
-See [contribution guidance](CONTRIBUTING.md), [remote-shell hardening](docs/REMOTE_SHELL_HARDENING.md) and the [historical README snapshot](docs/history/README_BEFORE_2026_11_16_REFRESH.md). Historical dated reports are retained as evidence of earlier stages; their old blockers do not override the current status matrix.
+Charging is presently a guarded 300 mA USB input lease lasting 3600 seconds. The input limit is not the measured battery current. Charging state, temperature and actual net current must be checked; automatic full-charge/endurance behavior is not yet qualified.
 
-## License and credits
+The working root Telnet shell is a temporary bench recovery interface. Authenticated SSH is still an open gate. See [remote-shell hardening](docs/REMOTE_SHELL_HARDENING.md); installing Kali tools does not close that gate.
 
-Original userspace toolkit material is MIT licensed. Experimental kernel sources retain their own SPDX terms, including GPL-2.0-only; external projects retain their respective licenses. See [LICENSE](LICENSE) and source headers.
+Keep Apple firmware, touch calibration, WLAN NVRAM/tuning, MAC/serial/ECID, credentials, private keys/bonds, target inventories and raw captures private. Public results contain reviewed aggregate evidence. The pre-push hook checks Git privacy; operators must still review newly staged artifacts. Tool use must have an explicit authorized scope and bounded outputs.
 
-Credits to HoolockLinux, Asahi Linux, Linux kernel contributors, checkra1n/PongoOS contributors and the open-source iPhone Linux community. The project builds on their work; it does not claim ownership of those upstream projects.
+## History, contributions and attribution
+
+Historical reports are retained, including failures and uncertain causes. Their dated blockers describe those experiments, not the present state. Start with current status documents, then follow their evidence links. The [pre-refresh README](docs/history/README_BEFORE_2026_11_16_REFRESH.md), [hardware snapshot](docs/history/HARDWARE_STATUS_BEFORE_2026_11_16_REFRESH.md) and [roadmap snapshot](docs/history/ROADMAP_BEFORE_2026_11_16_REFRESH.md) preserve earlier detail.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md), [firmware policy](docs/FIRMWARE_POLICY.md), [source/CI reproducibility](docs/CI_REPRODUCIBILITY.md) and the [issue alignment review](docs/ISSUE_STATUS_2026_11_16.md). Contributions should distinguish N71/S8000 from N71m/S8003 and OFFLINE/BUILD/HARDWARE evidence. No S8003 support claim follows from shared source files or dual-DTB packaging.
+
+Original userspace toolkit material is MIT licensed. Experimental kernel sources retain their own SPDX terms, including GPL-2.0-only; external projects retain their licenses. See [LICENSE](LICENSE) and individual source headers.
+
+Credits to HoolockLinux, Asahi Linux, Linux kernel contributors, checkra1n/PongoOS contributors, Omarchy-iPhone6s and the broader open-source iPhone/Linux community. This project builds on their work and preserves attribution in source and dated research notes.

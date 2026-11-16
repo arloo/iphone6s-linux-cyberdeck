@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-16",
+  "architecture": "arm64",
+  "status": "planned_not_built_or_device_tested",
+  "kernel_policy": "retain_custom_hardware_qualified_N71_kernel",
+  "repository_policy": "signed_Kali_metadata_in_isolated_rootfs_only",
+  "profiles": {
+    "base": [
+      "bash",
+      "coreutils",
+      "ca-certificates",
+      "openssh-client",
+      "less",
+      "nano",
+      "tmux",
+      "python3",
+      "iproute2",
+      "iputils-ping",
+      "procps"
+    ],
+    "network_diagnostics": [
+      "nmap",
+      "tcpdump",
+      "dnsutils",
+      "traceroute",
+      "ethtool",
+      "iperf3",
+      "curl",
+      "openssl",
+      "netcat-openbsd"
+    ],
+    "protocol_analysis": [
+      "tshark"
+    ],
+    "web_lab": [
+      "whatweb",
+      "nikto",
+      "sqlmap"
+    ],
+    "bluetooth_diagnostics": [
+      "bluez"
+    ],
+    "wireless_research": [
+      "iw",
+      "aircrack-ng"
+    ]
+  },
+  "default_build_selection": [
+    "base",
+    "network_diagnostics"
+  ],
+  "not_a_version_lockfile": true,
+  "arm64_dependency_resolution_completed": false,
+  "device_smoke_test_completed": false,
+  "native_monitor_mode_qualified": false,
+  "native_injection_qualified": false,
+  "service_policy": "reuse_recovery_network_and_Bluetooth_services; no competing daemons",
+  "companion_first": [
+    "large_desktop_proxy_workflows",
+    "database_backed_frameworks",
+    "bulk_password_recovery",
+    "large_reverse_engineering_sessions"
+  ]
+}

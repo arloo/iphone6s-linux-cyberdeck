@@ -40,3 +40,9 @@ The connectivity startup script is **prepared source only**. It is not installed
 N71m / S8003 remains completely untested. Local offline tests do not qualify hardware, and the prepared GitHub Actions template does not constitute an activated cloud CI run.
 
 Evidence: [Wi-Fi result](N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json), [Bluetooth result](N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json), [Bluetooth runtime](N71_BLUETOOTH_RUNTIME_2026_11_16.md), [touch result](N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md), [machine matrix](../manifests/test-matrix.json).
+
+## Product and issue review addendum
+
+The hardware milestone advances the original cyberdeck objective rather than replacing it. The remaining product includes touch-operated terminal input, on-screen keyboard, bounded tool jobs/results and a curated Kali ARM64 environment. The optional companion/personal-dashboard direction remains separate future integration work.
+
+The three original GitHub issues were reviewed with all existing comments and updated remotely to reflect physical successes and remaining acceptance. Five new workstreams now cover boot, Kali, UI, SSH and power. See [applied issue map](ISSUE_STATUS_2026_11_16.md), [detailed architecture](CYBERDECK_VISION_AND_ARCHITECTURE.md), [Kali integration](KALI_ARM64_INTEGRATION.md) and [reproducibility guide](OPERATIONS_AND_REPRODUCIBILITY.md). No new hardware pass is claimed by this documentation/issue review.

@@ -1,0 +1,62 @@
+{
+  "reviewed_on": "2026-11-16",
+  "repository": "arloo/iphone6s-linux-cyberdeck",
+  "issues": [
+    {
+      "number": 1,
+      "title": "[TOUCH] Qualify edge accuracy, endurance and resume after N71 multitouch bring-up",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/1",
+      "state": "open",
+      "action": "updated"
+    },
+    {
+      "number": 2,
+      "title": "[WIFI] Qualify reconnect, 5 GHz and endurance after native N71 Wi-Fi success",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/2",
+      "state": "open",
+      "action": "updated"
+    },
+    {
+      "number": 3,
+      "title": "[BT] Qualify reconnect, HID and power states after Dell pairing and encrypted data PASS",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/3",
+      "state": "open",
+      "action": "updated"
+    },
+    {
+      "number": 4,
+      "title": "[BOOT] Integrate and qualify automatic N71 touch, Wi-Fi and Bluetooth RAM startup",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/4",
+      "state": "open",
+      "action": "created"
+    },
+    {
+      "number": 5,
+      "title": "[KALI] Build and qualify curated ARM64 security-tool userspace on N71",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/5",
+      "state": "open",
+      "action": "created"
+    },
+    {
+      "number": 6,
+      "title": "[UI] Build touch-first cyberdeck launcher, terminal, keyboard and tool jobs",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/6",
+      "state": "open",
+      "action": "created"
+    },
+    {
+      "number": 7,
+      "title": "[SSH] Qualify key-only USB recovery access and retire unauthenticated Telnet",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/7",
+      "state": "open",
+      "action": "created"
+    },
+    {
+      "number": 8,
+      "title": "[POWER] Qualify charging lease, idle behavior and cyberdeck endurance",
+      "url": "https://github.com/arloo/iphone6s-linux-cyberdeck/issues/8",
+      "state": "open",
+      "action": "created"
+    }
+  ]
+}
