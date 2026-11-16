@@ -1,6 +1,6 @@
 # iPhone 6s Linux Cyberdeck — A9 Bring-up Lab
 
-**16 November 2026: real C5 DMA control sequence and MSI delivery PASS.** On the physical N71/S8000, four consecutive requests (version, revision, band list and capabilities) completed correctly through translated SID0. The chip reports BCM4350 rev8, D11 rev48 and both bands. With the original MSI address and message data8, Linux received one expected WLAN notification at AIC vector264, with no unexpected IRQ or valid DART fault. BME, IRQ mapping, controller/endpoint registers, descriptors and RAM were restored afterward. **Native Wi-Fi remains pending:** persistent driver integration, RF initialization, scan, association and traffic are not qualified.
+**16 November 2026: native Linux Wi-Fi is operating on the physical N71/S8000.** The real BCM4350C5 on PCIe is bound to `brcmfmac`, with translated SID0 DMA and the standard Linux MSI hierarchy (message8 / AIC264). Scan, WPA2-PSK authentication, DHCP, native default routing, DNS, Internet ping/HTTP and a SHA-256-verified 1MiB WLAN transfer passed. The managed runtime stays active in the current RAM-only Linux session. Controlled start/unbind/unload restored all seven PCIe power domains and preserved USB, touchscreen and Bluetooth presence. **Automatic restoration after a new RAM boot, suspend/resume, 5GHz association and long-duration stability remain unqualified.**
 
 **14 November 2026: real Broadcom PCI device + Linux DMA API PASS.** Stage29 binds an exact diagnostic driver to BCM4350 `14e4:43a3`, maps/verifies/unmaps a16KiB buffer in the same translated DART domain as the platform consumer, then removes PCI objects and restores reset, registers and power. Bus mastering stays OFF: endpoint DMA, IRQs, firmware execution and native Wi-Fi remain pending.
 
@@ -28,7 +28,7 @@
 
 **Community-driven, hardware-first Linux bring-up for the Apple iPhone 6s.** Active experimental target: **N71 / S8000 (Samsung A9)**. **N71m / S8003 (TSMC A9) experiments are deferred until compatible hardware becomes available**; all its hardware statuses remain NOT TESTED.
 
-We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-Fi and Bluetooth are the top priorities**. Native Linux now displays the CYBERDECK / A9 framebuffer UI and automatically initializes a real two-finger touchscreen on the physical iPhone 6s. Wi-Fi is still missing; Bluetooth has separate partial BLE evidence, and the current RAM-only boot is not a persistent OS installation.
+We are making a real iPhone 6s into a usable Linux cyberdeck. **Touchscreen, Wi-Fi and Bluetooth are the top priorities**. Native Linux now displays the CYBERDECK / A9 framebuffer UI and automatically initializes a real two-finger touchscreen on the physical iPhone 6s. Native Wi-Fi now operates in the current RAM Linux session; Bluetooth has separate partial BLE evidence, and the current RAM-only boot is not a persistent OS installation.
 
 > [!WARNING]
 > **Experimental hardware research, not a supported phone OS.** Booting custom kernels through checkm8/PongoOS can leave the device in DFU/Recovery or require manual recovery. This project's current tests are RAM-only and deliberately avoid writes to internal storage. Do not assume this eliminates all risks. Back up your device and proceed at your own risk.

@@ -10,3 +10,10 @@
 #if (defined(N71_PROTOCOL6_CONTROL_SEQUENCE) || defined(N71_PROTOCOL6_MSI_DELIVERY)) && !defined(N71_PROTOCOL6_DMA_REQUEST)
 #error "Protocol6 sequence/MSI qualification requires the endpoint DMA trial"
 #endif
+
+#if defined(N71_NATIVE_BRCMFMAC_TRIAL) && !defined(N71_NATIVE_MSI_DOMAIN)
+#error "Native brcmfmac requires the scoped Linux MSI domain"
+#endif
+#if defined(N71_NATIVE_WLAN_RUNTIME) && !defined(N71_NATIVE_BRCMFMAC_TRIAL)
+#error "Managed WLAN runtime requires native brcmfmac binding"
+#endif

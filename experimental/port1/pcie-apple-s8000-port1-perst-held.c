@@ -323,6 +323,14 @@ static struct debugfs_blob_wrapper n71_otp_blob;
 static struct dentry *n71_otp_file;
 static unsigned int n71_chipcommon_read(void *ctx, unsigned int off)
 { struct n71_dart_trial_mmio *m = ctx; return readl((u8 __iomem *)m->bar0 + off); }
+#ifdef N71_NATIVE_WLAN_RUNTIME
+#include <linux/kthread.h>
+static struct task_struct *n71_wlan_task;
+static int n71_runtime_state;
+static int n71_runtime_result=-EINPROGRESS;
+module_param_named(runtime_state,n71_runtime_state,int,0444);
+module_param_named(runtime_result,n71_runtime_result,int,0444);
+#endif
 #include "n71-pci-core-enumerate.h"
 #ifdef N71_NATIVE_IOMMU_RUNTIME
 #include "native-runtime.h"
@@ -499,8 +507,11 @@ static int n71_native_pci_action(struct device *parent,struct gpio_desc *perst,v
  mm.port=ioremap(0x602000000ULL,0x4000);mm.phy=ioremap(0x600008000ULL,0x4000);
  mm.cfg=ioremap(0x610008000ULL,0x1000);mm.endpoint=ioremap(0x610100000ULL,0x1000);
  if(!mm.port||!mm.phy||!mm.cfg||!mm.endpoint){rc=-ENOMEM;goto out;}
+#ifndef N71_NATIVE_BRCMFMAC_TRIAL
  if(!request_mem_region(0x7c0000000ULL,0x800000,"n71-native-pci-dma")){rc=-EBUSY;goto out;}
- region=true;mm.bar0=ioremap(0x7c0000000ULL,0x8000);if(!mm.bar0){rc=-ENOMEM;goto out;}
+ region=true;
+#endif
+ mm.bar0=ioremap(0x7c0000000ULL,0x8000);if(!mm.bar0){rc=-ENOMEM;goto out;}
  n71_pci_dma_context=&mm;
  rc=n71_port_active_hold(&mm);
  if(!n71_port_dart_ready(&mm)||n71_port_perst_level(&mm)!=0)rc=-EIO;
@@ -1042,8 +1053,36 @@ static const struct of_device_id n71_triplet_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, n71_triplet_of_match);
 
+#ifdef N71_NATIVE_WLAN_RUNTIME
+static int n71_wlan_runtime_thread(void *data)
+{
+ struct platform_device *pdev=data;
+ WRITE_ONCE(n71_runtime_state,1);
+ n71_microlease_probe(pdev);
+ WRITE_ONCE(n71_runtime_result,n71_probe_result);
+ WRITE_ONCE(n71_runtime_state,n71_probe_result?-1:0);
+ put_device(&pdev->dev);return 0;
+}
+static int n71_wlan_runtime_probe(struct platform_device *pdev)
+{
+ if(!armed||stage!=29||n71_wlan_task)return -EINVAL;
+ get_device(&pdev->dev);
+ n71_wlan_task=kthread_create(n71_wlan_runtime_thread,pdev,"n71-wlan-runtime");
+ if(IS_ERR(n71_wlan_task)){int rc=PTR_ERR(n71_wlan_task);n71_wlan_task=NULL;put_device(&pdev->dev);return rc;}
+ get_task_struct(n71_wlan_task);wake_up_process(n71_wlan_task);return 0;
+}
+static void n71_wlan_runtime_remove(struct platform_device *pdev)
+{
+ if(n71_wlan_task){kthread_stop(n71_wlan_task);put_task_struct(n71_wlan_task);n71_wlan_task=NULL;}
+}
+#endif
 static struct platform_driver n71_triplet_driver = {
+#ifdef N71_NATIVE_WLAN_RUNTIME
+    .probe = n71_wlan_runtime_probe,
+    .remove = n71_wlan_runtime_remove,
+#else
     .probe = n71_microlease_probe,
+#endif
     .driver = {
         .name = "n71-s8000-perst-held",
         .of_match_table = n71_triplet_of_match,
@@ -1084,6 +1123,12 @@ static int __init n71_microlease_init(void)
     ret = platform_driver_register(&n71_triplet_driver);
     if (!ret) {
         n71_driver_registered = true;
+#ifdef N71_NATIVE_WLAN_RUNTIME
+        if(n71_wlan_task){
+            pr_info("n71-wlan-runtime: worker started; interface lifetime ends on module removal\n");
+            return 0;
+        }
+#endif
         platform_driver_unregister(&n71_triplet_driver);
         n71_driver_registered = false;
     }

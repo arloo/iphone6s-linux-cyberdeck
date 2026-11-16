@@ -243,7 +243,7 @@ static int n71_firmware_write_trial(struct pci_dev *pdev)
 }
 #endif
 /* Bounded read-only EROM discovery. Never accesses the quarantined OTP. */
-static int n71_brcm_erom_inventory(struct pci_dev *pdev)
+static int __maybe_unused n71_brcm_erom_inventory(struct pci_dev *pdev)
 {
  struct n71_dart_trial_mmio *m=n71_pci_dma_context;
  u32 saved,a,b,id=0,base=0,wrap=0,wt=0;unsigned int i=0,cores=0;bool end=false,pcie=false,arm=false;int rc=-EIO;
@@ -336,19 +336,38 @@ restore:
  pr_info("n71-perst-held: BRCM_EROM_INVENTORY rc=%d cores=%u eot=%u window_restored=1 BUS_MASTER_OFF no_OTP_no_core_reset\n",rc,cores,end);
  return rc;
 }
-static int n71_pci_dma_probe(struct pci_dev *pdev,const struct pci_device_id *id){int rc=n71_dma_test_device(&pdev->dev);if(!rc)rc=n71_pci_irq_allocation_test(pdev);return rc?rc:n71_brcm_erom_inventory(pdev);}
+static int n71_pci_dma_probe(struct pci_dev *pdev,const struct pci_device_id *id){int rc=n71_dma_test_device(&pdev->dev);if(!rc)rc=n71_pci_irq_allocation_test(pdev);
+#ifdef N71_NATIVE_BRCMFMAC_TRIAL
+return rc;
+#else
+return rc?rc:n71_brcm_erom_inventory(pdev);
+#endif
+}
 static const struct pci_device_id n71_pci_dma_ids[]={{PCI_DEVICE(0x14e4,0x43a3)},{}};
 static struct pci_driver n71_pci_dma_driver={.name="n71-native-pci-dma-test",.id_table=n71_pci_dma_ids,.probe=n71_pci_dma_probe};
+#ifdef N71_NATIVE_MSI_DOMAIN
+#include "n71-native-msi-domain.h"
+#endif
+#ifdef N71_NATIVE_BRCMFMAC_TRIAL
+#include "n71-brcmfmac-bind-trial.h"
+#endif
 static int n71_native_pci_bind(struct pci_dev *ep)
 {
  int rc;
+#ifdef N71_NATIVE_MSI_DOMAIN
+ rc=n71_native_msi_domain_start(ep);if(rc)return rc;
+#endif
  rc=device_set_driver_override(&ep->dev,"n71-native-pci-dma-test");if(rc)return rc;
  rc=pci_register_driver(&n71_pci_dma_driver);if(rc)return rc;
  n71_dma_result=-EINPROGRESS;n71_allow_pci_dma_api=true;
  pci_bus_add_device(ep);
  rc=n71_dma_result;
  if(!ep->driver||strcmp(ep->driver->name,"n71-native-pci-dma-test"))rc=-ENODEV;
- n71_allow_pci_dma_api=false;pci_unregister_driver(&n71_pci_dma_driver);
+ pci_unregister_driver(&n71_pci_dma_driver);
+#ifdef N71_NATIVE_BRCMFMAC_TRIAL
+ if(!rc)rc=n71_native_brcmf_bind_trial(ep);
+#endif
+ n71_allow_pci_dma_api=false;
  return rc;
 }
 static struct platform_driver n71_dma_driver={.probe=n71_dma_probe,.driver={.name="n71-native-dma-probe"}};

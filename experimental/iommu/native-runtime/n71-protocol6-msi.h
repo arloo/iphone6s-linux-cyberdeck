@@ -5,7 +5,7 @@
  * S8000 port+0x168 reads zero: never write the newer-SoC MSI-address register. */
 #include <linux/atomic.h>
 struct n71_control_msi {
- struct n71_dart_trial_mmio *m;
+ struct n71_dart_trial_mmio *m;struct pci_dev *pdev;bool generic;
  unsigned int irq;int cap;
  u16 control,data;u32 lo,hi,cfg,base,address,mask;
  bool requested,enabled,changed;
@@ -30,7 +30,9 @@ static int n71_control_msi_stop(struct n71_control_msi *s,bool require_irq)
  }
  if(s->enabled){disable_irq(s->irq);s->enabled=false;}
  if(s->requested){free_irq(s->irq,s);s->requested=false;}
- if(s->irq){irq_dispose_mapping(s->irq);s->irq=0;}
+ if(s->generic){pci_disable_msi(s->pdev);s->generic=false;}
+ else if(s->irq)irq_dispose_mapping(s->irq);
+ s->irq=0;
  if(s->changed){
   writel(s->cfg,(u8 __iomem *)m->port+0x124);
   writel(s->base,(u8 __iomem *)m->port+0x128);
@@ -46,7 +48,10 @@ static int n71_control_msi_stop(struct n71_control_msi *s,bool require_irq)
 }
 static int n71_control_msi_start(struct pci_dev *pdev,struct n71_control_msi *s)
 {
- struct device_node *np;struct irq_domain *domain;struct irq_fwspec spec={};int rc=-EPERM;
+ struct device_node *np=NULL;int rc=-EPERM;
+#ifndef N71_NATIVE_MSI_DOMAIN
+ struct irq_domain *domain;struct irq_fwspec spec={};
+#endif
  struct n71_dart_trial_mmio *m=n71_pci_dma_context;
  if(!n71_dma_context_ok(&pdev->dev)||!m->port)return -EPERM;
  s->m=m;atomic_set(&s->count,0);atomic_set(&s->status,0);atomic_set(&s->bad,0);
@@ -58,18 +63,26 @@ static int n71_control_msi_start(struct pci_dev *pdev,struct n71_control_msi *s)
  s->mask=readl((u8 __iomem *)m->bar0+0x4c);
  if((s->cfg&1)||s->mask)return -EBUSY;
  s->lo=readl((u8 __iomem *)m->endpoint+s->cap+4);s->hi=readl((u8 __iomem *)m->endpoint+s->cap+8);s->data=readw((u8 __iomem *)m->endpoint+s->cap+12);
+#ifdef N71_NATIVE_MSI_DOMAIN
+ s->pdev=pdev;rc=pci_enable_msi(pdev);if(rc)return rc;
+ s->generic=true;s->irq=pdev->irq;
+#else
  np=of_find_node_by_path("/soc/interrupt-controller@20e100000");if(!np)return -ENODEV;
  domain=irq_find_host(np);
  if(!domain||irq_find_mapping(domain,(1U<<16)|264)){rc=-EBUSY;goto put;}
  spec.fwnode=of_fwnode_handle(np);spec.param_count=3;spec.param[0]=0;spec.param[1]=264;spec.param[2]=IRQ_TYPE_LEVEL_HIGH;
  s->irq=irq_create_fwspec_mapping(&spec);if(!s->irq){rc=-ENXIO;goto put;}
+#endif
  rc=request_irq(s->irq,n71_control_msi_irq,IRQF_NO_AUTOEN,"n71-wlan-control-one-shot",s);
- if(rc)goto put;s->requested=true;s->changed=true;
+ if(rc)goto put;
+ s->requested=true;s->changed=true;
  writel(0x00080008,(u8 __iomem *)m->port+0x128);writel(0x31,(u8 __iomem *)m->port+0x124);
  pr_info("n71-perst-held: BRCM_DMA_MSI_ROUTE cfg=%08x base=%08x fixed_address_register=%08x\n",readl((u8 __iomem *)m->port+0x124),readl((u8 __iomem *)m->port+0x128),readl((u8 __iomem *)m->port+0x168));
  if(readl((u8 __iomem *)m->port+0x128)!=0x00080008||readl((u8 __iomem *)m->port+0x124)!=0x31){rc=-EIO;goto put;}
+#ifndef N71_NATIVE_MSI_DOMAIN
  writel(0xbffff000,(u8 __iomem *)m->endpoint+s->cap+4);writel(0,(u8 __iomem *)m->endpoint+s->cap+8);writew(8,(u8 __iomem *)m->endpoint+s->cap+12);
  writew((s->control&~0x71)|PCI_MSI_FLAGS_ENABLE,(u8 __iomem *)m->endpoint+s->cap+2);
+#endif
  pr_info("n71-perst-held: BRCM_DMA_MSI_ENDPOINT cap=%x control=%04x addrlo=%08x addrhi=%08x data=%04x\n",s->cap,readw((u8 __iomem *)m->endpoint+s->cap+2),readl((u8 __iomem *)m->endpoint+s->cap+4),readl((u8 __iomem *)m->endpoint+s->cap+8),readw((u8 __iomem *)m->endpoint+s->cap+12));
  if(readl((u8 __iomem *)m->endpoint+s->cap+4)!=0xbffff000||readl((u8 __iomem *)m->endpoint+s->cap+8)||readw((u8 __iomem *)m->endpoint+s->cap+12)!=8||readw((u8 __iomem *)m->endpoint+s->cap+2)!=((s->control&~0x71)|1)){rc=-EIO;goto put;}
  writel(readl((u8 __iomem *)m->bar0+0x48)&0xff0000,(u8 __iomem *)m->bar0+0x48);
