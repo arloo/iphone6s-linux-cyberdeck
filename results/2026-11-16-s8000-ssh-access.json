@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "test_id": "authenticated_remote_shell",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_USB_SSH_CUTOVER_2026_11_16.md",
+  "summary": "Key-only Dropbear accepted pinned-host-key login, rejected unauthorized keys and password methods, bound only to USB IPv4, and remained reachable after TCP/23 closed. Fresh RAM boot untested."
+}

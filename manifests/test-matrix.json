@@ -25,7 +25,7 @@
         "wifi_network": "live_pass",
         "bluetooth_scan": "live_pass",
         "bluetooth_pairing": "live_pass",
-        "authenticated_remote_shell": "blocked"
+        "authenticated_remote_shell": "partial"
       },
       "evidence": [
         "docs/N71_Z2_HBPP_SAFE_KERNEL_LIVE_BOOT.md",
@@ -46,13 +46,15 @@
         "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
         "docs/N71_BLUETOOTH_RUNTIME_2026_11_16.md",
         "docs/PROJECT_STATE_2026_11_16.md",
-        "docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md"
+        "docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md",
+        "docs/N71_USB_SSH_CUTOVER_2026_11_16.md"
       ],
       "qualification_scope": {
         "touch_evdev_multitouch": "Physical single and simultaneous two-finger EVDEV; endurance/edge/latency unqualified",
         "wifi_network": "Current managed RAM session; 2.4 GHz WPA2/DHCP/DNS/Internet/1 MiB checked transfer; no reboot/suspend/5 GHz qualification",
         "bluetooth_scan": "LE discovery and controlled classic Dell inquiry; no GATT profile claim",
-        "bluetooth_pairing": "Controlled Dell pairing and bonding, encrypted L2CAP echo; no HID/audio or reboot persistence claim"
+        "bluetooth_pairing": "Controlled Dell pairing and bonding, encrypted L2CAP echo; no HID/audio or reboot persistence claim",
+        "authenticated_remote_shell": "Physical USB-only key authentication and Telnet cutover; fresh RAM boot untested"
       },
       "runtime_followup": {
         "native_dashboard_running": true,

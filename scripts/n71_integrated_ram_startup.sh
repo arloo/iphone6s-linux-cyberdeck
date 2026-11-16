@@ -12,6 +12,20 @@ mkdir /run/n71-integrated-attempted 2>/dev/null || exit 1
 sha256sum -c /usr/lib/cyberdeck/n71-integrated.sha256 > /run/n71-integrated-hash-PRIVATE.log 2>&1
 # The complete operator-built archive is pinned above; never extract an unverified input.
 tar -xzf /usr/lib/cyberdeck/n71-integrated-runtime-PRIVATE.tar.gz -C /
+# A working USB SSH recovery path must not depend on WLAN/BlueZ startup.
+# Launch asynchronously: original USB recovery remains available if this fails.
+if [ -x /usr/bin/n71-ssh-provision-ram ]; then
+    (
+        attempts=0
+        until ip -4 addr show dev usb0 2>/dev/null | grep -q 'inet 172.16.42.1/'; do
+            attempts=$((attempts + 1))
+            [ "$attempts" -lt 45 ] || exit 1
+            sleep 1
+        done
+        /bin/sh /usr/bin/n71-ssh-provision-ram
+    ) </dev/null > /run/n71-ssh-bootstrap-PRIVATE.log 2>&1 &
+    echo "$!" > /run/n71-ssh-bootstrap.pid
+fi
 /bin/sh /usr/bin/n71-connectivity-autostart > /run/n71-connectivity-autostart-PRIVATE.log 2>&1
 N71_DISPLAY_ACTION=apply /bin/sh /usr/bin/n71-balanced-display > /run/n71-display-profile.log 2>&1
 # Give the original init/getty handoff time to finish before owning the display.
