@@ -16,11 +16,13 @@ class NativeCyberdeckShell(unittest.TestCase):
         cls.root = Path(cls.work.name)
         source = cls.root / 'cyberdeck-shell'
         source.mkdir()
-        font = cls.root / 'fb-cyberdeck'
-        font.mkdir()
-        # Synthetic glyphs test rendering bounds; no external font is required.
-        (font / 'font_data.h').write_text(
-            '#include <stdint.h>\nstatic const uint16_t font14x24[95][24]={{0}};\n')
+        # Synthetic alpha glyphs exercise rendering without external font dependencies.
+        (source / 'font_aa.h').write_text(
+            '#include <stdint.h>\n'
+            '#define N71_FONT_SMALL_W 18\n#define N71_FONT_SMALL_H 34\n'
+            '#define N71_FONT_LARGE_W 28\n#define N71_FONT_LARGE_H 52\n'
+            'static const uint8_t font_small_alpha[95][34][18]={{{0}}};\n'
+            'static const uint8_t font_large_alpha[95][52][28]={{{0}}};\n')
         shutil.copy2(ROOT / 'examples/cyberdeck-shell/cyberdeck-shell.c', source)
         cls.binary = cls.root / 'ui'
         subprocess.run(['gcc', '-O1', '-Wall', '-Wextra', '-Werror',

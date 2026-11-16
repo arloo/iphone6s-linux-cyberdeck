@@ -2,7 +2,7 @@
 
 A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation, Wi-Fi and Bluetooth, a local terminal and a targeted Kali ARM64 tool environment. The intended experience is a fullscreen touch-first console for diagnostics, authorized security assessments and selected companion workflows.
 
-**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The native shell/dashboard 0.2 now runs on the phone with a PTY and on-screen keyboard; manual touch typing acceptance, automatic connectivity restoration after reboot and the Kali environment remain open. This remains a RAM-only research system, not a supported persistent phone OS.
+**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The native shell/dashboard 0.4 now runs on the phone with a PTY and on-screen keyboard; manual touch typing acceptance, automatic connectivity restoration after reboot and the Kali environment remain open. This remains a RAM-only research system, not a supported persistent phone OS.
 
 A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
 
@@ -31,7 +31,7 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 |---|---|---|
 | Boot chain | checkm8 → PongoOS → m1n1 → Linux | Physical RAM boot PASS; persistent installation unqualified |
 | Running kernel | 7.3.0-rc1-n71-batt2-g68aadac820d0-dirty, AArch64 | Specific tested build; kernel presence does not qualify other images |
-| Display/UI | Native dashboard, 48 × 24 ASCII PTY console and on-screen keyboard running on 750 × 1334 fbdev | Native execution/readback PASS; new UI human touch typing and optical acceptance pending |
+| Display/UI | Native dashboard, 38 × 14 ASCII PTY console and on-screen keyboard running on 750 × 1334 fbdev | Native execution/readback PASS; new UI human touch typing and optical acceptance pending |
 | Touch | Automatic Z2 initialization and real single/two-finger EVDEV events | Functional PASS; edge/latency/endurance/resume open |
 | USB networking | NCM recovery link and interactive shell | Working; key-only SSH migration still open |
 | Wi-Fi transport | Real BCM4350C5 PCIe 14e4:43a3, brcmfmac binding | Managed native runtime PASS |
@@ -106,7 +106,7 @@ Read the [complete build/provenance/resource and K0–K7 test plan](docs/KALI_AR
 
 ## Current-session finalization and power profile
 
-[Native shell UI 0.2](examples/cyberdeck-shell/) is running on the phone. Its actual ARM64 selftest executed a controlled command through the PTY using simulated keyboard hit dispatch. Framebuffer readback was reviewed; operator touch typing and optical confirmation of the new application are still pending. The console is ASCII/TERM=dumb, with no full VT emulation or scrollback browser.
+[Native shell UI 0.4](examples/cyberdeck-shell/) is running on the phone. Its actual ARM64 selftest executed a controlled command through the PTY using simulated keyboard hit dispatch. Framebuffer readback was reviewed; operator touch typing and optical confirmation of the new application are still pending. The console is ASCII/TERM=dumb, with no full VT emulation or scrollback browser.
 
 The display is now at 1023/2047 (about 50% of its register range), with the previous 1505 value retained for restoration. Existing schedutil CPU scaling and Wi-Fi power saving were preserved. A short observation measured 8,832 KiB UI RSS and 0.31% aggregate CPU utilization; this is not a battery-life benchmark. An independently verified 4 MiB WLAN transfer passed with the UI active after service recovery.
 
@@ -161,3 +161,11 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md), [firmware policy](docs/FIRMWARE_POLICY.
 Original userspace toolkit material is MIT licensed. Experimental kernel sources retain their own SPDX terms, including GPL-2.0-only; external projects retain their licenses. See [LICENSE](LICENSE) and individual source headers.
 
 Credits to HoolockLinux, Asahi Linux, Linux kernel contributors, checkra1n/PongoOS contributors, Omarchy-iPhone6s and the broader open-source iPhone/Linux community. This project builds on their work and preserves attribution in source and dated research notes.
+
+### Keyboard usability follow-up
+
+The owner confirmed initial touch typing works and requested larger keys. [Keyboard 0.3](docs/N71_KEYBOARD_03_2026_11_16.md) is now running with staggered QWERTY rows, larger full-width touch targets and glyphs, dedicated Shift/Delete/Return and a wide space bar. The previous 0.2 evidence remains dated; the fresh 0.3 integrated candidate is separately retained and still unbooted.
+
+### Typography follow-up
+
+[Typography 0.4](docs/N71_TYPOGRAPHY_04_2026_11_16.md) uses IBM Plex Mono Medium TrueType with baseline-aligned grayscale antialiasing and larger console text. The approved portrait keyboard geometry remains unchanged. The local font generator and source are public; font assets and binaries remain private. Earlier resource measurements apply to their dated revision, not a new typography benchmark.

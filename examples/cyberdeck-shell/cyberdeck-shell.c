@@ -13,7 +13,7 @@
 #include <sys/ioctl.h>
 #include <time.h>
 #include <unistd.h>
-#include "../fb-cyberdeck/font_data.h"
+#include "font_aa.h"
 #include <pty.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -92,26 +92,36 @@ static void ring(int cx,int cy,int r,uint32_t color) {
         if(err<0)err+=2*y+1; else {--x;err+=2*(y-x+1);}
     }
 }
-static void label(int x,int y,const char *text,int scale,uint32_t color) {
-    if(scale<1||scale>3)return;
-    for(const char *p=text;*p;p++){
-        unsigned char ch=(unsigned char)*p;
-        if(ch<32||ch>126)ch='?';
-        for(int cy=0;cy<24;cy++){
-            uint16_t bits=font14x24[ch-32][cy];
-            for(int cx=0;cx<14;cx++)
-                if(bits&(1u<<(13-cx)))
-                    rect(x+cx*scale,y+cy*scale,scale,scale,color);
-        }
-        x+=14*scale;
-        if(x>W-14*scale)break;
-    }
+static int font_width(int scale){return scale==2?N71_FONT_LARGE_W:N71_FONT_SMALL_W;}
+static int font_height(int scale){return scale==2?N71_FONT_LARGE_H:N71_FONT_SMALL_H;}
+static unsigned unpack_channel(uint32_t pixel,struct fb_bitfield field){
+ if(!field.length){return 0;}
+ unsigned maximum=(1u<<field.length)-1u;
+ return (((pixel>>field.offset)&maximum)*255+maximum/2)/maximum;
+}
+static void label(int x,int y,const char *text,int scale,uint32_t color){
+ if(scale!=1&&scale!=2)return;
+ int width=font_width(scale),height=font_height(scale);
+ for(const unsigned char *p=(const unsigned char *)text;*p;p++){
+  unsigned ch=*p;if(ch<32||ch>126)ch='?';
+  for(int row=0;row<height;row++)for(int col=0;col<width;col++){
+   unsigned alpha=scale==2?font_large_alpha[ch-32][row][col]:font_small_alpha[ch-32][row][col];
+   int px=x+col,py=y+row;if(!alpha||px<0||px>=W||py<0||py>=H)continue;
+   uint32_t *pixel=(uint32_t *)(pixels+(size_t)py*stride+(size_t)px*4);
+   if(alpha==255){*pixel=rgb(color);continue;}
+   unsigned red=(((color>>16)&255)*alpha+unpack_channel(*pixel,vinfo.red)*(255-alpha)+127)/255;
+   unsigned green=(((color>>8)&255)*alpha+unpack_channel(*pixel,vinfo.green)*(255-alpha)+127)/255;
+   unsigned blue=((color&255)*alpha+unpack_channel(*pixel,vinfo.blue)*(255-alpha)+127)/255;
+   *pixel=rgb((red<<16)|(green<<8)|blue);
+  }
+  x+=width;if(x>W-width)break;
+ }
 }
 
-#define ROWS 24
-#define COLS 48
+#define ROWS 14
+#define COLS 38
 static char terminal[ROWS][COLS+1];
-static int cursor_x,cursor_y,escape_state,page,shifted,symbol_mode,input_dropped,dirty=1,master=-1;
+static int cursor_x,cursor_y,escape_state,page,shifted,keyboard_mode,input_dropped,dirty=1,master=-1;
 static pid_t child=-1;
 static int ttyfd=-1,saved_kd_mode=KD_TEXT;
 static char backlight[256];
@@ -162,21 +172,79 @@ static int start_shell(void){
  fcntl(master,F_SETFL,fcntl(master,F_GETFL)|O_NONBLOCK);fcntl(master,F_SETFD,FD_CLOEXEC);return 0;
 }
 static void key_send(const char *s){if(master>=0){ssize_t n=write(master,s,strlen(s));if(n<0&&errno!=EAGAIN)running=0;}}
-static void button(int x,int y,int w,const char *text,int selected){rect(x,y,w,60,selected?0x183B44:0x10212C);outline(x,y,w,60,selected?COL_CYAN:COL_GRID);label(x+12,y+18,text,1,selected?COL_CYAN:COL_WHITE);}
+static void button(int x,int y,int w,const char *text,int selected){rect(x,y,w,60,selected?0x183B44:0x10212C);outline(x,y,w,60,selected?COL_CYAN:COL_GRID);label(x+(w-(int)strlen(text)*font_width(1))/2,y+(60-font_height(1))/2,text,1,selected?COL_CYAN:COL_WHITE);}
 static void card(int x,int y,const char *title,const char *value,const char *detail){rect(x,y,334,170,0x10212C);outline(x,y,334,170,COL_GRID);label(x+18,y+17,title,1,COL_SOFT);label(x+18,y+61,value,2,COL_CYAN);label(x+18,y+114,detail,1,COL_WHITE);}
-static const char *letters[]={"1234567890","qwertyuiop","asdfghjkl","zxcvbnm/."};
-static const char *symbols[]={"!@#$%^&*()","[]{}<>_=+-",";:\'\"`~|?","\\/.,:="};
+/* Shared portrait-phone geometry: drawing and touch dispatch use this table. */
+#define KEYBOARD_Y 854
+#define KEYBOARD_ROW 116
+#define MAX_KEYS 40
+#define KBA_CHARACTER 0
+#define KBA_SHIFT 1
+#define KBA_DELETE 2
+#define KBA_MODE 3
+#define KBA_RETURN 4
+struct keyboard_key { int x,y,w,h,action; char value; const char *label; };
+static const char *alphabet[]={"qwertyuiop","asdfghjkl","zxcvbnm"};
+static const char *digits[]={"1234567890","-/:;()$&@\"",".,?!'[]"};
+static const char *punctuation[]={"_\\|~<>={}%","+*^`#$&@!?",".,;:'\"="};
+static int keyboard_keys(struct keyboard_key *keys){
+ const char **rows=keyboard_mode==0?alphabet:(keyboard_mode==1?digits:punctuation);int n=0;
+ for(int row=0;row<3;row++){
+  int count=(int)strlen(rows[row]),offset=row==2?112:(750-count*75)/2;
+  if(row==2)keys[n++]=(struct keyboard_key){0,KEYBOARD_Y+row*KEYBOARD_ROW,106,KEYBOARD_ROW,KBA_SHIFT,0,keyboard_mode==0?"SHIFT":(keyboard_mode==1?"#+=":"123")};
+  for(int col=0;col<count;col++){char value=rows[row][col];if(!keyboard_mode&&shifted&&value>='a'&&value<='z')value-=32;
+   keys[n++]=(struct keyboard_key){offset+col*75,KEYBOARD_Y+row*KEYBOARD_ROW,75,KEYBOARD_ROW,KBA_CHARACTER,value,NULL};}
+  if(row==2)keys[n++]=(struct keyboard_key){654,KEYBOARD_Y+row*KEYBOARD_ROW,96,KEYBOARD_ROW,KBA_DELETE,0,"DEL"};
+ }
+ keys[n++]=(struct keyboard_key){0,KEYBOARD_Y+3*KEYBOARD_ROW,108,KEYBOARD_ROW,KBA_MODE,0,keyboard_mode?"ABC":"123"};
+ keys[n++]=(struct keyboard_key){108,KEYBOARD_Y+3*KEYBOARD_ROW,78,KEYBOARD_ROW,KBA_CHARACTER,'/',"/"};
+ keys[n++]=(struct keyboard_key){186,KEYBOARD_Y+3*KEYBOARD_ROW,354,KEYBOARD_ROW,KBA_CHARACTER,' ',"spazio"};
+ keys[n++]=(struct keyboard_key){540,KEYBOARD_Y+3*KEYBOARD_ROW,78,KEYBOARD_ROW,KBA_CHARACTER,'.',"."};
+ keys[n++]=(struct keyboard_key){618,KEYBOARD_Y+3*KEYBOARD_ROW,132,KEYBOARD_ROW,KBA_RETURN,0,"INVIO"};
+ return n;
+}
+static int keyboard_hit(int x,int y,struct keyboard_key *key){
+ if(x<0||x>=750||y<KEYBOARD_Y||y>=KEYBOARD_Y+4*KEYBOARD_ROW)return 0;
+ struct keyboard_key keys[MAX_KEYS];int n=keyboard_keys(keys),nearest=-1,distance=10000;
+ for(int i=0;i<n;i++){struct keyboard_key *k=&keys[i];if(y<k->y||y>=k->y+k->h)continue;
+  if(x>=k->x&&x<k->x+k->w){*key=*k;return 1;}
+  int d=abs(x-(k->x+k->w/2));if(d<distance){distance=d;nearest=i;}}
+ if(nearest>=0){*key=keys[nearest];return 1;}return 0;
+}
+static void keyboard_draw(void){
+ struct keyboard_key keys[MAX_KEYS];int n=keyboard_keys(keys);
+ rect(0,KEYBOARD_Y-8,W,H-KEYBOARD_Y+8,0x101C28);
+ for(int i=0;i<n;i++){struct keyboard_key *k=&keys[i];int selected=k->action==KBA_SHIFT&&shifted&&!keyboard_mode;
+  uint32_t fill=k->action==KBA_CHARACTER?0x263B4A:0x182D3C;if(selected)fill=0x2D6470;
+  rect(k->x+3,k->y+4,k->w-6,k->h-8,fill);outline(k->x+3,k->y+4,k->w-6,k->h-8,selected?COL_CYAN:COL_GRID);
+  if(k->action==KBA_SHIFT&&!keyboard_mode){int cx=k->x+k->w/2,cy=k->y+k->h/2;
+   line(cx-23,cy,cx,cy-24,COL_WHITE);line(cx,cy-24,cx+23,cy,COL_WHITE);line(cx-23,cy,cx-10,cy,COL_WHITE);line(cx+23,cy,cx+10,cy,COL_WHITE);outline(cx-10,cy,20,20,COL_WHITE);
+  }else if(k->action==KBA_DELETE){int cx=k->x+k->w/2,cy=k->y+k->h/2;
+   line(cx-27,cy,cx-10,cy-20,COL_WHITE);line(cx-27,cy,cx-10,cy+20,COL_WHITE);line(cx-10,cy-20,cx+25,cy-20,COL_WHITE);line(cx-10,cy+20,cx+25,cy+20,COL_WHITE);line(cx+25,cy-20,cx+25,cy+20,COL_WHITE);line(cx-3,cy-10,cx+15,cy+10,COL_WHITE);line(cx-3,cy+10,cx+15,cy-10,COL_WHITE);
+  }else{char character[2]={k->value,0};const char *text=k->label?k->label:character;int scale=(int)strlen(text)*28<=k->w-10?2:1;
+   label(k->x+(k->w-(int)strlen(text)*font_width(scale))/2,k->y+(k->h-font_height(scale))/2,text,scale,COL_WHITE);}
+ }
+}
+static void keyboard_press(const struct keyboard_key *key){
+ switch(key->action){
+ case KBA_CHARACTER:{char value[2]={key->value,0};key_send(value);if(!keyboard_mode&&shifted){shifted=0;dirty=1;}break;}
+ case KBA_SHIFT:if(!keyboard_mode)shifted=!shifted;else keyboard_mode=keyboard_mode==1?2:1;dirty=1;break;
+ case KBA_DELETE:key_send("\177");break;
+ case KBA_MODE:keyboard_mode=keyboard_mode?0:1;shifted=0;dirty=1;break;
+ case KBA_RETURN:key_send("\r");break;
+ }
+}
 static void render_shell(void){
  rect(0,0,W,H,COL_BG);rect(0,0,W,7,COL_PINK);rect(0,7,W,3,COL_CYAN);
- label(28,28,"CYBERDECK / A9",2,COL_CYAN);label(30,88,"N71  //  NATIVE LINUX  //  0.2",1,COL_SOFT);
+ label(28,28,"CYBERDECK / A9",2,COL_CYAN);label(30,88,"N71  //  NATIVE LINUX  //  0.4",1,COL_SOFT);
  const char *tabs[]={"HOME","TERMINAL","SYSTEM","TOOLS"};for(int i=0;i<4;i++)button(28+i*178,130,160,tabs[i],page==i);
  char a[100],b[100];
  if(page==0){
   label(30,218,"LOCAL OPERATIONS",1,COL_WHITE);ring(694,230,16,COL_CYAN);
-  snprintf(a,sizeof(a),"%d%% %.1fC",stats.battery,stats.temp/10.0);snprintf(b,sizeof(b),"%s %+d mA",stats.charge,stats.current);card(28,270,"BATTERY",a,b);
-  card(388,270,"WIFI / NATIVE",stats.wlan?"LINK UP":"LINK DOWN","BCM4350C5 / PCIe");
+  snprintf(a,sizeof(a),"%d%% %.1fC",stats.battery,stats.temp/10.0);snprintf(b,sizeof(b),"%s %+d mA",strcmp(stats.charge,"Charging")==0?"Charge":(strcmp(stats.charge,"Discharging")==0?"Drain":"Idle"),stats.current);card(28,270,"BATTERY",a,b);
+  card(388,270,"WIFI / NATIVE",stats.wlan?"LINK UP":"LINK DOWN","BCM4350C5 PCIe");
   card(28,466,"BLUETOOTH",stats.bt?"PRESENT":"ABSENT","HID TEST PENDING");
-  snprintf(a,sizeof(a),"CPU %d%%",stats.cpu_percent);snprintf(b,sizeof(b),"RAM AVAIL %d MiB",stats.mem_kib/1024);card(388,466,"SYSTEM / ARM64",a,b);
+  snprintf(a,sizeof(a),"CPU %d%%",stats.cpu_percent);snprintf(b,sizeof(b),"AVAIL %d MiB",stats.mem_kib/1024);card(388,466,"SYSTEM / ARM64",a,b);
   label(30,686,"TOUCH FIRST. LOCAL SHELL.",1,COL_CYAN);
   label(30,736,"USB RECOVERY REMAINS AVAILABLE",1,COL_SOFT);
   label(30,786,"KALI TOOLSET: NOT INSTALLED",1,COL_AMBER);
@@ -185,13 +253,10 @@ static void render_shell(void){
   button(30,1030,690,"SYSTEM / DISPLAY CONTROLS",0);
  }else if(page==1){
   label(30,210,"LOCAL SHELL / ASCII / TERM=dumb",1,COL_SOFT);
-  for(int y=0;y<ROWS;y++)label(30,258+y*24,terminal[y],1,COL_WHITE);
-  if(cursor_x<COLS)rect(30+cursor_x*14,258+cursor_y*24+22,13,2,COL_CYAN);
-  const char **rows=symbol_mode?symbols:letters;
-  for(int row=0;row<4;row++){int count=(int)strlen(rows[row]);int off=(W-count*70)/2;for(int col=0;col<count;col++){
-   char k[2]={rows[row][col],0};if(shifted&&k[0]>='a'&&k[0]<='z')k[0]-=32;button(off+col*70,875+row*65,64,k,0);}}
-  const char *keys[]={"SHIFT","SPACE",symbol_mode?"ABC":"SYM","BACK","ENTER"};for(int i=0;i<5;i++)button(25+i*142,1140,134,keys[i],i==0&&shifted);
-  button(25,1220,220,"CTRL-C",0);button(265,1220,220,"TAB",0);button(505,1220,220,"CLEAR VIEW",0);
+  for(int y=0;y<ROWS;y++)label(30,258+y*N71_FONT_SMALL_H,terminal[y],1,COL_WHITE);
+  if(cursor_x<COLS)rect(30+cursor_x*N71_FONT_SMALL_W,258+cursor_y*N71_FONT_SMALL_H+N71_FONT_SMALL_H-2,N71_FONT_SMALL_W-1,2,COL_CYAN);
+  button(18,778,226,"CTRL-C",0);button(262,778,226,"TAB",0);button(506,778,226,"CLEAR VIEW",0);
+  keyboard_draw();
  }else if(page==2){
   label(30,240,"POWER / PERFORMANCE",1,COL_CYAN);
   snprintf(a,sizeof(a),"CPU GOVERNOR: %s",stats.governor);label(30,302,a,1,COL_WHITE);
@@ -222,12 +287,9 @@ static void tap(int x,int y){
  else if(page==2){if(y>=430&&y<=490){if(x>=30&&x<=240)set_display(35);else if(x>=270&&x<=480)set_display(50);else if(x>=510&&x<=720)set_display(74);}if(y>=950&&y<=1010)running=0;}
  else if(page==3){if(y>=950&&y<=1010){page=1;dirty=1;}}
  else if(page==1){
-  const char **rows=symbol_mode?symbols:letters;
-  for(int row=0;row<4;row++)if(y>=875+row*65&&y<=935+row*65){int count=(int)strlen(rows[row]),off=(W-count*70)/2;int col=(x-off)/70;
-   if(x>=off&&col<count&&(x-off)%70<64){char s[2]={rows[row][col],0};if(shifted&&s[0]>='a'&&s[0]<='z')s[0]-=32;key_send(s);}return;}
-  if(y>=1140&&y<=1200){int k=(x-25)/142;if(x<25||k>=5||(x-25)%142>=134)return;
-   if(k==0){shifted=!shifted;dirty=1;}else if(k==1)key_send(" ");else if(k==2){symbol_mode=!symbol_mode;dirty=1;}else if(k==3)key_send("\177");else key_send("\r");}
-  if(y>=1220&&y<=1280){if(x>=25&&x<=245)key_send("\003");else if(x>=265&&x<=485)key_send("\t");else if(x>=505&&x<=725){for(int i=0;i<ROWS;i++){memset(terminal[i],' ',COLS);terminal[i][COLS]=0;}cursor_x=cursor_y=0;dirty=1;}}
+  struct keyboard_key key;if(keyboard_hit(x,y,&key)){keyboard_press(&key);return;}
+  if(y>=778&&y<=838){if(x>=18&&x<=244)key_send("\003");else if(x>=262&&x<=488)key_send("\t");else if(x>=506&&x<=732){for(int i=0;i<ROWS;i++){memset(terminal[i],' ',COLS);terminal[i][COLS]=0;}cursor_x=cursor_y=0;dirty=1;}}
+
  }
 }
 static void input_event(const struct input_event *e){
@@ -259,23 +321,30 @@ int main(int argc,char **argv){
   FILE *f=fopen(argv[2],"wb");if(!f)return 1;fprintf(f,"P6\n%d %d\n255\n",W,H);for(int i=0;i<W*H;i++){unsigned char *p=pixels+i*4;fputc(p[2],f);fputc(p[1],f);fputc(p[0],f);}fclose(f);free(pixels);return 0;
  }
  if(argc==2&&strcmp(argv[1],"--selftest")==0){
+  page=1;struct keyboard_key hit;
+  if(!keyboard_hit(0,900,&hit)||hit.value!='q'||!keyboard_hit(749,900,&hit)||hit.value!='p')return 15;
+  if(!keyboard_hit(75,1020,&hit)||hit.value!='a'||!keyboard_hit(710,1140,&hit)||hit.action!=KBA_DELETE)return 16;
+  for(int mode=0;mode<3;mode++){keyboard_mode=mode;for(int row=0;row<4;row++)for(int x=0;x<750;x++)if(!keyboard_hit(x,KEYBOARD_Y+row*KEYBOARD_ROW+50,&hit))return 17;}
+  keyboard_mode=0;tap(50,1250);if(keyboard_mode!=1)return 18;tap(40,1140);if(keyboard_mode!=2)return 19;tap(50,1250);if(keyboard_mode!=0)return 20;
+  tap(40,1140);if(!shifted)return 21;tap(30,900);if(shifted)return 22;
+  page=0;
   if(start_shell())return 10;
   char initial[2048]={0};size_t have=0;long long ready_until=milliseconds()+2000;
   while(milliseconds()<ready_until&&have<sizeof(initial)-1){struct pollfd p={.fd=master,.events=POLLIN};poll(&p,1,100);ssize_t n=read(master,initial+have,sizeof(initial)-have-1);if(n>0){have+=(size_t)n;initial[have]=0;if(strstr(initial,"deck# "))break;}}
   page=0;tap(100,970);if(page!=1)return 11;
   const char *command="echo uiok";
   for(const char *ch=command;*ch;ch++){
-   if(*ch==' '){tap(180,1160);continue;}
-   int found=0;for(int row=0;row<4;row++){const char *at=strchr(letters[row],*ch);if(at){int col=(int)(at-letters[row]);int off=(750-(int)strlen(letters[row])*70)/2;tap(off+col*70+20,895+row*65);found=1;break;}}
+   struct keyboard_key keys[MAX_KEYS];int count=keyboard_keys(keys),found=0;
+   for(int i=0;i<count;i++)if(keys[i].action==KBA_CHARACTER&&keys[i].value==*ch){tap(keys[i].x+keys[i].w/2,keys[i].y+keys[i].h/2);found=1;break;}
    if(!found)return 12;
   }
-  tap(620,1160);char output[4096]={0};size_t used=0;long long deadline=milliseconds()+5000;
+  tap(680,KEYBOARD_Y+3*KEYBOARD_ROW+50);char output[4096]={0};size_t used=0;long long deadline=milliseconds()+5000;
   while(milliseconds()<deadline&&used<sizeof(output)-1){struct pollfd p={.fd=master,.events=POLLIN};poll(&p,1,100);ssize_t n=read(master,output+used,sizeof(output)-used-1);if(n>0){used+=(size_t)n;output[used]=0;if(strstr(output,"\r\nuiok\r\n")||strstr(output,"\nuiok\n"))break;}}
   int ok=strstr(output,"\r\nuiok\r\n")!=NULL||strstr(output,"\nuiok\n")!=NULL;
   if(!ok)fprintf(stderr,"Synthetic PTY selftest output: %s\n",output);
   key_send("exit\r");close(master);kill(-child,SIGHUP);waitpid(child,NULL,0);
   terminal_bytes("abc\rZ\n123\b4",12);if(terminal[0][0]!='Z'||terminal[1][2]!='4')return 14;
-  puts(ok?"N71_UI_SELFTEST_PASS touch_key_dispatch=1 native_pty_shell=1 terminal_parser=1":"N71_UI_SELFTEST_FAIL");return ok?0:13;
+  puts(ok?"N71_UI_SELFTEST_PASS touch_key_dispatch=1 native_pty_shell=1 terminal_parser=1 keyboard_geometry_and_modes=1":"N71_UI_SELFTEST_FAIL");return ok?0:13;
  }
  int probe=argc==2&&strcmp(argv[1],"--probe")==0;
  if(argc!=1&&!probe){fputs("Usage: cyberdeck-shell [--preview PRIVATE_PPM]\n",stderr);return 2;}
@@ -288,6 +357,7 @@ int main(int argc,char **argv){
  evfd=discover_touch();if(evfd<0){fputs("Qualified touchscreen unavailable\n",stderr);return 7;}
  glob_t paths;if(glob("/sys/class/backlight/*/brightness",0,NULL,&paths)==0){if(paths.gl_pathc==1)snprintf(backlight,sizeof(backlight),"%s",paths.gl_pathv[0]);globfree(&paths);}
  if(probe){puts("N71_UI_HARDWARE_PROBE_PASS framebuffer=750x1334 native_touch=1 backup_read=1");close(evfd);close(fbfd);free(backup);free(pixels);return 0;}
+ const char *start=getenv("N71_START_PAGE");if(start&&strcmp(start,"1")==0)page=1;
  if(start_shell()<0){return 8;}
  ttyfd=open("/dev/tty0",O_RDWR|O_CLOEXEC);
  if(ttyfd>=0&&ioctl(ttyfd,KDGETMODE,&saved_kd_mode)==0){

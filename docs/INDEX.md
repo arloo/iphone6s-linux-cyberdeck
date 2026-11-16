@@ -4,6 +4,10 @@ Reviewed 2026-11-16. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
+- [Typography 0.4: readable TrueType alpha glyphs](N71_TYPOGRAPHY_04_2026_11_16.md)
+
+- [Keyboard 0.3: larger portrait keys and layout](N71_KEYBOARD_03_2026_11_16.md)
+
 - [Session finalization: native shell UI, service recovery and balanced display](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md)
 
 - [Cyberdeck product vision and architecture](CYBERDECK_VISION_AND_ARCHITECTURE.md)

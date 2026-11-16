@@ -38,3 +38,6 @@ __pycache__/
 .env*
 !.env.example
 *.swp
+
+# Local TrueType alpha raster; do not distribute generated font assets.
+examples/cyberdeck-shell/font_aa.h

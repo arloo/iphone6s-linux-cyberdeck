@@ -60,7 +60,12 @@
         "manual_UI_touch_typing_tested": false,
         "userspace_service_recovery_passed": true,
         "integrated_RAM_candidate_built": true,
-        "integrated_RAM_candidate_booted": false
+        "integrated_RAM_candidate_booted": false,
+        "prior_UI_manual_report": "Owner confirmed 0.2 typing functioned but keys were too small",
+        "current_UI_keyboard_revision": "0.4 typography / 0.3 geometry",
+        "current_keyboard_manual_comfort_accepted": false,
+        "keyboard03_owner_functionality_confirmed": true,
+        "font04_owner_readability_accepted": false
       }
     },
     {
