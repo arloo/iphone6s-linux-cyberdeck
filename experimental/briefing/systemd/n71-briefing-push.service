@@ -1,0 +1,11 @@
+[Unit]
+Description=Cyberdeck A9 send reduced AI briefing over authenticated USB SSH
+Documentation=https://github.com/arloo/iphone6s-linux-cyberdeck
+After=cyberdeck-server.service
+
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ExecStart=/usr/bin/python3 %h/Documenti/iphone6s-linux-cyberdeck-public/experimental/briefing/n71_push_briefing.py --push

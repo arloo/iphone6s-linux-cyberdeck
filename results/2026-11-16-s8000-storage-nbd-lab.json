@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "usb_nbd_filebacked_storage_lab",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md",
+  "summary": "A dedicated 64 MiB ext4 file image on the Dell was attached to /dev/nbd0 on the actual N71 over USB, mounted RO then RW, wrote and synchronized a test file, unmounted and detached; Dell offline ext4 readback matched. Does not qualify internal iPhone storage or standalone operation."
+}

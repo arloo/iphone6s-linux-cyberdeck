@@ -1,0 +1,15 @@
+[Unit]
+Description=Cyberdeck A9 companion briefing delivery on weekdays
+
+[Timer]
+# Existing backend generates its briefing after 08:45 Europe/Rome.
+# Multiple delivery opportunities tolerate a late backend refresh or USB attach.
+OnCalendar=Mon..Fri *-*-* 08:55:00
+OnCalendar=Mon..Fri *-*-* 09:45:00
+OnCalendar=Mon..Fri *-*-* 12:00:00
+Persistent=false
+Unit=n71-briefing-push.service
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

@@ -2,7 +2,7 @@
 
 A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation, Wi-Fi and Bluetooth, a local terminal and a targeted Kali ARM64 tool environment. The intended experience is a fullscreen touch-first console for diagnostics, authorized security assessments and selected companion workflows.
 
-**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The native shell/dashboard 0.4 now runs on the phone with a PTY and on-screen keyboard; manual touch typing acceptance, automatic connectivity restoration after reboot and the Kali environment remain open. This remains a RAM-only research system, not a supported persistent phone OS.
+**Physical milestone, 16 November 2026:** real automatic multitouch, phone-native Wi-Fi networking and controlled Bluetooth pairing/encrypted data transfer have passed on **N71 / Samsung S8000**. The native shell/dashboard is running with a PTY, enlarged on-screen keyboard and a new fifth TODAY view fed by authenticated companion SSH push. Manual finger acceptance, automatic connectivity restoration after reboot and the Kali environment remain open. This remains a RAM-only research system, not a supported persistent phone OS.
 
 A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
 
@@ -14,6 +14,7 @@ A [complete documentation index](docs/INDEX.md) links current guides and the ret
 | Inspect what genuinely works on the phone | [Hardware state](docs/HARDWARE_STATUS.md) and [engineering assessment](docs/PROJECT_STATE_2026_11_16.md) |
 | Understand build/runtime/recovery boundaries | [Operations and reproducibility](docs/OPERATIONS_AND_REPRODUCIBILITY.md) |
 | Plan Kali and select tool packages | [Kali ARM64 integration](docs/KALI_ARM64_INTEGRATION.md) and [profile manifest](manifests/kali-tool-profiles.json) |
+| Build the AI briefing and persistent storage | [Companion briefing and storage](docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md) |
 | Choose current work | [Roadmap](docs/ROADMAP.md) and [GitHub issue map](docs/ISSUE_STATUS_2026_11_16.md) |
 | Review historical reverse engineering | [Driver worklog](docs/DRIVER_WORKLOG.md), dated reports and [historical README](docs/history/README_BEFORE_2026_11_16_REFRESH.md) |
 
@@ -21,7 +22,7 @@ A [complete documentation index](docs/INDEX.md) links current guides and the ret
 
 The goal is a usable handheld cyberdeck, beyond successful hardware detection. An operator should be able to open a local terminal, enter a command with an on-screen keyboard, launch a selected tool against an explicit lab target, stop a job and review its private output directly on the phone. A Bluetooth keyboard is optional; no keyboard/mouse is currently at hand, so genuine HID tests are deferred rather than silently passed.
 
-The original fullscreen cyberpunk/dashboard direction remains in scope. Pinned projects/notes and optional personal briefings may later use authenticated companion services. They are future product workflows, separate from the already demonstrated framebuffer UI. No mail/calendar/personal-data integration is claimed by this repository's current hardware results.
+The original cyberpunk/dashboard direction now includes **two mandatory product workflows**: a server-side AI briefing of email, calendar, authorized WhatsApp messaging and selected projects, and reliable writable persistent storage. On 16 November the Dell generated an AI briefing from connected Gmail/Calendar and delivered a reduced report over key-only USB SSH to a live **TODAY** tab on the phone; the WhatsApp reader was inactive and completeness remains pending. A separate 64 MiB Dell-backed NBD/ext4 laboratory disk passed physical phone read/write and host readback. Neither result establishes standalone persistent internal storage. [Exact scope and remaining acceptance gates](docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md).
 
 The Dell serves as build/recovery workstation, controlled Bluetooth/network test peer and optional heavy-workload companion. Native Wi-Fi now provides actual phone radio networking; Dell-assisted execution and USB-forwarded Internet must remain labeled separately from phone-local operation.
 
@@ -31,9 +32,9 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 |---|---|---|
 | Boot chain | checkm8 → PongoOS → m1n1 → Linux | Physical RAM boot PASS; persistent installation unqualified |
 | Running kernel | 7.3.0-rc1-n71-batt2-g68aadac820d0-dirty, AArch64 | Specific tested build; kernel presence does not qualify other images |
-| Display/UI | Native dashboard, 38 × 14 ASCII PTY console and on-screen keyboard running on 750 × 1334 fbdev | Native execution/readback PASS; new UI human touch typing and optical acceptance pending |
+| Display/UI | Native five-tab dashboard with TODAY briefing, 38 × 14 ASCII PTY and on-screen keyboard on 750 × 1334 fbdev | New UI ARM64 selftest and live-process activation PASS; owner optical/manual-touch acceptance pending |
 | Touch | Automatic Z2 initialization and real single/two-finger EVDEV events | Functional PASS; edge/latency/endurance/resume open |
-| USB networking | NCM recovery link and interactive shell | Working; key-only SSH migration still open |
+| USB networking and SSH | NCM recovery link and key-only Dropbear on USB address | Authenticated current-session SSH/Telnet cutover PASS; fresh-boot recovery still open |
 | Wi-Fi transport | Real BCM4350C5 PCIe 14e4:43a3, brcmfmac binding | Managed native runtime PASS |
 | Wi-Fi networking | Scan, WPA2, DHCP, native route/DNS, Internet and checked 1 MiB transfer | PASS at 2412 MHz; 5 GHz/reboot/resume/endurance open |
 | Bluetooth transport | BCM UART HCI, genuine private patchram build 0825 | Enabled with zero observed transport errors |
@@ -42,7 +43,9 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 | Battery/charging | Gauge telemetry and positive net charge using guarded USB input lease | Monitored charging PASS; autonomous/full-charge policy open |
 | Kali ARM64 userspace | Curated package profiles and integration gates defined | Planned, not built or physically qualified here |
 | Touch terminal/jobs | Real local PTY/keyboard dispatch selftest passed on phone; Home/System/Tools views running | Manual typing, full VT/scrollback and Kali job integration remain open |
-| Internal storage/baseband | Outside the current experiments | No NAND installation or telephony claim |
+| Remote experimental storage | Dell-backed 64 MiB ext4 on /dev/nbd0 via USB | Read-only and read/write mount, synced file and host readback PASS; detached; not standalone or suitable for private data |
+| Internal Apple storage/baseband | Not enumerated as mass storage in current kernel | No internal NVMe/NAND read-write, APFS or telephony claim |
+| AI companion briefing | Gmail/Calendar AI snapshot delivered via pinned USB SSH to live TODAY UI | Reduced JSON/text push PASS; cached data; WhatsApp ingestion and owner finger-UI acceptance incomplete |
 | S8003 / N71m | No compatible physical device available | All hardware results NOT TESTED |
 
 The machine-readable [test matrix](manifests/test-matrix.json) covers established hardware acceptance tasks. The [Kali profile manifest](manifests/kali-tool-profiles.json) is a proposed package allowlist, not an installation/version lockfile.

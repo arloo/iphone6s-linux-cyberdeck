@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "partial",
+  "test_id": "ai_companion_briefing_phone_push",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md",
+  "summary": "Server AI briefing snapshot from connected Gmail and Calendar was reduced, flagged as cached, sent through pinned USB SSH to private phone JSON/text and rendered by a new running native TODAY UI. WhatsApp source was unavailable and direct finger interaction remains pending."
+}

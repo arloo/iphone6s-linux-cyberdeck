@@ -22,7 +22,7 @@ The Dell is the currently available controlled Bluetooth peer. Keyboard/mouse HI
 
 ## Remaining qualification
 
-- Authenticated USB-bound SSH and closure of unauthenticated Telnet before broader use: [hardening plan](REMOTE_SHELL_HARDENING.md).
+- Authenticated key-only SSH and Telnet closure **passed in the current RAM session**; fresh-boot recovery and host-key continuity are pending: [physical cutover](N71_USB_SSH_CUTOVER_2026_11_16.md).
 - Touch edge accuracy, latency, stuck-contact checks and repeated-boot endurance.
 - Longer concurrent Wi-Fi/Bluetooth traffic, 5 GHz association, reconnect/recovery and idle behavior.
 - Power management: suspend/resume and sustained charging/full-charge behavior. The current charging lease expires after one hour.
@@ -45,8 +45,8 @@ The target remains the handheld cyberdeck described in [product architecture](CY
 
 The Kali environment retains the tested N71 kernel. Package installation, monitor mode, injection, USB host accessories and HID gadget capability have distinct prerequisites and must never be inferred from each other. See [Kali gates](KALI_ARM64_INTEGRATION.md) and [proposed package profiles](../manifests/kali-tool-profiles.json).
 
-The original touch/Wi-Fi/Bluetooth issues [#1–#3](ISSUE_STATUS_2026_11_16.md) now track remaining qualification, with completed bring-up explicitly checked. Optional projects/notes/briefing integrations remain later companion/UI work after the local console is usable.
+The original touch/Wi-Fi/Bluetooth issues [#1–#3](ISSUE_STATUS_2026_11_16.md) now track remaining qualification, with completed bring-up explicitly checked. **Server-side AI briefings (mail/calendar/authorized messaging), a touch TODAY view and standalone writable internal data storage are mandatory product requirements**, not optional cosmetic integrations. [Detailed current acceptance and storage findings](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md).
 
 ## Current-session progress after the product review
 
-Startup idempotence and controlled recovery of four userspace daemons now pass. The native dashboard/PTY/on-screen keyboard runs on the phone, with native selftest and framebuffer-readback checks; real finger typing remains an acceptance task. A separate integrated RAM candidate is built and pinned, not booted. Display reduction and a short resource/network observation are recorded in [session evidence](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md). No Kali, SSH cutover, endurance or suspend qualification is implied.
+Startup idempotence and controlled recovery of four userspace daemons now pass. The native dashboard/PTY/on-screen keyboard runs on the phone, with native selftest and framebuffer-readback checks; real finger typing remains an acceptance task. A separate integrated RAM candidate is built and pinned, not booted. Display reduction and a short resource/network observation are recorded in [session evidence](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md). Kali, endurance, suspend and **fresh-boot** SSH recovery remain unqualified. Subsequent current-session SSH cutover, native TODAY briefing and Dell-backed ext4 NBD laboratory read/write have since passed; see [companion/storage scope](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md).

@@ -6,7 +6,7 @@ Reviewed 2026-11-16. This document defines the intended product and separates it
 
 Turn the iPhone 6s N71 into a pocket Linux cyberdeck: a touch-operated local console for system diagnostics, network assessment, Bluetooth work and selected Kali ARM64 security tools. The Dell remains the build/recovery workstation and an optional companion for expensive jobs. Native Wi-Fi should carry ordinary network traffic without relying on USB forwarding.
 
-The initial project also envisaged a fullscreen cyberpunk interface, pinned projects/notes and an optional personal briefing dashboard backed by companion services. These remain part of the wider direction. They do not replace the native Linux console and are not implemented merely because the framebuffer demo displays a cyberdeck screen. Mail/calendar or other private integrations require their own authenticated connectors and acceptance tests; no such account data belongs in the public repository.
+The original project also requires a fullscreen cyberpunk interface, pinned projects/notes, **server-side AI analysis of authorized email/calendar/WhatsApp messages**, secure delivery of a morning briefing, and **independent writable persistent storage**. The live N71 TODAY screen now consumes a reduced briefing pushed over pinned USB SSH; source coverage and autonomous delivery remain incomplete. The Dell-backed NBD/ext4 lab has passed physical read/write, but internal iPhone flash is not enumerated. [Current companion and storage requirements](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md).
 
 ## Product layers and implementation status
 
@@ -18,7 +18,8 @@ The initial project also envisaged a fullscreen cyberpunk interface, pinned proj
 | Connectivity services | Managed brcmfmac, WPA, DHCP/DNS, private BlueZ/D-Bus | Current-session startup/idempotence and four-daemon recovery passed | New integrated RAM boot qualification |
 | Kali ARM64 environment | Curated command-line tools and isolated dependency tree | Planned; no on-phone Kali smoke test | Signed package manifest, ARM64 ABI check, measured resources and controlled tool tests |
 | Cyberdeck shell/UI | Touch launcher, terminal, keyboard, jobs/status and private results | Native dashboard/ASCII PTY/on-screen keyboard running; native dispatch selftest passed | End-to-end touch-only command execution and result review |
-| Optional companion services | Heavy analysis, private project/briefing integrations | Design direction | Explicit service contracts, authentication and offline behavior |
+| AI companion briefing | Dell Gmail/Calendar reader and API AI output pushed over pinned USB SSH to native TODAY tab | Actual reduced briefing push and app process pass; WhatsApp watcher inactive | Source-complete messaging, scheduled delivery, finger UI review and fresh-boot recovery |
+| Persistent storage | Writable RAM root; 64 MiB Dell-backed ext4 NBD USB lab passed phone write/host readback | Hardware lab only, not internal iPhone storage | Safe, independent, encrypted on-device /data, read/write and reboot persistence |
 
 ## Runtime topology
 
@@ -60,7 +61,7 @@ Native phone networking must remain independently testable. Label every result a
 
 The current system lives in volatile RAM. Credentials, Bluetooth bonds and installed files can disappear on reboot unless privately included in the next candidate. There is no qualified persistent filesystem and no permission implied to experiment with internal iOS storage.
 
-Initial packaging should preserve a small recovery image, produce an operator-private connectivity candidate, and load a measured Kali subset only when memory permits. A host-served root filesystem or a separately qualified external storage path may be explored later; neither is already operational. Larger images also need independent Pongo transfer-size/time qualification.
+Initial packaging should preserve a small recovery image, produce an operator-private connectivity candidate, and load a measured Kali subset only when memory permits. A dedicated host-served **NBD data image** has physically passed a bounded ext4 read/write experiment over USB, without touching internal Apple storage. It is not a tested production root filesystem or a standalone persistent /data volume. Larger images also need independent Pongo transfer-size/time qualification.
 
 Keep private captures, targets, network keys, pairing keys, machine identifiers, firmware and calibration out of Git. Pairing keys and authorized-key provisioning are state, not redistributable examples. Export logs explicitly; do not automatically publish job results.
 
@@ -82,7 +83,7 @@ Hardware bring-up is the foundation of this gate. Its completion does not by its
 - Bluetooth audio and LE application profiles until individually tested.
 - Wi-Fi monitor mode, injection, AP mode, USB host peripherals and USB HID gadget functions until kernel/firmware and physical tests qualify each feature.
 - Persistent standalone installation, boot without the present checkm8 workflow, telephony, cameras, GPU acceleration and broad S8003 support.
-- Personal dashboard integrations until the local console and security boundary are usable.
+- Comprehensive WhatsApp chat capture and Wi-Fi briefing push until explicit source-coverage and security gates pass; the briefing feature itself is **not deferred**.
 
 See [current hardware](HARDWARE_STATUS.md), [engineering state](PROJECT_STATE_2026_11_16.md), [roadmap](ROADMAP.md) and [issue alignment](ISSUE_STATUS_2026_11_16.md).
 

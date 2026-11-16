@@ -34,3 +34,8 @@ test:
 build/n71-bt-l2cap-echo-aarch64: tools/n71-bt-l2cap-echo.c
 	mkdir -p build
 	$(CC) $(CFLAGS) -I$(BLUEZ_HEADERS) -o $@ $<
+
+# USB-only NBD laboratory bridge: never point this at an Apple device/partition.
+build/n71-nbd-client-aarch64: experimental/storage/n71-nbd-client.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -Werror -o $@ $<

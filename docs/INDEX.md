@@ -4,6 +4,8 @@ Reviewed 2026-11-16. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
+- [AI companion briefing, WhatsApp reader goal and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)
+
 - [Typography 0.4: readable TrueType alpha glyphs](N71_TYPOGRAPHY_04_2026_11_16.md)
 
 - [Keyboard 0.3: larger portrait keys and layout](N71_KEYBOARD_03_2026_11_16.md)
