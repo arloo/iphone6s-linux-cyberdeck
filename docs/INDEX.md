@@ -4,7 +4,8 @@ Reviewed 2026-11-16. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
-- [AI companion briefing, WhatsApp reader goal and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)
+- [AI companion briefing and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)
+- [Personal WhatsApp On-Device connector and private contact exclusions](WHATSAPP_PERSONAL_COMPANION_2026_11_16.md)
 
 - [Typography 0.4: readable TrueType alpha glyphs](N71_TYPOGRAPHY_04_2026_11_16.md)
 

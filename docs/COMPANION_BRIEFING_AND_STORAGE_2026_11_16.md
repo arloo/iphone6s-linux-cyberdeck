@@ -8,7 +8,7 @@ On weekdays at **08:45 Europe/Rome**, and on explicit refresh, a trusted Linux c
 
 1. **Email:** authenticated, read-only Gmail recent-inbox snapshot, sender, subject, time and bounded content, with thread/follow-up provenance.
 2. **Calendar:** authorized Google Calendar events for the next seven days; display agenda, conflicts, travel/context and upcoming obligations. Other providers require explicit adapters.
-3. **Messaging:** an explicitly authorized WhatsApp Web companion reader. Today's KDE notification watcher provides only previews when enabled. It is not a full chat reader, does not access silenced chats or past history and is currently **inactive**. A future session-bound, read-only UI reader or explicit user-provided chat export must report actual coverage and freshness, deduplicate source events and never claim to have read inaccessible conversations.
+3. **Messaging:** the operator uses **personal WhatsApp Messenger**, not Business. Meta offers no official personal-chat inbox API. The preferred future companion connector is **Beeper Desktop On-Device** on the Dell, using its documented LOCAL read-only chat/message APIs, with explicit owner-approved linked-device setup. Our backend now has an offline-tested, **disabled-by-default** Beeper reader and a private per-contact/group exclusion policy; no account is connected. The older KDE notification watcher is incomplete and inactive. No daily export/import workflow will be implemented. See [personal WhatsApp source and exclusion plan](WHATSAPP_PERSONAL_COMPANION_2026_11_16.md).
 4. **Projects, notes and existing tasks:** explicit allowlisted inputs, with per-item source attribution.
 
 The **companion** performs filtering, bounded data preparation and AI analysis using the server-side OpenAI Responses API (`store:false` currently used by the pre-existing private DECK backend). The output is structured into a prioritized overview, actions, calendar context and suggested tasks, each with provenance, timestamps and source-completeness indicators. Source text is untrusted, never commands. No email sending, message replying or calendar edits happen without a separate explicit approval.
@@ -21,7 +21,7 @@ An owner-private integrated RAM payload including connectivity, the new TODAY UI
 
 ### Remaining briefing acceptance gates
 
-- Build a bounded, authorization-based WhatsApp ingestion method and verify coverage (notification previews versus selected live threads versus imported history). Preserve source types and last-seen time.
+- Connect an authorized personal WhatsApp account to a separately installed **Beeper On-Device** client if approved. Use only documented local GET methods, apply exact local contact/group exclusions before model ingestion, and qualify the true indexed-history coverage. Do not claim an official Meta personal API or implement manual export/import.
 - Add conflict/deduplication review, explicit urgency/source confidence and unread/reply-needed analysis without inventing actions or due dates.
 - Run a scheduled **companion-side** refresh and push after 08:45; preserve an on-demand trigger; report last successful update and offline status.
 - Replace USB-only delivery with an independently authenticated, encrypted Wi-Fi path for untethered operation; rotate keys safely after each new RAM boot.
@@ -51,6 +51,6 @@ This demonstrates **read/write to remote Dell-backed storage**, not autonomous i
 
 1. Preserve current known-good USB SSH recovery and verified touch/WLAN/BT runtime.
 2. Finish native TODAY UI user acceptance and the supervised integrated RAM boot.
-3. Implement a reliable, source-complete-enough server-side WhatsApp reader and scheduled, encrypted AI briefing updates.
+3. Finish Beeper On-Device account onboarding, verify strict contact/group exclusions, and connect the optional local reader to scheduled AI briefings without exposing raw conversations to the Cyberdeck.
 4. Extend isolated NBD proof into a guarded temporary workspace while developing and independently qualifying the internal storage controller; **do not** bridge the plaintext NBD service to WLAN.
 5. Qualify standalone persistent internal `/data`, encrypted private cache, Kali data and long-duration charge/power controls.
