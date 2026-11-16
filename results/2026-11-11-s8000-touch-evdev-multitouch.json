@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "touch_evdev_multitouch",
+  "observed_on": "2026-11-11",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md",
+  "summary": "Automatic Z2 initialization and real simultaneous two-finger EVDEV input; no endurance claim."
+}

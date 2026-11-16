@@ -24,6 +24,28 @@ SECRET_PATTERN = re.compile(
 )
 
 
+FUNCTIONAL_EVIDENCE = {
+    "touch_evdev_multitouch": "docs/N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md",
+    "wifi_network": "docs/N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json",
+    "bluetooth_scan": "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
+    "bluetooth_pairing": "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
+}
+
+
+def require_functional_evidence(profile: dict, records: list[dict]) -> None:
+    """A calibration/build result alone cannot qualify functional hardware."""
+    for task, report in FUNCTIONAL_EVIDENCE.items():
+        if profile["hardware_results"][task] != "live_pass":
+            continue
+        assert report in profile["evidence"], f"missing functional report: {task}"
+        assert any(item.get("profile") == profile["id"]
+                   and item.get("test_id") == task
+                   and item.get("level") == "hardware"
+                   and item.get("result") == "live_pass"
+                   and item.get("evidence_report") == report
+                   for item in records), f"missing reviewed hardware result: {task}"
+
+
 def check() -> None:
     upstream = json.loads((ROOT / "manifests/upstreams.json").read_text())
     matrix = json.loads((ROOT / "manifests/test-matrix.json").read_text())
@@ -53,7 +75,6 @@ def check() -> None:
     assert not profiles["s8003-n71m"]["evidence"]
     s8000 = profiles["s8000-n71"]["hardware_results"]
     assert s8000["hbpp_strict_read"] == "live_pass"
-    assert s8000["touch_evdev_multitouch"] != "live_pass"
     assert s8000["calibration_ack_data"] == "live_pass"
     assert (ROOT / "results/2026-11-11-s8000-segmented-cal-ack.json").is_file()
     assert s8000["authenticated_remote_shell"] != "live_pass"
@@ -74,6 +95,10 @@ def check() -> None:
             "evidence_report", "summary"
         }
         assert item["kernel_source_commit"] == upstream["sources"]["linux"]["commit"]
+
+    require_functional_evidence(profiles["s8000-n71"], [
+        json.loads(path.read_text()) for path in (ROOT / "results").glob("*.json")
+    ])
 
     # The workflow is source-controlled even before GitHub grants the
     # separate workflow-write permission needed to activate Actions.

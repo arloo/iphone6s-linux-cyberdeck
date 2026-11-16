@@ -9,6 +9,7 @@ Verified on the N71 Samsung S8000:
 - BlueZ reported Paired and Bonded.
 - A controlled L2CAP echo at PSM 0x1001 exchanged 256 packets of 256 bytes with exact payload checks, totaling 65,536 bytes.
 - Both endpoints required BT_SECURITY_MEDIUM; the server reported level 2 and verified the expected peer.
+- The controlled Dell test passed twice in the same RAM session, each with a 65,536-byte verified echo. No daemon restart or reboot occurred between the trials.
 - HCI transport errors remained zero. Native Wi-Fi stayed WPA_COMPLETED and Internet traffic succeeded during the Bluetooth test.
 - Temporary Dell discoverability was restored after the test. Addresses, device scan logs and pairing keys remain private.
 

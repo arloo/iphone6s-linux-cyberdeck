@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_reviewed": "2026-11-11",
+  "last_reviewed": "2026-11-16",
   "upstream_kernel_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
   "status_legend": {
     "live_pass": "Observed on physical hardware with sanitized evidence",
@@ -21,10 +21,10 @@
         "touch_analog_rollback": "live_pass",
         "hbpp_strict_read": "live_pass",
         "calibration_ack_data": "live_pass",
-        "touch_evdev_multitouch": "blocked",
-        "wifi_network": "blocked",
-        "bluetooth_scan": "partial",
-        "bluetooth_pairing": "blocked",
+        "touch_evdev_multitouch": "live_pass",
+        "wifi_network": "live_pass",
+        "bluetooth_scan": "live_pass",
+        "bluetooth_pairing": "live_pass",
         "authenticated_remote_shell": "blocked"
       },
       "evidence": [
@@ -41,8 +41,18 @@
         "docs/N71_TYPE1_FIRST_PHYSICAL_TOUCH_SUCCESS_2026_11_11.md",
         "docs/N71_SIMULTANEOUS_TWO_FINGER_EVDEV_PASS_2026_11_11.md",
         "docs/N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md",
-        "docs/N71_LIVE_FBDEV_CYBERDECK_POC_2026_11_11.md"
-      ]
+        "docs/N71_LIVE_FBDEV_CYBERDECK_POC_2026_11_11.md",
+        "docs/N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json",
+        "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
+        "docs/N71_BLUETOOTH_RUNTIME_2026_11_16.md",
+        "docs/PROJECT_STATE_2026_11_16.md"
+      ],
+      "qualification_scope": {
+        "touch_evdev_multitouch": "Physical single and simultaneous two-finger EVDEV; endurance/edge/latency unqualified",
+        "wifi_network": "Current managed RAM session; 2.4 GHz WPA2/DHCP/DNS/Internet/1 MiB checked transfer; no reboot/suspend/5 GHz qualification",
+        "bluetooth_scan": "LE discovery and controlled classic Dell inquiry; no GATT profile claim",
+        "bluetooth_pairing": "Controlled Dell pairing and bonding, encrypted L2CAP echo; no HID/audio or reboot persistence claim"
+      }
     },
     {
       "id": "s8003-n71m",

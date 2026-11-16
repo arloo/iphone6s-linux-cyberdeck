@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "bluetooth_scan",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
+  "summary": "LE discovery saw 12 devices; classic discovery found the controlled Dell peer. No GATT application claim."
+}

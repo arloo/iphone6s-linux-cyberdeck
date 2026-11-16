@@ -1,5 +1,12 @@
 # Apple A9 hardware driver worklog
 
+## 2026-11-16 — native connectivity milestone
+
+Native BCM4350C5 Wi-Fi passed WPA2/DHCP/DNS/Internet and a verified 1 MiB transfer. Bluetooth passed LE discovery, controlled Dell pairing/bonding and a 65,536-byte encrypted L2CAP echo while Wi-Fi remained connected. Genuine automatic Z2 single/two-finger touch had already passed. Charging is monitored through a finite 300 mA input lease.
+
+See [current assessment](PROJECT_STATE_2026_11_16.md) and [hardware matrix](HARDWARE_STATUS.md). Keyboard/mouse and audio profiles, new-boot restoration, suspend/resume and endurance remain open. Older entries below are historical observations, not current blockers.
+
+
 Updated November 9, 2026. Device: iPhone 6s **Samsung A9 / S8000 / N71**. Do not extrapolate these runtime observations to TSMC/S8003.
 
 ## 1. Bluetooth: HCI control plane already responds

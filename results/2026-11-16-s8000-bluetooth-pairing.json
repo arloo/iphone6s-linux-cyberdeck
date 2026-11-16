@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "bluetooth_pairing",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json",
+  "summary": "Controlled Dell pairing and bonding with 65,536-byte encrypted L2CAP echo, repeated in the same RAM session; no HID/audio/reboot persistence claim."
+}

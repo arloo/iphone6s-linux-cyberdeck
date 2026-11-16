@@ -1,40 +1,32 @@
-# Hardware-first roadmap — S8000 active, S8003 deferred
+# Hardware-first roadmap — reviewed 2026-11-16
 
-**Target for current experiments: N71 / Samsung A9 / S8000 only.** The N71m/TSMC A9/S8003 variant is expressly **out of active experimental scope** until a compatible physical device is available. Its test matrix remains entirely `not_tested`. Upstream source compatibility and references may remain in the build manifest; this is not authorization to run S8003-specific hardware tests or claim working peripherals.
+Active target: **N71 / Samsung S8000**. N71m / S8003 remains deferred until compatible hardware is available.
 
-**Recovery resolved and calibration milestone, 2026-11-11:** The N71/S8000 was physically recovered to known-good RAM-only Linux #5, with hardware baselines and strict HBPP register reads verified. The previous 1040-byte **single-transfer** calibration USB-loss incident has **no proven root cause**. The new **single-message segmented 256+256+256+256+16** private calibration upload obtained genuine **ACK_DATA=0x4bc1 on poll 0**, while the USB gadget remained healthy (40/40 ICMP). See [live calibrated ACK report](N71_CALIBRATION_ACK_DATA_LIVE_SUCCESS_2026_11_11.md). This is a controller-acknowledgment milestone, **not** touch firmware boot or working EVDEV input.
+## Achieved on physical N71
 
-## Milestone T — first complete Linux touch contact
+- RAM boot, framebuffer UI and USB recovery access.
+- Automatic Z2 touchscreen initialization, genuine single-contact and simultaneous two-finger EVDEV input.
+- Native BCM4350C5 Wi-Fi: PCIe, translated DART DMA, Linux MSI, brcmfmac, WPA2, DHCP, DNS, Internet and checked 1 MiB transfer.
+- Managed Wi-Fi runtime with verified load/unbind/unload and complete power-domain cleanup.
+- Bluetooth LE/classic discovery, controlled Dell pairing/bonding and 65,536-byte encrypted L2CAP transfer with Wi-Fi active.
+- Battery telemetry and monitored charging with a finite guarded USB input lease.
 
-- **T0 — LIVE PASS:** S8000 framebuffer and SPI2 host, reference clock and Chestnut analog rail independently verified with exact rollback.
-- **T1 — LIVE PASS:** Integrated touch power/reset/clock, strict HBPP READ_DATA/checksum validation and version 0x434d15c1 reproduced on the physical S8000.
-- **T2a — LIVE PASS (2026-11-11):** Single supervised NOP-prefixed 1040-byte *private* calibration upload, five SPI transfers under one message, received **ACK_DATA=0x4bc1** on the first poll. Independent watchdog and rollback PASS. This is not proof that the production driver can repeat the full boot sequence.
-- **T2b — NEXT / BLOCKED:** After accepted calibration, load the privately supplied matching Z2 firmware through bounded SPI transfers, program the controller startup sequence and register real Linux touchscreen input. Preserve independent recovery, bounded watchdog and private firmware segregation. **No EVDEV touchscreen has been observed.**
-- **T3 — FIRST VERTICAL RELEASE GATE:** Independently capture one real 750×1334 touch contact with bounded X/Y coordinates, SYN_REPORT, and tracking ID release. No synthetic input counts.
-- **T4:** Stable two-finger simultaneous contacts, tracked drag, edge/corner accuracy, and no stuck touches.
-- **T5:** Stability across repeated RAM-only boots, idle and blank/unblank cycles.
+## Next: make the verified session reproducible after boot
 
-See [touch acceptance criteria](TOUCH_EVDEV_ACCEPTANCE.md) and [sanitized live HBPP result](N71_HBPP_STATUS_ONLY_LIVE_SUCCESS.md).
+1. Assemble an owner-private RAM candidate containing the pinned Wi-Fi runtime, BlueZ/D-Bus, credentials and existing pairing state. Preserve the known-good recovery image and USB access.
+2. Validate startup idempotence and service recovery in the current session, then inspect the offline image/component differences.
+3. Qualify a supervised new RAM boot: touch, USB, charging, automatic Wi-Fi association/DHCP and restored Bluetooth controller/bond state. Startup source alone does not satisfy this gate.
+4. Repeat the encrypted Dell transfer after service restart and after a new boot, with native Wi-Fi traffic in parallel.
 
-## Milestone W — connected S8000 Wi-Fi
+The Dell is the currently available controlled Bluetooth peer. Keyboard/mouse HID tests are deferred until a real peripheral is available. A successful Dell L2CAP test must not be relabeled as a HID or audio result.
 
-- Existing BCM4350 Wi-Fi device remains blocked by absent S8000-specific Apple PCIe host enumeration and a working Wi-Fi driver stack.
-- Bring up **only PCIe port 1** for Wi-Fi; never experiment with the storage or baseband ports.
-- Confirm the actual WLAN interface and bounded scan; then join an owned test network, obtain a valid IP address and sustain traffic. Firmware and calibration stay private.
+## Remaining qualification
 
-## Milestone B — usable Bluetooth
+- Authenticated USB-bound SSH and closure of unauthenticated Telnet before broader use: [hardening plan](REMOTE_SHELL_HARDENING.md).
+- Touch edge accuracy, latency, stuck-contact checks and repeated-boot endurance.
+- Longer concurrent Wi-Fi/Bluetooth traffic, 5 GHz association, reconnect/recovery and idle behavior.
+- Power management: suspend/resume and sustained charging/full-charge behavior. The current charging lease expires after one hour.
+- HID input, A2DP playback and LE application profiles when appropriate devices are available.
+- GitHub Actions activation remains separate from local tests; the template is prepared, no remote CI success claimed.
 
-- Passive BLE RF reception and vendor firmware loading were observed in earlier S8000 experiments (25 advertising reports in 12 seconds); they do **not** prove pairing on the current kernel.
-- Bring up board-matched PMIC GPIO/UART and then demonstrate controlled discovery, pairing, reconnection and stable transfer with an authorized peripheral.
-
-## Security gate — before use outside the lab
-
-- Replace unauthenticated root Telnet with a USB-bound, key-authenticated SSH service. Demonstrate password refusal and TCP/23 closure before exposing or bridging new network interfaces. See [remote shell hardening](REMOTE_SHELL_HARDENING.md).
-
-## Reproducibility and CI
-
-- Keep pinned source manifests, local RAM-only image packaging, offline protocol regression, cross-compiled ARM64 modules, and **human-reviewed** hardware evidence separate.
-- GitHub Actions [workflow template](../ci/verify.yml) is published but not activated remotely until GitHub grants workflow-write permission; do not label local tests as completed cloud CI runs.
-- Current S8000 live kernel is RAM-booted `7.3.0-rc1-g68aadac820d0-dirty` build #5. No iOS NAND writes. The touch firmware and per-device calibration never enter Git.
-
-**S8003 resumption trigger:** an actual compatible S8003/N71m device becomes available. At that point begin with read-only identification and separate supervised RAM-boot gates; never transfer S8000 test results to S8003.
+See [current state](PROJECT_STATE_2026_11_16.md), [hardware matrix](HARDWARE_STATUS.md), [machine-readable results](../manifests/test-matrix.json) and the [historical roadmap](history/ROADMAP_BEFORE_2026_11_16_REFRESH.md).

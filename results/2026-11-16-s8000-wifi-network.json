@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "profile": "s8000-n71",
+  "level": "hardware",
+  "result": "live_pass",
+  "test_id": "wifi_network",
+  "observed_on": "2026-11-16",
+  "kernel_source_commit": "68aadac820d01d0cd4efbd1fefd4c45f23be0a51",
+  "evidence_report": "docs/N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json",
+  "summary": "Native BCM4350C5 brcmfmac WPA2/DHCP/DNS/Internet and SHA-256-verified 1 MiB WLAN transfer in the current managed RAM session."
+}

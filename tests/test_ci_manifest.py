@@ -87,7 +87,22 @@ class SourcePinAndCiTests(unittest.TestCase):
         s8000 = next(p for p in matrix["profiles"] if p["id"] == "s8000-n71")
         state = s8000["hardware_results"]
         self.assertEqual(state["hbpp_strict_read"], "live_pass")
-        self.assertNotEqual(state["touch_evdev_multitouch"], "live_pass")
+        # Genuine multitouch now has independent physical evidence, not just ACK.
+        self.assertEqual(state["touch_evdev_multitouch"], "live_pass")
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("state_validator", ROOT / "scripts/validate_project.py")
+        validator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(validator)
+        records = [json.loads(p.read_text()) for p in (ROOT / "results").glob("*.json")]
+        validator.require_functional_evidence(s8000, records)
+        for task in validator.FUNCTIONAL_EVIDENCE:
+            with self.subTest(task=task):
+                without = [item for item in records if item.get("test_id") != task]
+                with self.assertRaisesRegex(AssertionError, "missing reviewed hardware result"):
+                    validator.require_functional_evidence(s8000, without)
+        synthetic_only = [dict(item, level="offline") for item in records]
+        with self.assertRaisesRegex(AssertionError, "missing reviewed hardware result"):
+            validator.require_functional_evidence(s8000, synthetic_only)
         self.assertEqual(state["calibration_ack_data"], "live_pass")
 
     def test_workflow_separates_three_levels(self):
