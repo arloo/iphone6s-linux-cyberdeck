@@ -5,3 +5,4 @@ obj-m += n71_s3e_p0_iommu_ro.o
 obj-m += n71_s3e_p0_mode_ro.o
 obj-m += n71_s3e_p0_nvme_mode.o
 obj-m += n71_s3e_p0_rootstart.o
+obj-m += n71_s3e_dart_compare_ro.o

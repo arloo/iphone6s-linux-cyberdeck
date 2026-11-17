@@ -51,6 +51,14 @@ change the reset lines.
 
 ### Follow-up physical S8000 storage MMIO results
 
+The native read-only comparison module `n71_s3e_dart_compare_ro.c` has
+also been built for the actual booted kernel and physically tested. It
+confirmed active Wi-Fi DART1 command `0x00000102` and packed TCR
+`0x00000080` while storage DART0, NVMMU0 and port0 each returned
+`0xffffffff`. The comparator never changes PMGR power or any MMIO
+register. Details and original Apple callback provenance:
+[storage force-active diagnostics](../../docs/N71_S8000_STORAGE_FORCE_ACTIVE_DART0_DIAG_2026_11_17.md).
+
 The following additional native modules have been **executed on the iPhone**:
 
 - `n71_s3e_p0_mode_ro.c`: root common mode `+0x14 = 0x101`,
