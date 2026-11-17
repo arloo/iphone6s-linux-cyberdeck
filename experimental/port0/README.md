@@ -203,6 +203,24 @@ recovery access and an existing recoverable backup. They have no
 permanent install process and do not modify flash. Any module's
 presence in this folder does not imply storage-device support.
 
+## Combined physically asserted S3E PERST + PCIe link0 (verified)
+
+The `n71_s3e_p0_asserted_reset_rootstart.c` module was compiled
+for the live N71 ARM64 kernel, SHA-256 verified and executed once on
+the real iPhone 6s/S8000. It kept NAND GPIO160 **OUTPUT LOW** while
+the genuine `pcie_link0` PMGR domain was powered for 25 ms and
+stock S8000 NVMe mode / port0 ID3 and ID2 bits were temporarily
+enabled. All requested writes acknowledged; all root registers,
+power domain and GPIO160 returned to their original exact values
+before the module was unloaded. GPIO160 was not retained in
+quarantine, and the native Wi-Fi/USB remained available.
+
+**Unresolved:** DART0, NVMMU0 and port0 MMIO still read
+`0xffffffff`. Root port0 link was down, and no NAND block device
+was enumerated. Do not misrepresent this as functional NAND.
+
+[Full original-hardware test details](../../docs/N71_S8000_STORAGE_ASSERTED_PERST_COMBINED_ROOTSTART_2026_11_17.md).
+
 ## Next engineering milestone
 
 1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock
