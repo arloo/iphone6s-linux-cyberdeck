@@ -321,18 +321,25 @@ buffer was released after verification. Empty-root programming is not an
 end-to-end endpoint DMA fault test. The shared transaction code is
 `../port1/n71-dart-all-stream-owned-roots-trial.h`.
 
+## Internal S3E endpoint physically identified
+
+`endpoint_id_trial=1` adds a bounded release/reassert of GPIO160 inside
+active empty roots on all four DART0 streams. On the real iPhone it read
+**106b:2002**, command/status0x00100000 and class/revision0x01800211
+through temporary **bus2**, then restored routing, local0x80, reset,
+TTBRs, root controls and PMGR. The root bridge is106b:1003; the existing
+WLAN root106b:1004 stays on bus1. Native WLAN Internet ping passed after
+the trial. [Physical result and exact limits](../../docs/N71_S8000_S3E_2002_PHYSICAL_PCIE_ID_2026_11_17.md).
+
 ## Next engineering milestone
 
-1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock
-   Apple PCIe controller and S3E NVMe initialization code.
-2. Qualify DART0 and the S8000 `nvme-mmu0` DMA isolation, with
-   bounded fault paths and no request allowed outside approved buffers.
-3. Train PCIe port0 with deterministic rollback and identify
-   the physical `106b:2002` endpoint via **read-only PCI config access**.
-4. Build an S8000-compatible Apple NVMe controller transport and
-   enumerate *existing* namespaces read-only; only after the
-   full read-only block path and independent backups are qualified
-   may any writable Linux volume be considered.
+1. Qualify the S3E BAR and bridge memory aperture without enabling endpoint
+   bus mastering; read NVMe capability/version/controller-state registers.
+2. Implement S3E/NVMe MMU transport with Linux-owned queues and bounded
+   fault handling before any admin command or namespace data transfer.
+3. Register the storage PCIe path with its correct Linux driver and read
+   existing namespaces. A writable persistent volume requires a separately
+   qualified read path and an explicit storage layout.
 
 The generic NVMe PCI table in the tested Linux kernel recognizes
 Apple `106b:2001/2003/2005`, **not** `106b:2002`. Binding generic

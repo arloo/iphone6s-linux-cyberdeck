@@ -13,6 +13,7 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 - [N71/S8000 physically verified SN2400 500 mA input and stock port-local PCIe register 0x210](N71_S8000_SN2400_500MA_AND_PCIE_LOCAL0210_2026_11_17.md)
 - [Actual N71/S8000 DART and NVMe MMU Fact implementations and state-restoration limits](N71_S8000_DART_NVMMU_FACT_IMPLEMENTATIONS_2026_11_17.md)
 - [Physical port0 DART0/NVMe MMU MMIO breakthrough and corrected ID5 selector](N71_S8000_PORT0_DART_NVMMU_MMIO_BREAKTHROUGH_2026_11_17.md)
+- [Physical internal S3E 106b:2002 PCIe identification under all-stream empty DART0 roots](N71_S8000_S3E_2002_PHYSICAL_PCIE_ID_2026_11_17.md)
 - [S8000 storage: full original PHY 41/41 and port0-vs-WLAN local MMIO 0/16 differential](N71_S8000_PHY_41_AND_PORT0_MMIO_DIFFERENTIAL_2026_11_17.md)
 
 - [AI companion briefing and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)

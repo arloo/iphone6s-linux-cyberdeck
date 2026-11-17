@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * N71 S8000 storage port0: owner-supervised, one-shot 25ms PMGR power lease.
- *
- * When fully armed: assert S3E NAND GPIO160 reset as OUTPUT LOW,
- * temporarily enable the stock S8000 NVMe mode and port0-only PCIe
- * root bits, request genpd "pcie_link0" ON for 25 ms, then synchronously
- * restore every root register and PMGR domain BEFORE returning GPIO160
- * to its exact original INPUT LOW configuration. Never deassert PERST.
- * Optional dart0_owned_roots reuses the proven SID0 TTBR/TCR trial.
- * No NVMMU writes, NVMe commands, filesystem/NAND, iOS partition,
- * or DMA writes. No PCI endpoint rescan or PCIe configuration access.
- *
- * This uses of_genpd_add_device with the provider *node pointer*, because
- * the live S8000 DT does not assign a phandle to power-controller@80320.
- * No DT overlay is needed; no shared DT properties are altered.
+ * N71/S8000 owner-supervised storage port0 research pilot.
+ * Default modes keep NAND GPIO160 OUTPUT LOW while temporarily powering
+ * port0 and applying source-verified root controls. Optional DART0 modes
+ * program Linux-owned empty roots and restore the inherited TTBR state.
+ * Explicit endpoint_id_trial may release PERST only inside active empty
+ * roots on all four DART0 streams. It reads three endpoint config words
+ * through temporarily reserved bus2, then restores routing, reasserts
+ * reset and restores local0x80 before the DART guard can be removed.
+ * Root controls and PMGR return to baseline before restoring GPIO INPUT.
+ * Failed rollback retains tables, module, power consumer and GPIO claim.
+ * No NVMMU write, NVMe command, filesystem or NAND data operation.
  */
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -21,6 +18,8 @@
 #include <linux/slab.h>
 #include <linux/sizes.h>
 #include "../port1/n71-dart-all-stream-owned-roots-trial.h"
+#include "../port1/n71-port-local-trial.h"
+#include "n71_s3e_endpoint_cfg_ro.h"
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/init.h>
@@ -54,6 +53,8 @@
 #define DART0_PHYS 0x601008000ULL
 #define NVMMU0_PHYS 0x601004000ULL
 #define P0_PORT_PHYS 0x601000000ULL
+#define P0_ROOT_ECAM_PHYS 0x610000000ULL
+#define P0_EP_BUS2_ECAM_PHYS 0x610200000ULL
 #define S8000_PINCTRL_PHYS 0x20f100000ULL
 #define DWELL_MS 25U
 #define S8000_GPIO_CHIP "20f100000.pinctrl"
@@ -75,6 +76,12 @@ static bool assert_storage_reset;
 static bool stock_late_controls;
 static bool dart0_owned_roots;
 static bool dart0_all_streams;
+static bool observe_p0_config;
+static bool endpoint_id_trial;
+module_param(endpoint_id_trial, bool, 0400);
+MODULE_PARM_DESC(endpoint_id_trial, "bounded NAND PERST release/reassert inside all-stream DART0 empty roots; bus2 temporary endpoint config ID reads only");
+module_param(observe_p0_config, bool, 0400);
+MODULE_PARM_DESC(observe_p0_config, "six read-only root0 PCI config/local samples while all DART0 empty roots active and NAND reset asserted");
 module_param(dart0_all_streams, bool, 0400);
 MODULE_PARM_DESC(dart0_all_streams, "extend empty-root transaction to all four exclusive DART0 streams; requires dart0_owned_roots and asserted NAND reset");
 module_param(dart0_owned_roots, bool, 0400);
@@ -290,6 +297,7 @@ struct n71_storage_dart_context {
     void __iomem *pinctrl;
     int inner_rc;
     bool all_streams;
+    void __iomem *cfg,*local,*endpoint;
 };
 static unsigned int n71_storage_dart_read(void *ctx, unsigned int off)
 {
@@ -315,6 +323,143 @@ static int n71_storage_dart_perst(void *ctx)
 }
 static void n71_storage_dart_tick(void *ctx) { udelay(1); }
 static void n71_storage_dart_delay(void *ctx) { udelay(100); }
+static int n71_storage_full_dart_guard(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    unsigned int j;
+    if (!m->all_streams || readl((u8 __iomem *)m->dart+0x0c)!=0x80808080U ||
+        readl(m->dart)!=0xf02U ||
+        (readl((u8 __iomem *)m->dart+0x10)&BIT(31))) return 0;
+    for (j=0;j<16;j++)
+        if (readl((u8 __iomem *)m->dart+0x40+4*j)!=n71_tables.word[j]) return 0;
+    return 1;
+}
+static int n71_storage_reset_level(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    u32 v=readl((u8 __iomem *)m->pinctrl+S8000_GPIO160_OFFSET);
+    if (!n71_reset_claimed || !n71_reset_pin ||
+        gpiod_get_direction(n71_reset_pin)!=0) return -1;
+    return v==S8000_GPIO160_ASSERTED_LOW ? 0 :
+           v==(S8000_GPIO160_ASSERTED_LOW|1U) ? 1 : -1;
+}
+static void n71_storage_set_reset(void *ctx,int high)
+{
+    if (high && (!endpoint_id_trial || !n71_storage_full_dart_guard(ctx))) return;
+    gpiod_set_value_cansleep(n71_reset_pin,high);
+    pr_info("n71-s3e-p0: NAND_PERST_BOUNDED_TRIAL requested=%d observed=%d\n",
+            high,n71_storage_reset_level(ctx));
+}
+static unsigned int n71_storage_local_read(void *ctx,unsigned int off)
+{
+    struct n71_storage_dart_context *m=ctx;
+    return readl((u8 __iomem *)m->local+off);
+}
+static void n71_storage_local_write(void *ctx,unsigned int off,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    if (WARN_ON_ONCE(off!=0x80 || val>1)) return;
+    writel(val,(u8 __iomem *)m->local+off);
+}
+static void n71_storage_link_tick(void *ctx) {msleep(4);}
+static int n71_storage_endpoint_ready(void *ctx)
+{
+    return n71_storage_reset_level(ctx)==1 && n71_storage_full_dart_guard(ctx) &&
+        n71_storage_local_read(ctx,0x80)==1 &&
+        (n71_storage_local_read(ctx,0x88)&1);
+}
+static unsigned int n71_storage_root_read(void *ctx,unsigned int off)
+{
+    struct n71_storage_dart_context *m=ctx;
+    return readl((u8 __iomem *)m->cfg+off);
+}
+static void n71_storage_root_bus_write(void *ctx,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    writel(val,(u8 __iomem *)m->cfg+0x18);
+}
+static unsigned int n71_storage_endpoint_read(void *ctx,unsigned int off)
+{
+    struct n71_storage_dart_context *m=ctx;
+    return readl((u8 __iomem *)m->endpoint+off);
+}
+static int n71_storage_endpoint_identify(void *ctx)
+{
+    const struct n71_s3e_cfg_ops o={
+        .ready=n71_storage_endpoint_ready,.root_read=n71_storage_root_read,
+        .root_bus_write=n71_storage_root_bus_write,
+        .endpoint_read=n71_storage_endpoint_read,
+    };
+    struct n71_s3e_cfg_result r;
+    int rc=n71_s3e_endpoint_cfg_trial(&o,ctx,&r);
+    pr_info("n71-s3e-p0: S3E_ENDPOINT_CFG_READONLY rc=%d id=%08x command_status=%08x class_rev=%08x reads=%u buses_restored=%u\n",
+            rc,r.id,r.command,r.class_rev,r.reads,r.restored);
+    return rc;
+}
+static int n71_storage_endpoint_release_trial(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    const struct n71_port_trial_ops ops={
+        .read=n71_storage_local_read,.write=n71_storage_local_write,
+        .perst_level=n71_storage_reset_level,.set_perst=n71_storage_set_reset,
+        .dart_ready=n71_storage_full_dart_guard,.delay=n71_storage_link_tick,
+        .observe=n71_storage_endpoint_identify,
+    };
+    unsigned int status,samples,restored;
+    int rc;
+    if (n71_storage_root_read(ctx,0)!=0x1003106bU ||
+        (n71_storage_root_read(ctx,4)&0xffffU)!=0 ||
+        (n71_storage_root_read(ctx,0x18)&0x00ffffffU)!=0 ||
+        n71_storage_reset_level(ctx)!=0 || !n71_storage_full_dart_guard(ctx))
+        return -EPERM;
+    m->endpoint=ioremap(P0_EP_BUS2_ECAM_PHYS,0x1000);
+    if (!m->endpoint) return -ENOMEM;
+    rc=n71_port_local_trial(&ops,ctx,1,&status,&samples,&restored);
+    if (!restored || n71_storage_reset_level(ctx)!=0) rc=-3;
+    pr_info("n71-s3e-p0: S3E_BOUNDED_RELEASE_TRIAL rc=%d local_status=%08x samples=%u local80_restored=%u NAND_RESET_LOW=%u\n",
+        rc,status,samples,restored,n71_storage_reset_level(ctx)==0);
+    iounmap(m->endpoint);m->endpoint=NULL;
+    return rc;
+}
+static int n71_storage_p0_config_observe(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    void __iomem *cfg=NULL,*local=NULL;
+    u32 id,command,class_rev,buses,local80,local88;
+    unsigned int j;
+    int rc=-EPERM;
+    if (!m->all_streams || !n71_storage_dart_perst(ctx) ||
+        readl((u8 __iomem *)m->dart+0x0c)!=0x80808080U)
+        return rc;
+    for (j=0;j<16;j++)
+        if (readl((u8 __iomem *)m->dart+0x40+4*j)!=n71_tables.word[j])
+            return rc;
+    /* Original N71 apcie resource0: ECAM 0x610000000 length16MiB.
+     * Device0/function0/bus0 is the storage root bridge. Read only:
+     * no bus numbers, command, BARs, local control or PERST writes.
+     */
+    cfg=ioremap(P0_ROOT_ECAM_PHYS,0x1000);
+    local=ioremap(P0_PORT_PHYS,0x1000);
+    if (!cfg || !local) {rc=-ENOMEM;goto out;}
+    id=readl(cfg);
+    command=readl((u8 __iomem *)cfg+4);
+    class_rev=readl((u8 __iomem *)cfg+8);
+    buses=readl((u8 __iomem *)cfg+0x18);
+    local80=readl((u8 __iomem *)local+0x80);
+    local88=readl((u8 __iomem *)local+0x88);
+    pr_info("n71-s3e-p0: STORAGE_ROOT_CFG_RO id=%08x command_status=%08x class_rev=%08x buses=%08x local80=%08x local88=%08x NAND_RESET_LOW=YES\n",
+            id,command,class_rev,buses,local80,local88);
+    rc=(id & 0xffffU)==0x106bU && n71_storage_dart_perst(ctx) ? 0 : -ENODEV;
+    if (!rc && endpoint_id_trial) {
+        m->cfg=cfg;m->local=local;
+        rc=n71_storage_endpoint_release_trial(ctx);
+        m->cfg=NULL;m->local=NULL;
+    }
+out:
+    if (local) iounmap(local);
+    if (cfg) iounmap(cfg);
+    return rc;
+}
 static void n71_storage_dart_hold(void *ctx)
 {
     struct n71_storage_dart_context *m=ctx;
@@ -323,6 +468,7 @@ static void n71_storage_dart_hold(void *ctx)
         .read=n71_storage_dart_read,.write=n71_storage_dart_write,
         .perst_low=n71_storage_dart_perst,.hold=n71_storage_dart_delay,
         .tick=n71_storage_dart_tick,
+        .active_hold=observe_p0_config ? n71_storage_p0_config_observe : NULL,
     };
     if (m->all_streams)
         m->inner_rc=n71_dart_all_stream_owned_roots_trial(&inner,ctx,
@@ -415,6 +561,8 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (endpoint_id_trial && !observe_p0_config) {ret=-EPERM;goto out_put;}
+    if (observe_p0_config && !dart0_all_streams) {ret=-EPERM;goto out_put;}
     if (dart0_all_streams && !dart0_owned_roots) {ret=-EPERM;goto out_put;}
     if (dart0_owned_roots && !stock_late_controls) {ret=-EPERM;goto out_put;}
     if (stock_late_controls && (!assert_storage_reset || !rootstart_p0 ||
@@ -834,4 +982,4 @@ static void __exit n71_port0_exit(void)
 module_init(n71_port0_init);
 module_exit(n71_port0_exit);
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("S8000 NAND PERST160 asserted LOW during port0 root start and read-only DART0/NVMMU inspection");
+MODULE_DESCRIPTION("Bounded S8000 port0 controls, Linux-owned DART0 roots and optional S3E config identification");

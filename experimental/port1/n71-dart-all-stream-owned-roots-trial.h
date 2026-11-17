@@ -5,7 +5,9 @@
 
 /* Four streams, four 4KiB TTBR roots each, original S5L8960X layout.
  * The caller owns and DMA-synchronizes sixteen distinct empty pages.
- * Endpoint reset stays asserted. No endpoint DMA-containment claim.
+ * Default trials hold endpoint reset. An optional active observer must
+ * reassert reset before return, or request quarantine with -3.
+ * No endpoint DMA-containment claim.
  * Returns -3 if hardware cannot safely release the caller's pages.
  */
 static int n71_dart_all_stream_owned_roots_trial(
@@ -47,7 +49,11 @@ static int n71_dart_all_stream_owned_roots_trial(
         }
         o->tick(ctx);
     }
-    if (!ret && o->active_hold) ret=o->active_hold(ctx);
+    if (!ret && o->active_hold) {
+        ret=o->active_hold(ctx);
+        /* Unsafe observer rollback retains translation and owned roots. */
+        if (ret==-3) return -3;
+    }
     if (o->read(ctx,0x10)!=fault) ret=-1;
 disable:
     if (!o->perst_low(ctx)) return -3;

@@ -54,6 +54,13 @@ static void restored(struct model *m) {
  unsigned i;assert(!m->r[3] && !m->unsafe);
  for(i=0;i<16;i++)assert(m->r[16+i]==m->old[i]);
 }
+static int observe_unsafe(void *ctx) {(void)ctx;return -3;}
+static int observe_failure(void *ctx) {
+ struct model *m=ctx;unsigned i;
+ assert(m->low && m->r[3]==0x80808080U);
+ for(i=0;i<16;i++)assert(m->r[16+i]==m->roots[i]);
+ return -9;
+}
 int main(void) {
  struct model m;unsigned last,polls,i;int rc;
  const struct n71_dart_trial_ops o={
@@ -77,6 +84,19 @@ int main(void) {
  assert(rc==-1 && !m.writes);restored(&m);
  init(&m);m.roots[15]=m.roots[0];rc=n71_dart_all_stream_owned_roots_trial(&o,&m,m.roots,&last,&polls);
  assert(rc==-1 && !m.writes);restored(&m);
+ {
+ struct n71_dart_trial_ops observed=o;
+ observed.active_hold=observe_failure;init(&m);
+ rc=n71_dart_all_stream_owned_roots_trial(&observed,&m,m.roots,&last,&polls);
+ assert(rc==-9);restored(&m);
+ }
+ {
+ struct n71_dart_trial_ops observed=o;
+ observed.active_hold=observe_unsafe;init(&m);
+ rc=n71_dart_all_stream_owned_roots_trial(&observed,&m,m.roots,&last,&polls);
+ assert(rc==-3 && m.r[3]==0x80808080U && !m.unsafe);
+ for(i=0;i<16;i++)assert(m.r[16+i]==m.roots[i]);
+ }
  puts("ALL_STREAM_ROLLBACK_AND_RETAIN_CASES_PASS");
  return 0;
 }

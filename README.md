@@ -6,7 +6,7 @@ A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation
 
 **Hardware-test charging policy (17 Nov 2026):** before every further N71/S8000 PCIe, DART or NVMe MMU trial, check the SN2400 lease age, battery capacity/temperature/voltage and USB VBUS. The Dell USB device advertises **500 mA** and a 30-second physically monitored trial at 500 mA input delivered an average **+265 mA net battery current**; this does not imply a fast-charge negotiation or authorize higher USB draw. A 3600-second rollback lease is active only in the attended RAM session. It must be explicitly renewed as part of subsequent testing before expiry, and never bypassed if health checks fail. [Physical charging and 0x210 driver evidence](docs/N71_S8000_SN2400_500MA_AND_PCIE_LOCAL0210_2026_11_17.md).
 
-**Storage hardware breakthrough (17 Nov 2026):** the real N71/S8000 now exposes valid DART0 and NVMe MMU MMIO after a bounded port0 ID2/ID4 trial with NAND reset held LOW. Root controls, power and the GPIO were restored, and WLAN stayed connected. Temporary Linux-owned empty roots and bounded invalidation on all four DART0 streams also passed physical programming/readback and rollback. Endpoint DMA fault containment, PCIe enumeration and namespace access remain open. [Measured result and corrected port0 status selector](docs/N71_S8000_PORT0_DART_NVMMU_MMIO_BREAKTHROUGH_2026_11_17.md).
+**Storage hardware breakthrough (17 Nov 2026):** the real N71/S8000 now identifies its internal **Apple S3E 106b:2002**, class018002/revision11, through bounded PCIe config reads on temporary bus2. Empty Linux-owned DART0 roots covered all four hardware streams, endpoint bus mastering stayed disabled, and routing/reset/controls/tables were restored. WLAN then passed a real native Internet ping. A registered Linux storage device, NVMe transport and namespace access remain open. [Physical S3E identification](docs/N71_S8000_S3E_2002_PHYSICAL_PCIE_ID_2026_11_17.md) and [MMIO/DART0 stages](docs/N71_S8000_PORT0_DART_NVMMU_MMIO_BREAKTHROUGH_2026_11_17.md).
 
 A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
 
@@ -49,7 +49,8 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 | Kali ARM64 security tools | First-stage n71-kali profile and genuine tcpdump 4.99.7/libpcap 1.10.7 ARM64 static build | Phone-local PASS for version and bounded USB capture; full signed Kali ARM64 rootfs and nmap are pending |
 | Touch terminal/jobs | Real local PTY/keyboard dispatch selftest passed on phone; Home/System/Tools views running | Manual typing, full VT/scrollback and Kali job integration remain open |
 | Remote experimental storage | Dell-backed 64 MiB ext4 on /dev/nbd0 via USB | Read-only and read/write mount, synced file and host readback PASS; detached; not standalone or suitable for private data |
-| Internal Apple storage/baseband | Not enumerated as mass storage in current kernel | No internal NVMe/NAND read-write, APFS or telephony claim |
+| Internal Apple storage | S3E 106b:2002 physical PCIe config identification, class018002/revision11; all-stream empty DART0 roots and bounded reset/routing rollback | Controller identification PASS; Linux registration, NVMe transport and namespace access open |
+| Baseband | PCIe link2 kept OFF | Telephony unqualified |
 | AI companion briefing | Gmail/Calendar AI snapshot delivered via pinned USB SSH to live TODAY UI | Reduced JSON/text push PASS; cached data; WhatsApp ingestion and owner finger-UI acceptance incomplete |
 | S8003 / N71m | No compatible physical device available | All hardware results NOT TESTED |
 
