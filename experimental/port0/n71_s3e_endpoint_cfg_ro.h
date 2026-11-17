@@ -6,12 +6,15 @@ struct n71_s3e_cfg_ops {
     unsigned int (*root_read)(void *,unsigned int);
     void (*root_bus_write)(void *,unsigned int);
     unsigned int (*endpoint_read)(void *,unsigned int);
+    int (*observe)(void *);
 };
 struct n71_s3e_cfg_result {
     unsigned int id,command,class_rev,saved_bus,restored,reads;
 };
 /* The supervisor reserves bus2 before entry. Endpoint header reads only;
- * root routing is temporarily changed and restored. No command/BAR writes.
+ * root routing is temporarily changed and restored. The optional observer
+ * owns any separately guarded config/MMIO transaction; this helper itself
+ * changes only the temporary bus route.
  * Return -3 means routing rollback failed: retain active empty DART roots.
  */
 static int n71_s3e_endpoint_cfg_trial(const struct n71_s3e_cfg_ops *o,
@@ -38,6 +41,7 @@ static int n71_s3e_endpoint_cfg_trial(const struct n71_s3e_cfg_ops *o,
         if (i==1 && (words[1]&4)) {rc=-4;goto restore;}
     }
     rc=o->ready(ctx) && (words[2]>>8)==0x018002U ? 0 : -2;
+    if (!rc && o->observe) rc=o->observe(ctx);
 restore:
     r->id=words[0];r->command=words[1];r->class_rev=words[2];
     o->root_bus_write(ctx,saved);

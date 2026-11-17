@@ -6,7 +6,8 @@
  * program Linux-owned empty roots and restore the inherited TTBR state.
  * Explicit endpoint_id_trial may release PERST only inside active empty
  * roots on all four DART0 streams. It reads three endpoint config words
- * through temporarily reserved bus2, then restores routing, reasserts
+ * through temporarily reserved bus2. Optional bar0_size_trial sizes and
+ * restores BAR0 with decode/master OFF. It then restores routing, reasserts
  * reset and restores local0x80 before the DART guard can be removed.
  * Root controls and PMGR return to baseline before restoring GPIO INPUT.
  * Failed rollback retains tables, module, power consumer and GPIO claim.
@@ -20,6 +21,7 @@
 #include "../port1/n71-dart-all-stream-owned-roots-trial.h"
 #include "../port1/n71-port-local-trial.h"
 #include "n71_s3e_endpoint_cfg_ro.h"
+#include "n71_s3e_bar0_size.h"
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/init.h>
@@ -78,6 +80,9 @@ static bool dart0_owned_roots;
 static bool dart0_all_streams;
 static bool observe_p0_config;
 static bool endpoint_id_trial;
+static bool bar0_size_trial;
+module_param(bar0_size_trial, bool, 0400);
+MODULE_PARM_DESC(bar0_size_trial, "probe and restore only S3E BAR0 geometry while both decode and bus mastering are disabled");
 module_param(endpoint_id_trial, bool, 0400);
 MODULE_PARM_DESC(endpoint_id_trial, "bounded NAND PERST release/reassert inside all-stream DART0 empty roots; bus2 temporary endpoint config ID reads only");
 module_param(observe_p0_config, bool, 0400);
@@ -383,12 +388,33 @@ static unsigned int n71_storage_endpoint_read(void *ctx,unsigned int off)
     struct n71_storage_dart_context *m=ctx;
     return readl((u8 __iomem *)m->endpoint+off);
 }
+static void n71_storage_endpoint_bar_write(void *ctx,unsigned int off,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    if (WARN_ON_ONCE(off!=0x10 && off!=0x14)) return;
+    writel(val,(u8 __iomem *)m->endpoint+off);
+}
+static int n71_storage_bar0_observe(void *ctx)
+{
+    const struct n71_s3e_bar_ops ops={
+        .ready=n71_storage_endpoint_ready,.read=n71_storage_endpoint_read,
+        .write=n71_storage_endpoint_bar_write,
+    };
+    struct n71_s3e_bar_result r;
+    int rc;
+    if ((n71_storage_root_read(ctx,4)&0xffffU)!=0) return -EPERM;
+    rc=n71_s3e_bar0_size_trial(&ops,ctx,&r);
+    pr_info("n71-s3e-p0: S3E_BAR0_SIZE_TRIAL rc=%d lo=%08x hi=%08x mask_lo=%08x mask_hi=%08x is64=%u bytes=%llu restored=%u decode_and_master_OFF=YES\n",
+        rc,r.lo,r.hi,r.mask_lo,r.mask_hi,r.is64,r.size,r.restored);
+    return rc;
+}
 static int n71_storage_endpoint_identify(void *ctx)
 {
     const struct n71_s3e_cfg_ops o={
         .ready=n71_storage_endpoint_ready,.root_read=n71_storage_root_read,
         .root_bus_write=n71_storage_root_bus_write,
         .endpoint_read=n71_storage_endpoint_read,
+        .observe=bar0_size_trial ? n71_storage_bar0_observe : NULL,
     };
     struct n71_s3e_cfg_result r;
     int rc=n71_s3e_endpoint_cfg_trial(&o,ctx,&r);
@@ -561,6 +587,7 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (bar0_size_trial && !endpoint_id_trial) {ret=-EPERM;goto out_put;}
     if (endpoint_id_trial && !observe_p0_config) {ret=-EPERM;goto out_put;}
     if (observe_p0_config && !dart0_all_streams) {ret=-EPERM;goto out_put;}
     if (dart0_all_streams && !dart0_owned_roots) {ret=-EPERM;goto out_put;}

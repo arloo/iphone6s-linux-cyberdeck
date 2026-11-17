@@ -7,7 +7,21 @@ firmware remain in RAM, and no Apple storage block device is enumerated.
 A full, **encrypted iOS user-data backup was completed and checked locally**
 before the physical power test. This is not a bare-metal NAND backup.
 
-## Verified on hardware
+## Current storage state — latest verified results
+
+The physical S3E endpoint is now identified as **106b:2002**, class018002,
+on isolated downstream bus2. All four DART0 streams used Linux-owned
+empty roots during bounded NAND PERST release. **BAR0 is a64-bit,
+16KiB memory BAR** (mask `ffffc004:ffffffff`); its original pair was
+restored with decode and bus mastering OFF. Port0 power, GPIO160 and
+inherited DART state restored; native WLAN remained functional.
+NVMe capability reads, command queues and a readable Linux namespace
+remain pending. [Physical results](../../docs/N71_S8000_S3E_2002_PHYSICAL_PCIE_ID_2026_11_17.md).
+
+The following earlier trial notes preserve their individual test states;
+the current result above supersedes earlier unresolved/quarantine states.
+
+## Earlier power and register trials
 
 - N71 stock Apple Device Tree identifies the storage endpoint as
   `apcie/pci-bridge0/s3e`, with Apple PCI ID `106b:2002`.
