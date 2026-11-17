@@ -47,7 +47,7 @@ restore:
     return *restore_pass ? result : -3;
 }
 /* Register pulse only: no TLB flush and no claim of DMA containment. */
-static int n71_dart_tcr0_pulse(const struct n71_dart_trial_ops *o, void *ctx)
+static inline int n71_dart_tcr0_pulse(const struct n71_dart_trial_ops *o, void *ctx)
 {
     unsigned int i;
     int ret = 0;
@@ -102,7 +102,7 @@ disable:
     if (o->read(ctx, 0x0c) != 0) ret = -3;
     return ret;
 }
-static int n71_dart_tcr0_flush_trial(const struct n71_dart_trial_ops *o, void *ctx,
+static inline int n71_dart_tcr0_flush_trial(const struct n71_dart_trial_ops *o, void *ctx,
                                   unsigned int *last, unsigned int *polls)
 {
     const unsigned int roots[4] = {0, 0, 0, 0};

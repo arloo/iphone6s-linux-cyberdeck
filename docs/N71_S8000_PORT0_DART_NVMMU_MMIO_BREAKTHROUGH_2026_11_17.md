@@ -57,7 +57,42 @@ Older port0 pilots sampled 0x16c in some status/preflight paths; that
 was not the proven selector. Current port0 sources now use0x12c.
 Their independently logged DART/NVMMU all-ones observations remain valid.
 
-Next: program and verify Linux-owned DART0 translation roots and bounded
-TLB operations while NAND reset remains asserted. Endpoint reset release,
-PCIe identification and namespace reads require that isolation work first.
-This result provides register access, not NAND data or persistent Linux.
+## Linux-owned DART0 tables physically programmed and restored
+
+Two further real-phone transactions passed with NAND reset held LOW:
+
+| Stage | Owned roots | Active packed TCR | Invalidate command | Observed polls | Result |
+| --- | --- | --- | --- | --- | --- |
+| SID0 | 4 | 0x00000080 | 0x00000102 | 2 | inner_rc0, restore_pass1, pages_zero1, free_safe1 |
+| All four streams | 16 | 0x80808080 | 0x00000f02 | 2 | inner_rc0, restore_pass1, pages_zero1, free_safe1 |
+
+The sixteen 4KiB roots used sixteen distinct 16KiB Linux pages, 256KiB
+of backing RAM. Every direct-DMA address was verified as the original
+36-bit physical address; inherited-root overlap and duplicate roots
+were rejected before zeroing. No table or physical allocation address
+is published. The original ADT consumer graph identifies only S3E as a
+declared DART0 consumer; DART0 and WLAN DART1 use the same stock driver
+compatible and original TTBR format.
+
+The outer transaction checked all sixteen TTBR cells, the packed TCR,
+command status and fault state, then restored the inherited roots before
+freeing the owned buffers. SID0 invalidation leaves the command's stream
+selector at0x102; it does not replay0xf02 just to reproduce a readback.
+The all-stream command selects all four exclusive storage DART0 streams.
+Each invalidation loop has at most100 polls with1us ticks. Failure to
+disable translation, finish a command, restore roots or observe reset LOW
+retains the pages, module, domain consumer and reset hold for quarantine.
+
+The all-stream trial's ARM64 SHA256 was
+`f6560f10af82a615eb2f8d33e1744f1bd41d16e3ca406ed7c5a5f24626970311`.
+Its final readings were battery68%, Charging, +276mA net; the eight
+preflight samples were all positive. The module unloaded normally after
+verified rollback and WLAN carrier stayed1. A host-compiled fault harness
+also checks success, timeout, failed TCR disable/page retention, bad TTBR
+readback, fault-state change, missing reset and duplicate roots. Those
+control-flow tests are distinct from the physical results above.
+
+Next: qualify bounded endpoint reset release and read-only PCIe config
+identification while the owned tables remain active. Programming and
+readback of empty roots have passed; endpoint DMA fault containment,
+S3E enumeration, namespace reads and persistent Linux remain unqualified.

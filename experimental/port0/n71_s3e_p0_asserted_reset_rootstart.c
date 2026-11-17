@@ -7,7 +7,8 @@
  * root bits, request genpd "pcie_link0" ON for 25 ms, then synchronously
  * restore every root register and PMGR domain BEFORE returning GPIO160
  * to its exact original INPUT LOW configuration. Never deassert PERST.
- * No DART/NVMMU writes, NVMe commands, filesystem/NAND, iOS partition,
+ * Optional dart0_owned_roots reuses the proven SID0 TTBR/TCR trial.
+ * No NVMMU writes, NVMe commands, filesystem/NAND, iOS partition,
  * or DMA writes. No PCI endpoint rescan or PCIe configuration access.
  *
  * This uses of_genpd_add_device with the provider *node pointer*, because
@@ -15,6 +16,11 @@
  * No DT overlay is needed; no shared DT properties are altered.
  */
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
+#include <linux/sizes.h>
+#include "../port1/n71-dart-all-stream-owned-roots-trial.h"
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/init.h>
@@ -67,6 +73,12 @@ static bool stock_nvme_mode;
 static bool rootstart_p0;
 static bool assert_storage_reset;
 static bool stock_late_controls;
+static bool dart0_owned_roots;
+static bool dart0_all_streams;
+module_param(dart0_all_streams, bool, 0400);
+MODULE_PARM_DESC(dart0_all_streams, "extend empty-root transaction to all four exclusive DART0 streams; requires dart0_owned_roots and asserted NAND reset");
+module_param(dart0_owned_roots, bool, 0400);
+MODULE_PARM_DESC(dart0_owned_roots, "temporary Linux-owned empty SID0 DART0 roots and bounded TLB flush; NAND reset stays OUTPUT LOW; no endpoint DMA");
 module_param(stock_late_controls, bool, 0400);
 MODULE_PARM_DESC(stock_late_controls, "bounded port0 ID2 bit8 clear and ID4 bit0 set while NAND GPIO160 remains OUTPUT LOW; always reverse-restore");
 module_param(assert_storage_reset, bool, 0400);
@@ -211,6 +223,156 @@ static void n71_safe_detach(void)
     n71_consumer=NULL;
 }
 
+struct n71_owned_tables {
+    struct device *dev;
+    void *page[16];
+    dma_addr_t dma[16];
+    bool mapped[16];
+    u32 word[16];
+    unsigned int count;
+};
+static struct n71_owned_tables n71_tables;
+static void n71_owned_free(struct n71_owned_tables *t)
+{
+    unsigned int i;
+    for (i = 0; i < 16; i++) {
+        if (t->mapped[i])
+            dma_unmap_single(t->dev, t->dma[i], PAGE_SIZE, DMA_TO_DEVICE);
+        if (t->page[i]) free_page((unsigned long)t->page[i]);
+    }
+    if (t->dev) put_device(t->dev);
+    memset(t, 0, sizeof(*t));
+}
+static int n71_owned_alloc(struct device *dev, struct n71_owned_tables *t, void __iomem *dart, unsigned int count)
+{
+    unsigned int i, j;
+    int ret;
+    if ((count!=4 && count!=16) || PAGE_SIZE < SZ_4K || (PAGE_SIZE % SZ_4K) || of_find_property(dev->of_node, "iommus", NULL))
+        return -EPERM;
+    ret = dma_coerce_mask_and_coherent(dev, DMA_BIT_MASK(36));
+    if (ret) return ret;
+    t->dev = get_device(dev);
+    t->count=count;
+    for (i = 0; i < count; i++) {
+        phys_addr_t pa;
+        t->page[i] = (void *)__get_free_page(GFP_KERNEL);
+        if (!t->page[i]) { ret = -ENOMEM; goto fail; }
+        pa = virt_to_phys(t->page[i]);
+        t->word[i] = n71_dart_owned_ttbr(pa);
+        if (!t->word[i]) { ret = -EPERM; goto fail; }
+        /* Kernel pages may be 16 KiB while each DART root is 4 KiB.
+         * Reject overlap anywhere in the allocation BEFORE explicit zeroing. */
+        for (j = 0; j < 16; j++) {
+            phys_addr_t old_pa = (phys_addr_t)(readl((u8 __iomem *)dart + 0x40 + 4*j) & 0x00ffffffU) << 12;
+            if (old_pa >= pa && old_pa < pa + PAGE_SIZE) { ret = -EBUSY; goto fail; }
+        }
+        memset(t->page[i], 0, PAGE_SIZE);
+        for (j = 0; j < i; j++)
+            if (t->word[j] == t->word[i]) { ret = -EPERM; goto fail; }
+        t->dma[i] = dma_map_single(dev, t->page[i], PAGE_SIZE, DMA_TO_DEVICE);
+        if (dma_mapping_error(dev, t->dma[i])) { ret = -EIO; goto fail; }
+        t->mapped[i] = true;
+        /* This synthetic device must use direct identity DMA; reject a bounce
+         * buffer or an IOVA instead of encoding it as a physical TTBR. */
+        if (t->dma[i] != pa) { ret = -EPERM; goto fail; }
+        dma_sync_single_for_device(dev, t->dma[i], PAGE_SIZE, DMA_TO_DEVICE);
+    }
+    dma_wmb();
+    pr_info("n71-s3e-p0: OWNED_ROOTS_ALLOCATED roots=%u table_bytes=%lu backing_bytes=%lu zero=1 direct_dma=1 pa36=1 addresses_redacted\n", count, (unsigned long)count*SZ_4K, (unsigned long)count*PAGE_SIZE);
+    return 0;
+fail:
+    n71_owned_free(t);
+    return ret;
+}
+
+struct n71_storage_dart_context {
+    void __iomem *dart;
+    void __iomem *pinctrl;
+    int inner_rc;
+    bool all_streams;
+};
+static unsigned int n71_storage_dart_read(void *ctx, unsigned int off)
+{
+    struct n71_storage_dart_context *m=ctx;
+    return readl((u8 __iomem *)m->dart+off);
+}
+static void n71_storage_dart_write(void *ctx, unsigned int off, unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    /* Restrict writes to command, packed TCR and SID0's four TTBR cells. */
+    if (WARN_ON_ONCE(off!=0 && off!=0x0c &&
+            (off<0x40 || off>(m->all_streams ? 0x7c : 0x4c) || (off & 3)))) return;
+    writel(val,(u8 __iomem *)m->dart+off);
+}
+static int n71_storage_dart_perst(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    return n71_reset_claimed && n71_reset_pin &&
+        readl((u8 __iomem *)m->pinctrl+S8000_GPIO160_OFFSET)==
+            S8000_GPIO160_ASSERTED_LOW &&
+        gpiod_get_direction(n71_reset_pin)==0 &&
+        gpiod_get_value_cansleep(n71_reset_pin)==0;
+}
+static void n71_storage_dart_tick(void *ctx) { udelay(1); }
+static void n71_storage_dart_delay(void *ctx) { udelay(100); }
+static void n71_storage_dart_hold(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    unsigned int command, polls;
+    const struct n71_dart_trial_ops inner={
+        .read=n71_storage_dart_read,.write=n71_storage_dart_write,
+        .perst_low=n71_storage_dart_perst,.hold=n71_storage_dart_delay,
+        .tick=n71_storage_dart_tick,
+    };
+    if (m->all_streams)
+        m->inner_rc=n71_dart_all_stream_owned_roots_trial(&inner,ctx,
+                                     n71_tables.word,&command,&polls);
+    else
+        m->inner_rc=n71_dart_owned_roots_trial(&inner,ctx,n71_tables.word,
+                                             &command,&polls);
+    pr_info("n71-s3e-p0: DART0_OWNED_ROOTS streams=%u inner_rc=%d command=%08x polls=%u NAND_PERST_LOW=YES\n",
+            m->all_streams ? 4 : 1,m->inner_rc,command,polls);
+}
+static int n71_storage_dart_owned_trial(struct device *dev,
+                 void __iomem *dart, void __iomem *pinctrl)
+{
+    struct n71_storage_dart_context mm={
+        .dart=dart,.pinctrl=pinctrl,.inner_rc=-EINPROGRESS,
+        .all_streams=dart0_all_streams,
+    };
+    const struct n71_dart_trial_ops outer={
+        .read=n71_storage_dart_read,.write=n71_storage_dart_write,
+        .perst_low=n71_storage_dart_perst,.hold=n71_storage_dart_hold,
+        .command_change_mask=0x00000f00U,
+    };
+    unsigned int zero_ok=0,restore_ok=0,j;
+    bool free_safe,pages_zero=true;
+    int rc;
+    if (!n71_storage_dart_perst(&mm) || readl((u8 __iomem *)dart+0x0c)!=0)
+        return -EPERM;
+    rc=n71_owned_alloc(dev,&n71_tables,dart,dart0_all_streams ? 16 : 4);
+    if (rc) return rc;
+    rc=n71_dart_disabled_ttbr_trial(&outer,&mm,&zero_ok,&restore_ok);
+    free_safe=restore_ok && n71_storage_dart_perst(&mm) &&
+        readl((u8 __iomem *)dart+0x0c)==0 &&
+        !(readl((u8 __iomem *)dart)&BIT(3));
+    if (free_safe) {
+        for (j=0;j<n71_tables.count;j++) {
+            dma_sync_single_for_cpu(n71_tables.dev,n71_tables.dma[j],
+                                    PAGE_SIZE,DMA_TO_DEVICE);
+            if (memchr_inv(n71_tables.page[j],0,PAGE_SIZE)) pages_zero=false;
+        }
+        n71_owned_free(&n71_tables);
+    } else {
+        n71_unreleased=true;
+        pr_err("n71-s3e-p0: DART0_ROOTS_QUARANTINED_KEEP_PAGES_POWER_AND_NAND_RESET\n");
+    }
+    pr_info("n71-s3e-p0: DART0_ROOT_TRANSACTION rc=%d zero_pass=%u restore_pass=%u inner_rc=%d pages_zero=%u free_safe=%u NAND_RESET_LOW=YES\n",
+        rc,zero_ok,restore_ok,mm.inner_rc,pages_zero,free_safe);
+    return !rc && zero_ok && restore_ok && !mm.inner_rc &&
+           pages_zero && free_safe ? 0 : -EIO;
+}
+
 static int __init n71_port0_init(void)
 {
     struct regmap *map;
@@ -253,6 +415,8 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (dart0_all_streams && !dart0_owned_roots) {ret=-EPERM;goto out_put;}
+    if (dart0_owned_roots && !stock_late_controls) {ret=-EPERM;goto out_put;}
     if (stock_late_controls && (!assert_storage_reset || !rootstart_p0 ||
             !stock_nvme_mode || !sample_root || !sample_iommu)) {
         ret=-EPERM; goto out_put;
@@ -489,6 +653,9 @@ static int __init n71_port0_init(void)
                     nvmmu_ctrl==0xffffffffU || p0_fifo==0xffffffffU)
                     ret=-EIO;
             }
+            if (!ret && dart0_owned_roots) {
+                ret=n71_storage_dart_owned_trial(&n71_consumer->dev,dart0,pinctrl);
+            }
             if (port0) { iounmap(port0); port0=NULL; }
             if (nvmmu0) { iounmap(nvmmu0); nvmmu0=NULL; }
             if (dart0) { iounmap(dart0); dart0=NULL; }
@@ -500,6 +667,7 @@ static int __init n71_port0_init(void)
             pr_info("n71-s3e-p0: PHYSICAL_ROOT_DURING_P0_POWER p0_id5=%08x p0_bit0=%u p1_id5=%08x p1_bit0=%u shared=%08x no_pcie_reset_no_dma\n",
                 p0_link,p0_link&1U,p1_link,p1_link&1U,shared);
         }
+        if (n71_unreleased) goto cleanup;
         if (rootstart_p0) {
             if (id4_dirty) {
                 writel(id4_saved,(u8 __iomem *)root_mmio + 0x124);

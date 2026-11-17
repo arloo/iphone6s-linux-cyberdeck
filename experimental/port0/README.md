@@ -313,6 +313,14 @@ was restored and WLAN remained active. The current ID5 selector is
 **root+0x12c** for port0, not0x16c. See the
 [physical evidence](../../docs/N71_S8000_PORT0_DART_NVMMU_MMIO_BREAKTHROUGH_2026_11_17.md).
 
+The same integrated pilot now accepts `dart0_owned_roots=1`, and optionally
+`dart0_all_streams=1`. Both modes passed on the real phone with NAND reset
+LOW: SID0 used four owned roots, the all-stream mode sixteen; TLB completion
+was observed after two polls, inherited TTBRs were restored and every owned
+buffer was released after verification. Empty-root programming is not an
+end-to-end endpoint DMA fault test. The shared transaction code is
+`../port1/n71-dart-all-stream-owned-roots-trial.h`.
+
 ## Next engineering milestone
 
 1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock
