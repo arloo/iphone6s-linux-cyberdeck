@@ -64,7 +64,7 @@ static int __init n71_compare_init(void)
         ret=-ENOMEM;
         goto out;
     }
-    p0_id5=sample(root,0x16c);
+    p0_id5=sample(root,0x12c);
     p1_id5=sample(root,0x1ac);
     if (p0_id5 != 0 || p1_id5 != 1) {
         ret=-EBUSY;

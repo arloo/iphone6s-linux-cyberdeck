@@ -131,7 +131,7 @@ static int __init n71_storage_perst_init(void)
     if (!ap || !root) {ret=-ENOMEM; goto out;}
     baseline=readl((u8 __iomem *)ap+N71_P0_REG);
     p1=readl((u8 __iomem *)ap+N71_P1_REG);
-    p0_link=readl((u8 __iomem *)root+0x16c);
+    p0_link=readl((u8 __iomem *)root+0x12c);
     p1_link=readl((u8 __iomem *)root+0x1ac);
     ret=regmap_read(pin_map,N71_P0_REG,&cached);
     if (ret) goto out;

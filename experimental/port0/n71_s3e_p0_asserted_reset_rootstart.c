@@ -66,6 +66,9 @@ static bool sample_iommu;
 static bool stock_nvme_mode;
 static bool rootstart_p0;
 static bool assert_storage_reset;
+static bool stock_late_controls;
+module_param(stock_late_controls, bool, 0400);
+MODULE_PARM_DESC(stock_late_controls, "bounded port0 ID2 bit8 clear and ID4 bit0 set while NAND GPIO160 remains OUTPUT LOW; always reverse-restore");
 module_param(assert_storage_reset, bool, 0400);
 MODULE_PARM_DESC(assert_storage_reset, "exclusively hold storage GPIO160 OUTPUT LOW during port0 power and restore exact original input mode");
 module_param(rootstart_p0, bool, 0400);
@@ -215,8 +218,8 @@ static int __init n71_port0_init(void)
     void __iomem *dart0=NULL,*nvmmu0=NULL,*port0=NULL;
     void __iomem *pinctrl=NULL;
     bool mode_dirty=false, attempted=false;
-    bool id3_dirty=false, id2_dirty=false;
-    u32 id3_saved=0,id2_saved=0;
+    bool id3_dirty=false, id2_dirty=false, id4_dirty=false;
+    u32 id3_saved=0,id2_saved=0,id4_saved=0;
     struct of_phandle_args spec={};
     struct device_node *parent,*pin_node=NULL;
     struct platform_device *pin_dev=NULL;
@@ -250,6 +253,10 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (stock_late_controls && (!assert_storage_reset || !rootstart_p0 ||
+            !stock_nvme_mode || !sample_root || !sample_iommu)) {
+        ret=-EPERM; goto out_put;
+    }
     if (assert_storage_reset) {
         u32 pin_raw=0,pin_cached=0,wifi_raw=0,p0_root=0,p1_root=0;
         if (!stock_nvme_mode || !rootstart_p0 || !sample_iommu ||
@@ -269,7 +276,7 @@ static int __init n71_port0_init(void)
         if (!pinctrl) {ret=-ENOMEM;goto out_put;}
         pin_raw=readl((u8 __iomem *)pinctrl + S8000_GPIO160_OFFSET);
         wifi_raw=readl((u8 __iomem *)pinctrl + 4*161);
-        p0_root=readl((u8 __iomem *)root_mmio + 0x16c);
+        p0_root=readl((u8 __iomem *)root_mmio + 0x12c);
         p1_root=readl((u8 __iomem *)root_mmio + 0x1ac);
         ret=regmap_read(n71_pinctrl_regmap,S8000_GPIO160_OFFSET,&pin_cached);
         if (ret || pin_raw!=S8000_GPIO160_ORIGINAL ||
@@ -324,7 +331,7 @@ static int __init n71_port0_init(void)
         mode0=readl((u8 __iomem *)root_mmio + 0x14);
         mode1=readl((u8 __iomem *)root_mmio + 0x24);
         shared_status=readl((u8 __iomem *)root_mmio + 0x2c);
-        port0_status=readl((u8 __iomem *)root_mmio + 0x16c);
+        port0_status=readl((u8 __iomem *)root_mmio + 0x12c);
         port1_status=readl((u8 __iomem *)root_mmio + 0x1ac);
         if (perst160!=(assert_storage_reset ?
                 S8000_GPIO160_ASSERTED_LOW : S8000_GPIO160_ORIGINAL) ||
@@ -380,7 +387,7 @@ static int __init n71_port0_init(void)
         pr_info("n71-s3e-p0: PHYSICAL_LINK0_POWER_ON actual=15 target=%u dwell=25ms endpoint_reset_unchanged=yes no_DART_no_DMA_no_NVMe\n",
             TARGET(inside));
         if (rootstart_p0) {
-            u32 id4_saved, id5_saved;
+            u32 id5_saved;
             id3_saved=readl((u8 __iomem *)root_mmio + 0x114);
             id2_saved=readl((u8 __iomem *)root_mmio + 0x100);
             id4_saved=readl((u8 __iomem *)root_mmio + 0x124);
@@ -418,6 +425,44 @@ static int __init n71_port0_init(void)
                 }
             }
         }
+        if (!ret && stock_late_controls) {
+            u32 active_id2, active_id4, pin_now;
+            /* Original S800x ROOT vslot1992 clears selector-ID2 bit8;
+             * ROOT vslot1968 with flag0 sets selector-ID4 bit0.
+             * Those exact operations were already microleased on port1.
+             * This research trial evaluates port0 under asserted NAND
+             * reset even if opaque ID5 readiness is not yet observed;
+             * it is not a claim to replay Apple's full startup method.
+             * Do not issue telemetry 3/7, local0x210 acknowledgments,
+             * DART/NVMMU initialization, PCI config or endpoint DMA.
+             */
+            pin_now=readl((u8 __iomem *)pinctrl + S8000_GPIO160_OFFSET);
+            if (!n71_reset_claimed || pin_now!=S8000_GPIO160_ASSERTED_LOW ||
+                gpiod_get_direction(n71_reset_pin)!=0 ||
+                gpiod_get_value_cansleep(n71_reset_pin)!=0) {
+                ret=-EPERM;
+            } else {
+                active_id2=(id2_saved | BIT(0)) & ~BIT(8);
+                writel(active_id2,(u8 __iomem *)root_mmio + 0x100);
+                if (readl((u8 __iomem *)root_mmio + 0x100)!=active_id2) {
+                    ret=-EIO;
+                } else {
+                    pr_info("n71-s3e-p0: LATE_ID2_BIT8_CLEAR_ACK id2=%08x id5=%08x NAND_RESET_LOW=YES\n",
+                        active_id2,readl((u8 __iomem *)root_mmio + 0x12c));
+                    udelay(100);
+                    active_id4=id4_saved | BIT(0);
+                    id4_dirty=true;
+                    writel(active_id4,(u8 __iomem *)root_mmio + 0x124);
+                    if (readl((u8 __iomem *)root_mmio + 0x124)!=active_id4) {
+                        ret=-EIO;
+                    } else {
+                        udelay(100);
+                        pr_info("n71-s3e-p0: LATE_ID4_BIT0_SET_ACK id4=%08x id5=%08x NAND_RESET_LOW=YES\n",
+                            active_id4,readl((u8 __iomem *)root_mmio + 0x12c));
+                    }
+                }
+            }
+        }
         msleep(DWELL_MS);
         if (sample_iommu) {
             u32 dart_id, dart_tcr, dart_fault, dart_ttbr0;
@@ -449,13 +494,20 @@ static int __init n71_port0_init(void)
             if (dart0) { iounmap(dart0); dart0=NULL; }
         }
         if (root_mmio) {
-            u32 p0_link=readl((u8 __iomem *)root_mmio+0x16c);
+            u32 p0_link=readl((u8 __iomem *)root_mmio+0x12c);
             u32 p1_link=readl((u8 __iomem *)root_mmio+0x1ac);
             u32 shared=readl((u8 __iomem *)root_mmio+0x2c);
             pr_info("n71-s3e-p0: PHYSICAL_ROOT_DURING_P0_POWER p0_id5=%08x p0_bit0=%u p1_id5=%08x p1_bit0=%u shared=%08x no_pcie_reset_no_dma\n",
                 p0_link,p0_link&1U,p1_link,p1_link&1U,shared);
         }
         if (rootstart_p0) {
+            if (id4_dirty) {
+                writel(id4_saved,(u8 __iomem *)root_mmio + 0x124);
+                if (readl((u8 __iomem *)root_mmio + 0x124)!=id4_saved)
+                    ret=-EUCLEAN;
+                else id4_dirty=false;
+                pr_info("n71-s3e-p0: LATE_ID4_RESTORE_CHECK restored=%u\n", !id4_dirty);
+            }
             if (id2_dirty) {
                 writel(id2_saved,(u8 __iomem *)root_mmio + 0x100);
                 if (readl((u8 __iomem *)root_mmio + 0x100)!=id2_saved)
@@ -468,7 +520,7 @@ static int __init n71_port0_init(void)
                     ret=-EUCLEAN;
                 else id3_dirty=false;
             }
-            if (id2_dirty || id3_dirty) {
+            if (id2_dirty || id3_dirty || id4_dirty) {
                 n71_unreleased=true;
                 pr_err("n71-s3e-p0: ROOT_PORT_CONTROL_ROLLBACK_FAILED, quarantine\n");
             } else {
@@ -476,6 +528,7 @@ static int __init n71_port0_init(void)
             }
         }
     }
+    if (n71_unreleased) goto cleanup;
     rel=pm_runtime_put_sync_suspend(&n71_consumer->dev);
     if (rel<0) {
         n71_unreleased=true;
@@ -594,7 +647,7 @@ out_put:
      * but keep the inert module resident for a supervised rmmod.
      */
     if (attempted && ret && !mode_dirty && !id3_dirty &&
-        !id2_dirty && !n71_consumer) {
+        !id2_dirty && !id4_dirty && !n71_consumer) {
         pr_err("n71-s3e-p0: DIAGNOSTIC_REJECTED_AFTER_SAFE_ROLLBACK rc=%d; do not retry\n",ret);
         return 0;
     }

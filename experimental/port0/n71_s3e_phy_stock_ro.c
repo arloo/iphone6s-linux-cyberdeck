@@ -85,7 +85,7 @@ static int __init n71_stock_phy_ro_init(void)
         err = -ENOMEM;
         goto out;
     }
-    original_root_p0 = readl((u8 __iomem *)root + 0x16c);
+    original_root_p0 = readl((u8 __iomem *)root + 0x12c);
     original_root_p1 = readl((u8 __iomem *)root + 0x1ac);
     dart1_cmd = readl((u8 __iomem *)dart1 + 0x00);
     dart1_tcr = readl((u8 __iomem *)dart1 + 0x0c);
@@ -99,7 +99,7 @@ static int __init n71_stock_phy_ro_init(void)
         if (phy_values[i] != 0xffffffffU)
             ++valid;
     }
-    root_p0 = readl((u8 __iomem *)root + 0x16c);
+    root_p0 = readl((u8 __iomem *)root + 0x12c);
     root_p1 = readl((u8 __iomem *)root + 0x1ac);
     if (root_p0 != original_root_p0 || root_p1 != original_root_p1) {
         err = -EUCLEAN;

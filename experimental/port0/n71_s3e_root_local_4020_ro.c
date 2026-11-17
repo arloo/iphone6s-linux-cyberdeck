@@ -75,7 +75,7 @@ static int __init n71_root4020_init(void)
     r1=readl((u8 __iomem *)root+0x4060);
     r2=readl((u8 __iomem *)root+0x40a0);
     r3=readl((u8 __iomem *)root+0x40e0);
-    id5p0=readl((u8 __iomem *)root+0x16c);
+    id5p0=readl((u8 __iomem *)root+0x12c);
     id5p1=readl((u8 __iomem *)root+0x1ac);
     shared=readl((u8 __iomem *)root+0x2c);
     iounmap(root);

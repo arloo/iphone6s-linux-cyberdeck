@@ -64,7 +64,7 @@ static int __init n71_p0_read_init(void)
     p0_id2=readl((u8 __iomem *)root+0x140);
     p0_id3=readl((u8 __iomem *)root+0x154);
     p0_id4=readl((u8 __iomem *)root+0x164);
-    p0_id5=readl((u8 __iomem *)root+0x16c);
+    p0_id5=readl((u8 __iomem *)root+0x12c);
     p1_id2=readl((u8 __iomem *)root+0x180);
     p1_id5=readl((u8 __iomem *)root+0x1ac);
     iounmap(root);

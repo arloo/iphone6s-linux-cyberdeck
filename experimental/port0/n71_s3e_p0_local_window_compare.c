@@ -279,7 +279,7 @@ static int __init n71_port0_init(void)
         if (!pinctrl) {ret=-ENOMEM;goto out_put;}
         pin_raw=readl((u8 __iomem *)pinctrl + S8000_GPIO160_OFFSET);
         wifi_raw=readl((u8 __iomem *)pinctrl + 4*161);
-        p0_root=readl((u8 __iomem *)root_mmio + 0x16c);
+        p0_root=readl((u8 __iomem *)root_mmio + 0x12c);
         p1_root=readl((u8 __iomem *)root_mmio + 0x1ac);
         ret=regmap_read(n71_pinctrl_regmap,S8000_GPIO160_OFFSET,&pin_cached);
         if (ret || pin_raw!=S8000_GPIO160_ORIGINAL ||
@@ -334,7 +334,7 @@ static int __init n71_port0_init(void)
         mode0=readl((u8 __iomem *)root_mmio + 0x14);
         mode1=readl((u8 __iomem *)root_mmio + 0x24);
         shared_status=readl((u8 __iomem *)root_mmio + 0x2c);
-        port0_status=readl((u8 __iomem *)root_mmio + 0x16c);
+        port0_status=readl((u8 __iomem *)root_mmio + 0x12c);
         port1_status=readl((u8 __iomem *)root_mmio + 0x1ac);
         if (perst160!=(assert_storage_reset ?
                 S8000_GPIO160_ASSERTED_LOW : S8000_GPIO160_ORIGINAL) ||
@@ -503,7 +503,7 @@ static int __init n71_port0_init(void)
                 if (bank[k]) iounmap(bank[k]);
         }
         if (root_mmio) {
-            u32 p0_link=readl((u8 __iomem *)root_mmio+0x16c);
+            u32 p0_link=readl((u8 __iomem *)root_mmio+0x12c);
             u32 p1_link=readl((u8 __iomem *)root_mmio+0x1ac);
             u32 shared=readl((u8 __iomem *)root_mmio+0x2c);
             pr_info("n71-s3e-p0: PHYSICAL_ROOT_DURING_P0_POWER p0_id5=%08x p0_bit0=%u p1_id5=%08x p1_bit0=%u shared=%08x no_pcie_reset_no_dma\n",

@@ -303,6 +303,16 @@ thermally/VBUS guarded; all future hardware tests require a fresh
 charger preflight. Details in the
 [combined power and port0 research note](../../docs/N71_S8000_SN2400_500MA_AND_PCIE_LOCAL0210_2026_11_17.md).
 
+## Physical DART0/NVMe MMU access now works
+
+The opt-in `stock_late_controls=1` mode of
+`n71_s3e_p0_asserted_reset_rootstart.c` physically cleared port0 ID2 bit8
+and set ID4 bit0 under asserted NAND GPIO160. DART0 and NVMe MMU then
+returned valid values rather than all ones. All root/PMGR/GPIO state
+was restored and WLAN remained active. The current ID5 selector is
+**root+0x12c** for port0, not0x16c. See the
+[physical evidence](../../docs/N71_S8000_PORT0_DART_NVMMU_MMIO_BREAKTHROUGH_2026_11_17.md).
+
 ## Next engineering milestone
 
 1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock

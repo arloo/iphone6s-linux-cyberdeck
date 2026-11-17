@@ -269,7 +269,7 @@ static int __init n71_port0_init(void)
             if (dart0) { iounmap(dart0); dart0=NULL; }
         }
         if (root_mmio) {
-            u32 p0_link=readl((u8 __iomem *)root_mmio+0x16c);
+            u32 p0_link=readl((u8 __iomem *)root_mmio+0x12c);
             u32 p1_link=readl((u8 __iomem *)root_mmio+0x1ac);
             u32 shared=readl((u8 __iomem *)root_mmio+0x2c);
             pr_info("n71-s3e-p0: PHYSICAL_ROOT_DURING_P0_POWER p0_id5=%08x p0_bit0=%u p1_id5=%08x p1_bit0=%u shared=%08x no_pcie_reset_no_dma\n",

@@ -227,7 +227,7 @@ static int __init n71_port0_init(void)
         mode0=readl((u8 __iomem *)root_mmio + 0x14);
         mode1=readl((u8 __iomem *)root_mmio + 0x24);
         shared_status=readl((u8 __iomem *)root_mmio + 0x2c);
-        port0_status=readl((u8 __iomem *)root_mmio + 0x16c);
+        port0_status=readl((u8 __iomem *)root_mmio + 0x12c);
         port1_status=readl((u8 __iomem *)root_mmio + 0x1ac);
         if (perst160!=0x00072200 || mode0!=0x00000101 ||
             mode1!=0 || shared_status!=0x00000011 ||
@@ -310,7 +310,7 @@ static int __init n71_port0_init(void)
             if (dart0) { iounmap(dart0); dart0=NULL; }
         }
         if (root_mmio) {
-            u32 p0_link=readl((u8 __iomem *)root_mmio+0x16c);
+            u32 p0_link=readl((u8 __iomem *)root_mmio+0x12c);
             u32 p1_link=readl((u8 __iomem *)root_mmio+0x1ac);
             u32 shared=readl((u8 __iomem *)root_mmio+0x2c);
             pr_info("n71-s3e-p0: PHYSICAL_ROOT_DURING_P0_POWER p0_id5=%08x p0_bit0=%u p1_id5=%08x p1_bit0=%u shared=%08x no_pcie_reset_no_dma\n",
