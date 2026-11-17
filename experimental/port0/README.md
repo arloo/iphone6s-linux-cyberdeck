@@ -68,15 +68,30 @@ detached before platform devices are unregistered.
 It contains **no** `pm_runtime_get`, `pm_runtime_enable`, MMIO write,
 NVMe command, reset release or DMA enable. It is default-inert and
 requires explicit parameters `armed=1 attach_domains=1` to attach.
-This module is compiled for the exact N71 booted ARM64 kernel, and
-its static safety contract tests pass. The live genpd-attachment path
-has **not yet been hardware tested**; do not mistake source validation
-for physical power-on or a proven DMA translation setup.
+This module is compiled for the exact N71 booted ARM64 kernel.
+**Physical test on 2026-11-17: PASS.** Both platform devices
+`n71-a9-dart0.0.auto` and `n71-a9-nvmmu0.1.auto` appeared
+under `pcie_link0` in the live Linux `pm_genpd_summary`, while
+the domain remained `off-0`. After `rmmod`, both associations
+and devices disappeared, Wi-Fi carrier remained up, USB SSH
+continued responding, and the NAND block-device list remained empty.
+Genpd marked the devices `unsupported`: they have no fully
+enabled runtime PM or storage controller driver yet.
 
-The owner's existing SN2400 bounded-input charger was restored to a
-300-mA monitored lease when the previous lease expired. The
-storage-driver staging checks still refuse power-dependent testing
-while battery and supply preflights are inadequate.
+The owner's bounded SN2400 charging lease was restored to 300 mA
+following the previous automatic timeout. The phone's fuel gauge
+alternates charging/idle/discharging over short intervals.
+The private staging procedure consequently requires **ten actual
+current samples**, a positive total, at least four positive
+charging samples, 40%+ capacity, temperature below 40 °C,
+3.7–4.25 V battery voltage and a configured USB gadget;
+no power-dependent storage trial was approved on this criterion.
+Brightness was lowered temporarily to support net-positive current.
+
+**This success proves safe platform/genpd wiring only.** The MMIO
+register windows still require verified electrical power/clock
+sequencing and DMA quarantine before the real S3E PCIe endpoint
+can be brought up.
 
 ## Sources
 
