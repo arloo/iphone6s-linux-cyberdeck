@@ -1,0 +1,18 @@
+[Unit]
+Description=Cyberdeck A9 owner-only AI text bridge (USB network, no model key on phone)
+Documentation=https://github.com/arloo/iphone6s-linux-cyberdeck
+After=cyberdeck-server.service
+
+[Service]
+Type=simple
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+EnvironmentFile=%h/.config/cyberdeck/deck.env
+ExecStart=/usr/bin/python3 -u %h/Documenti/iphone6s-linux-cyberdeck-public/experimental/ai/n71_ai_usb_bridge.py
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=5
+
+[Install]
+WantedBy=default.target

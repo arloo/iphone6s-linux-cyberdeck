@@ -1,6 +1,6 @@
 # Targeted Kali ARM64 integration for N71
 
-Design reviewed 2026-11-16. **Not installed or physically qualified on the phone.** The current live tools are the minimal bring-up utilities, WPA/DHCP and BlueZ/D-Bus; their existence is not a Kali installation.
+Design reviewed 2026-11-17. **Partial security tool integration is physically qualified; a complete Kali ARM64 rootfs is not installed.** The phone now has an owner-local `n71-kali` diagnostic profile and a real static ARM64 tcpdump 4.99.7 linked with libpcap 1.10.7. A bounded two-packet USB capture passed on the device; full Kali package management, nmap, monitor mode/injection, and persistent tools remain open. [Exact live proof and privacy architecture](N71_THREE_PILLARS_KALI_TODAY_AI_2026_11_17.md).
 
 ## Architectural decision
 

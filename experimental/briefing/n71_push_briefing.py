@@ -7,17 +7,59 @@ files travel to the device. Default mode is a metadata-only dry run.
 import argparse
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import unicodedata
 from zoneinfo import ZoneInfo
 
 STATE = Path.home() / ".local/share/cyberdeck/reader-state.json"
 SSH_CONFIG = Path.home() / "Documenti/cyberdeck-a9-linux/private-touch-live-test/n71-ssh-20261116/client-config-PRIVATE.json"
+POLICY = Path.home() / ".config/cyberdeck/wa-privacy.json"
 MAX_BYTES = 24576
 ZONE = ZoneInfo("Europe/Rome")
 ANSI = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def assert_whatsapp_privacy_revision(state, policy_path=POLICY):
+    """Never push AI content generated before the operator changed exclusions.
+
+    Mirrors the backend policy stamp, without exporting contact names to the
+    phone or importing personal WhatsApp access credentials.
+    """
+    if not isinstance(state, dict):
+        raise ValueError("Briefing state is not a JSON object")
+    if policy_path.is_symlink():
+        raise ValueError("Privacy policy must not be a symlink")
+    if not policy_path.exists():
+        revision = "unconfigured"
+    else:
+        info = policy_path.stat(follow_symlinks=False)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or info.st_mode & 0o077 or not (0 < info.st_size <= 65536)):
+            raise ValueError("Privacy policy file is not private or valid")
+        try:
+            doc = json.loads(policy_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, UnicodeError) as exc:
+            raise ValueError("Unreadable privacy policy") from exc
+        if (not isinstance(doc, dict) or doc.get("version") != 1
+                or doc.get("mode") != "strict"
+                or type(doc.get("include_groups")) is not bool
+                or any(not isinstance(doc.get(k), list)
+                       or len(doc[k]) > 1000
+                       or any(not isinstance(x, str) or not x.strip() for x in doc[k])
+                       for k in ("excluded_contacts", "excluded_groups"))):
+            raise ValueError("Invalid or incomplete privacy policy")
+        after = policy_path.stat(follow_symlinks=False)
+        if after.st_mtime_ns != info.st_mtime_ns or after.st_size != info.st_size:
+            raise ValueError("Privacy policy changed during inspection")
+        revision = str(info.st_mtime_ns) + ":" + str(info.st_size)
+    if state.get("wa_privacy_revision") != revision:
+        raise ValueError("WhatsApp contact exclusions changed; refresh AI before phone push")
+    return revision
+
 
 def clean(value, limit=500):
     if not isinstance(value, str):
@@ -117,6 +159,7 @@ def main():
     parser.add_argument("--push", action="store_true", help="Send over pinned USB-only SSH")
     args = parser.parse_args()
     state = json.loads(STATE.read_text())
+    revision = assert_whatsapp_privacy_revision(state)
     compact, binary, display = payload_from(state)
     if not args.push:
         print("BRIEFING_PREVIEW_ONLY items=" + str(len(compact["actions"]))
@@ -125,7 +168,13 @@ def main():
               + " bytes=" + str(len(binary)))
         return
     config = json.loads(SSH_CONFIG.read_text())
+    # Repeat immediately before each transfer so stale AI text cannot be
+    # uploaded after an exclusion edit made during briefing serialization.
+    if assert_whatsapp_privacy_revision(state) != revision:
+        raise ValueError("Privacy revision changed before JSON transfer")
     ssh_push(config, "today.json", binary)
+    if assert_whatsapp_privacy_revision(state) != revision:
+        raise ValueError("Privacy revision changed before display transfer")
     ssh_push(config, "today.txt", display)
     print("BRIEFING_SSH_PUSH_PASS no_raw_messages=true no_api_keys=true"
           + " cached=" + str(compact["cached"])

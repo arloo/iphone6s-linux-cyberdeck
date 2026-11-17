@@ -1,7 +1,10 @@
 """Offline source-data minimization and rendering gates for the N71 companion push."""
 from datetime import datetime, timedelta
 import importlib.util
+import json
+import os
 from pathlib import Path
+import tempfile
 import unittest
 from zoneinfo import ZoneInfo
 
@@ -70,6 +73,42 @@ class BriefingPush(unittest.TestCase):
         ui = (ROOT / "examples/cyberdeck-shell/cyberdeck-shell.c").read_text()
         self.assertIn('"/run/cyberdeck/today.txt"', ui)
         self.assertIn('"TODAY"', ui)
+
+    def test_private_policy_revision_blocks_stale_ai_phone_transfer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            policy = Path(temporary) / "wa-privacy.json"
+            doc = {"version": 1, "mode": "strict", "include_groups": False,
+                   "excluded_contacts": [], "excluded_groups": []}
+            policy.write_text(json.dumps(doc))
+            policy.chmod(0o600)
+            info = policy.stat()
+            state = {"wa_privacy_revision": f"{info.st_mtime_ns}:{info.st_size}"}
+            self.assertEqual(push.assert_whatsapp_privacy_revision(state, policy),
+                             state["wa_privacy_revision"])
+            doc["excluded_contacts"].append("excluded-test-contact")
+            policy.write_text(json.dumps(doc))
+            with self.assertRaisesRegex(ValueError, "exclusions changed"):
+                push.assert_whatsapp_privacy_revision(state, policy)
+
+    def test_insecure_or_malformed_policy_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            policy = Path(temporary) / "wa-privacy.json"
+            policy.write_text('{"version":1,"mode":"open"}')
+            policy.chmod(0o600)
+            with self.assertRaisesRegex(ValueError, "Invalid or incomplete"):
+                push.assert_whatsapp_privacy_revision({"wa_privacy_revision": "unconfigured"}, policy)
+            policy.chmod(0o644)
+            with self.assertRaisesRegex(ValueError, "not private"):
+                push.assert_whatsapp_privacy_revision({"wa_privacy_revision": "unconfigured"}, policy)
+
+    def test_unconfigured_policy_must_match_state_revision(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            missing = Path(temporary) / "not-configured.json"
+            with self.assertRaisesRegex(ValueError, "exclusions changed"):
+                push.assert_whatsapp_privacy_revision({}, missing)
+            self.assertEqual(push.assert_whatsapp_privacy_revision(
+                {"wa_privacy_revision": "unconfigured"}, missing), "unconfigured")
+
 
 if __name__ == "__main__":
     unittest.main()

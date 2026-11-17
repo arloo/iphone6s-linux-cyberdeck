@@ -121,7 +121,7 @@ static void label(int x,int y,const char *text,int scale,uint32_t color){
 #define ROWS 14
 #define COLS 38
 static char terminal[ROWS][COLS+1];
-static int cursor_x,cursor_y,escape_state,page,shifted,keyboard_mode,input_dropped,dirty=1,master=-1;
+static int cursor_x,cursor_y,escape_state,page,shifted,keyboard_mode,input_dropped,dirty=1,master=-1,ai_chat_started=0;
 static pid_t child=-1;
 static int ttyfd=-1,saved_kd_mode=KD_TEXT;
 static char backlight[256];
@@ -256,7 +256,8 @@ static void keyboard_press(const struct keyboard_key *key){
 static void render_shell(void){
  rect(0,0,W,H,COL_BG);rect(0,0,W,7,COL_PINK);rect(0,7,W,3,COL_CYAN);
  label(28,28,"CYBERDECK / A9",2,COL_CYAN);label(30,88,"N71  //  NATIVE LINUX  //  0.4",1,COL_SOFT);
- const char *tabs[]={"HOME","TERMINAL","SYSTEM","TOOLS","TODAY"};for(int i=0;i<5;i++)button(16+i*146,130,139,tabs[i],page==i);
+ const char *tabs[]={"HOME","TERM","SYS","KALI","TODAY","AI"};
+ for(int i=0;i<6;i++)button(10+i*124,130,117,tabs[i],page==i);
  char a[100],b[100];
  if(page==0){
   label(30,218,"LOCAL OPERATIONS",1,COL_WHITE);ring(694,230,16,COL_CYAN);
@@ -266,7 +267,7 @@ static void render_shell(void){
   snprintf(a,sizeof(a),"CPU %d%%",stats.cpu_percent);snprintf(b,sizeof(b),"AVAIL %d MiB",stats.mem_kib/1024);card(388,466,"SYSTEM / ARM64",a,b);
   label(30,686,"TOUCH FIRST. LOCAL SHELL.",1,COL_CYAN);
   label(30,736,"USB RECOVERY REMAINS AVAILABLE",1,COL_SOFT);
-  label(30,786,"KALI TOOLSET: NOT INSTALLED",1,COL_AMBER);
+  label(30,786,"KALI TOOLS + AI / USB COMPANION",1,COL_CYAN);
   label(30,836,"CHARGING USES A FINITE LEASE",1,COL_SOFT);
   button(30,950,690,"OPEN LOCAL TERMINAL",1);
   button(30,1030,690,"SYSTEM / DISPLAY CONTROLS",0);
@@ -288,29 +289,59 @@ static void render_shell(void){
   label(30,800,"EXIT RESTORES THE PREVIOUS FRAMEBUFFER",1,COL_WHITE);
   button(30,950,690,"EXIT TO PREVIOUS DISPLAY",0);
  }else if(page==3){
-  label(30,240,"TOOLS / INTEGRATION STATUS",1,COL_CYAN);
-  label(30,315,"AVAILABLE: BUSYBOX LOCAL SHELL",1,COL_WHITE);
-  label(30,375,"AVAILABLE: WIFI / BLUEZ RUNTIME",1,COL_WHITE);
-  label(30,465,"KALI ARM64 PACKAGES: PLANNED",1,COL_AMBER);
-  label(30,525,"NMAP / TCPDUMP: NOT INSTALLED",1,COL_SOFT);
-  label(30,585,"MONITOR / INJECTION: NOT QUALIFIED",1,COL_SOFT);
-  label(30,675,"NO PLACEHOLDER TOOL RUN BUTTONS",1,COL_SOFT);
-  button(30,950,690,"OPEN WORKING LOCAL SHELL",1);
+  label(30,230,"KALI / SECURITY TOOLSET",1,COL_CYAN);
+  label(30,300,"NETWORK: IP / PING / TRACEROUTE",1,COL_WHITE);
+  label(30,355,"DIAGNOSTICS: DNS / TCP PORT CHECK",1,COL_WHITE);
+  label(30,415,"KALI ROOTFS: PERSISTENCE PENDING",1,COL_AMBER);
+  label(30,475,"TOOLS: N71-KALI LOCAL PROFILE",1,COL_WHITE);
+  label(30,540,"WIRELESS INJECTION: NOT VERIFIED",1,COL_SOFT);
+  label(30,600,"ONLY TEST NETWORKS YOU OWN",1,COL_AMBER);
+  button(30,710,690,"NETWORK / INTERFACES",0);
+  button(30,790,690,"KALI TOOLS / HELP",0);
+  button(30,950,690,"OPEN KALI TERMINAL",1);
  }else if(page==4){
   label(30,218,"TODAY / AI COMPANION BRIEFING",1,COL_CYAN);
   draw_today();
   button(30,960,690,"SHOW FULL REPORT IN TERMINAL",1);
   button(30,1040,690,"RELOAD LATEST PUSHED REPORT",0);
+ }else if(page==5){
+  label(30,206,"DECK.AI / USB API TEXT DIALOGUE",1,COL_CYAN);
+  label(30,237,ai_chat_started?"TYPE QUESTION, THEN PRESS INVIO":"AI CLIENT: PRESS THE AI TAB",1,COL_SOFT);
+  for(int y=0;y<ROWS;y++)label(30,268+y*N71_FONT_SMALL_H,terminal[y],1,COL_WHITE);
+  if(cursor_x<COLS)rect(30+cursor_x*N71_FONT_SMALL_W,268+cursor_y*N71_FONT_SMALL_H+N71_FONT_SMALL_H-2,N71_FONT_SMALL_W-1,2,COL_CYAN);
+  button(18,778,226,"END CHAT",0);
+  button(262,778,226,"RESET AI",0);
+  button(506,778,226,"CLEAR VIEW",0);
+  keyboard_draw();
  }
  draw_num++;dirty=0;
 }
 static void set_display(int percent){if(!backlight[0]||stats.maxbrightness<=0)return;FILE *f=fopen(backlight,"w");if(f){fprintf(f,"%d\n",stats.maxbrightness*percent/100);fclose(f);}sample();}
 static void tap(int x,int y){
- if(y>=130&&y<=190){for(int i=0;i<5;i++)if(x>=16+i*146&&x<=155+i*146){page=i;dirty=1;}return;}
+ if(y>=130&&y<=190){for(int i=0;i<6;i++)if(x>=10+i*124&&x<127+i*124){
+    if(page==5&&i!=5&&ai_chat_started){key_send("/exit\r");ai_chat_started=0;}
+    page=i;dirty=1;
+    if(i==5&&!ai_chat_started&&access("/usr/bin/n71-ai",X_OK)==0){
+      key_send("/usr/bin/n71-ai --chat\r");ai_chat_started=1;
+    }
+    return;
+  }return;}
  if(page==0){if(y>=950&&y<=1010)page=1;else if(y>=1030&&y<=1090)page=2;dirty=1;}
  else if(page==2){if(y>=430&&y<=490){if(x>=30&&x<=240)set_display(35);else if(x>=270&&x<=480)set_display(50);else if(x>=510&&x<=720)set_display(74);}if(y>=950&&y<=1010)running=0;}
- else if(page==3){if(y>=950&&y<=1010){page=1;dirty=1;}}
+ else if(page==3){
+  if(y>=710&&y<=770){page=1;key_send("n71-kali network\r");dirty=1;}
+  else if(y>=790&&y<=850){page=1;key_send("n71-kali help\r");dirty=1;}
+  else if(y>=950&&y<=1010){page=1;key_send("n71-kali help\r");dirty=1;}
+ }
  else if(page==4){if(y>=960&&y<=1020){page=1;key_send("cat /run/cyberdeck/today.txt\r");dirty=1;}else if(y>=1040&&y<=1100){dirty=1;}}
+ else if(page==5){
+  struct keyboard_key key;if(keyboard_hit(x,y,&key)){keyboard_press(&key);return;}
+  if(y>=778&&y<=838){
+   if(x>=18&&x<=244){if(ai_chat_started)key_send("/exit\r");ai_chat_started=0;page=1;dirty=1;}
+   else if(x>=262&&x<=488){if(ai_chat_started)key_send("/reset\r");dirty=1;}
+   else if(x>=506&&x<=732){for(int i=0;i<ROWS;i++){memset(terminal[i],' ',COLS);terminal[i][COLS]=0;}cursor_x=cursor_y=0;dirty=1;}
+  }
+ }
  else if(page==1){
   struct keyboard_key key;if(keyboard_hit(x,y,&key)){keyboard_press(&key);return;}
   if(y>=778&&y<=838){if(x>=18&&x<=244)key_send("\003");else if(x>=262&&x<=488)key_send("\t");else if(x>=506&&x<=732){for(int i=0;i<ROWS;i++){memset(terminal[i],' ',COLS);terminal[i][COLS]=0;}cursor_x=cursor_y=0;dirty=1;}}
@@ -353,7 +384,8 @@ int main(int argc,char **argv){
   keyboard_mode=0;tap(50,1250);if(keyboard_mode!=1)return 18;tap(40,1140);if(keyboard_mode!=2)return 19;tap(50,1250);if(keyboard_mode!=0)return 20;
   tap(40,1140);if(!shifted)return 21;tap(30,900);if(shifted)return 22;
   page=0;
-  tap(675,160);if(page!=4)return 23;
+  tap(555,160);if(page!=4)return 23;
+  tap(690,160);if(page!=5)return 25;
   tap(75,160);if(page!=0)return 24;
   if(start_shell())return 10;
   char initial[2048]={0};size_t have=0;long long ready_until=milliseconds()+2000;

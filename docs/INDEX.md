@@ -1,8 +1,10 @@
 # Documentation index
 
-Reviewed 2026-11-16. Current guides lead; dated experiment reports preserve the exact scope of their own tests. An old blocker in a dated report does not override the current hardware matrix. No prior report was deleted in this refresh.
+Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the exact scope of their own tests. An old blocker in a dated report does not override the current hardware matrix. No prior report was deleted in this refresh.
 
 ## Current guides
+
+- [Three-pillar live milestone: KALI / TODAY / AI](N71_THREE_PILLARS_KALI_TODAY_AI_2026_11_17.md)
 
 - [AI companion briefing and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)
 - [Personal WhatsApp On-Device connector and private contact exclusions](WHATSAPP_PERSONAL_COMPANION_2026_11_16.md)
