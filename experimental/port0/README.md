@@ -280,6 +280,29 @@ vtables, with no hardware access. This clarifies missing stages in
 the previous safe power-on diagnostic; it does **not** authorize
 writing `3` or `7`, enabling DMA or deasserting NAND PERST.
 
+## Stock A9 port-local status register 0x210 (real read-only comparison)
+
+The original Samsung S8000 PCIe source's **port vslot1504** reads
+port-local register `0x210` using vslot2000, then if its result is
+nonzero writes back the same 32-bit value through vslot2008. The
+new [original source gate](../../tools/n71_s8000_stock_port_0210_source_gate.py)
+is verified against the authentic private Apple kernelcache.
+
+The new ARM64 `n71_s8000_port1_0210_ro.c` was built and run once
+against the existing **active WLAN** PCIe port1, without register
+writes. It returned **`0x0001fc0f` at local `0x210`** (and
+`0x80=1`, `0x88=5`, root port1 ID5=1). Wi-Fi remained connected
+and port0 remained OFF. The register's write-one-to-clear/interrupt/
+status semantics remain unqualified: **do not replay that write**.
+
+At the same time, the existing SN2400 battery driver was physically
+qualified at 500 mA USB **input** for a 30-second bounded trial,
+averaging **+265 mA net battery charge across 14 positive samples**.
+The subsequent supervised 3600-second lease remains ephemeral and
+thermally/VBUS guarded; all future hardware tests require a fresh
+charger preflight. Details in the
+[combined power and port0 research note](../../docs/N71_S8000_SN2400_500MA_AND_PCIE_LOCAL0210_2026_11_17.md).
+
 ## Next engineering milestone
 
 1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock

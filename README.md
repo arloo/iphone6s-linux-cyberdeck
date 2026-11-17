@@ -4,6 +4,8 @@ A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation
 
 **Physical milestone, 17 November 2026:** native Linux on the real **N71 / Samsung S8000** now runs a **six-tab KALI / TODAY / AI Cyberdeck**, retaining HOME, TERM and SYS. Automatic multitouch, Wi-Fi and Bluetooth from 16 November remain available. A first-stage Kali-compatible tool profile and genuine ARM64 static tcpdump 4.99.7 passed physical tests; TODAY receives a privacy-checked AI briefing via pinned USB SSH; and the text AI tab connects via an owner-only Dell USB bridge to the OpenAI Responses API without placing an OpenAI key on the phone. A private next-boot RAM payload has been built but **not physically boot-tested**. Full Kali userspace, manual ergonomic acceptance, standalone storage and automatic per-boot provisioning remain open. This is a RAM-only research system, not a persistent phone OS. [Detailed evidence and limits](docs/N71_THREE_PILLARS_KALI_TODAY_AI_2026_11_17.md).
 
+**Hardware-test charging policy (17 Nov 2026):** before every further N71/S8000 PCIe, DART or NVMe MMU trial, check the SN2400 lease age, battery capacity/temperature/voltage and USB VBUS. The Dell USB device advertises **500 mA** and a 30-second physically monitored trial at 500 mA input delivered an average **+265 mA net battery current**; this does not imply a fast-charge negotiation or authorize higher USB draw. A 3600-second rollback lease is active only in the attended RAM session. It must be explicitly renewed as part of subsequent testing before expiry, and never bypassed if health checks fail. [Physical charging and 0x210 driver evidence](docs/N71_S8000_SN2400_500MA_AND_PCIE_LOCAL0210_2026_11_17.md).
+
 A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
 
 ## Start here
@@ -41,7 +43,7 @@ The Dell serves as build/recovery workstation, controlled Bluetooth/network test
 | Bluetooth transport | BCM UART HCI, genuine private patchram build 0825 | Enabled with zero observed transport errors |
 | Bluetooth discovery/data | LE scan (12 devices), classic Dell pairing/bonding and encrypted L2CAP echo | Two controlled same-session trials PASS; HID/audio/GATT/reboot open |
 | Radio coexistence | Wi-Fi Internet traffic during Bluetooth transfer | Short concurrent test PASS; no sustained benchmark |
-| Battery/charging | Gauge telemetry and positive net charge using guarded USB input lease | Monitored charging PASS; autonomous/full-charge policy open |
+| Battery/charging | SN2400 verified 500 mA USB input pilot: 14 positive samples, +265 mA mean net battery; subsequent supervised 3600 s lease | Measured positive charging PASS; automatic kernel rollback on expiry; full-charge, unattended renewal and reboot persistence not proven |
 | Kali ARM64 security tools | First-stage n71-kali profile and genuine tcpdump 4.99.7/libpcap 1.10.7 ARM64 static build | Phone-local PASS for version and bounded USB capture; full signed Kali ARM64 rootfs and nmap are pending |
 | Touch terminal/jobs | Real local PTY/keyboard dispatch selftest passed on phone; Home/System/Tools views running | Manual typing, full VT/scrollback and Kali job integration remain open |
 | Remote experimental storage | Dell-backed 64 MiB ext4 on /dev/nbd0 via USB | Read-only and read/write mount, synced file and host readback PASS; detached; not standalone or suitable for private data |
