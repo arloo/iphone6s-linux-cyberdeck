@@ -35,6 +35,27 @@ before the physical power test. This is not a bare-metal NAND backup.
   NVMe-MMU remapping, DMA, APFS resize, NAND write or partitioning**
   was performed. All experimental modules were unloaded afterwards.
 
+## Native Linux storage controller device-model milestone (17 November)
+
+**Executed on the actual iPhone 6s/S8000:** the ARM64 module
+`n71_s3e_platform_inventory.c` registered and bound platform devices
+`n71-a9-dart0.0.auto` and `n71-a9-nvmmu0.1.auto` with their exact
+stock Apple physical resources. Linux confirmed **1 DART0 resource**
+and **2 NVMMU0 resources**. Both devices and the module were then
+unregistered; Wi-Fi stayed active and PCIe link0 stayed OFF.
+
+The optional `n71-s8000-storage-controllers-disabled.dtsi` also compiled
+as part of the **full N71 Linux Device Tree** and supplies both physical
+resource sets, original IRQs 245/246 and the `pcie_link0` genpd
+dependency. It is **not installed** on the running phone or any boot image.
+Both nodes remain `status = "disabled"`. This work does **not** train
+the storage link, map DMA, access NAND, enumerate `106b:2002`, or
+establish a usable Linux storage volume.
+
+The live phone was discharging (~51%) during registration, so no
+further hardware power/PHY reset tests were run. Resume invasive
+qualification only with a reliable charging supply.
+
 ## Sources
 
 `n71_s3e_port0_power.c` — opt-in PMGR 25-ms physical power lease,

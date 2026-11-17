@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * N71 / Samsung S8000 physical S3E storage controller resources.
+ *
+ * Hardware sources: genuine N71 original Apple Device Tree and live
+ * iPhone 6s iOS NVMe controller. Intentionally DISABLED pending verified
+ * DART0 + NVMMU0 power/clock and DMA isolation.
+ *
+ * Include this only in Samsung S8000 N71 DTS *after* s8000.dtsi.
+ * It is deliberately not part of the public production DTB or any
+ * iPhone's current bootloader image.
+ */
+&{/soc} {
+    n71_s3e_dart0: iommu@601008000 {
+        compatible = "apple,s8000-dart", "apple,s5l8960x-dart";
+        reg = <0x6 0x01008000 0x0 0x4000>;
+        interrupt-parent = <&aic>;
+        interrupts = <AIC_IRQ 245 IRQ_TYPE_LEVEL_HIGH>;
+        power-domains = <&ps_pcie_link0>;
+        /* Stock N71: ADT phandle 0x80, mapper child 0x81.
+         * No iommu-map/#iommu-cells/SID until requester isolation is proven.
+         */
+        status = "disabled";
+    };
+
+    n71_s3e_nvmmu0: iommu@601004000 {
+        compatible = "apple,s8000-nvmmu";
+        reg = <0x6 0x01004000 0x0 0x4000>,
+              <0x6 0x01000000 0x0 0x4000>;
+        reg-names = "nvmmu-tcb", "nvmmu-port0";
+        interrupt-parent = <&aic>;
+        interrupts = <AIC_IRQ 246 IRQ_TYPE_LEVEL_HIGH>;
+        power-domains = <&ps_pcie_link0>;
+        /* Stock N71: ADT phandle 0x82 and a distinct S3E iommu-parent.
+         * Never enable without validated TCB/SART/invalidate-fifo protocol.
+         */
+        status = "disabled";
+    };
+};
