@@ -57,6 +57,44 @@ synthetic regression tests. Authentic-private source verification:
 `N71_STOCK_S8000_STORAGE_CALLBACK_SOURCE_GATE=PASS`.
 Full project suite: **1,630 tests PASS**.
 
+## Original Apple Fact targets resolved to IORegistry phandles
+
+**Critical correction:** Each original `Fact` callback's first u32 is
+a real `AAPL,phandle`, not a PMGR device index, physical register address
+or IOMMU SID. The genuine stock N71 ADT resolves the full graph:
+
+| Fact callback / related mapper | Phandle | Target |
+| --- | --- | --- |
+| Storage DART force-active | `0x80` | `dart-apcie0` |
+| Storage DART mapper | `0x81` | `dart-apcie0/mapper-apcie0` |
+| Storage NVMMU force-active | `0x82` | `nvme-mmu0` |
+| WLAN DART force-active | `0x83` | `dart-apcie1` |
+| WLAN DART mapper | `0x84` | `dart-apcie1/mapper-apcie1` |
+| Baseband DART force-active | `0x85` | `dart-apcie2` |
+| Baseband DART mapper | `0x86` | `dart-apcie2/mapper-apcie2` |
+
+The original S3E `iommu-parent` consists of three phandles:
+`(0x81, 0x81, 0x82)`. Storage DART's actual `Fact` target is the
+*controller service* `0x80`, not the mapper service `0x81`.
+The NVMMU controller `0x82` is a distinct dependency.
+
+The live N71 Linux Device Tree currently has **no platform-device
+node** for DART0 or NVMMU0; the existing runtime DART driver is for
+the WLAN path. This is a concrete native Linux device-model and
+power sequencing gap, in addition to link training. The original
+Apple `AppleARMPlatform`, `ApplePMGR`, `AppleS8000PMGR`,
+`IODARTFamily` and `AppleS5L8960XDART` ARM64 executable text
+is extracted in the owner's private reverse-engineering workspace.
+No Apple binary is published.
+
+The strict original-firmware gate
+`tools/n71_s8000_storage_force_active_chain_gate.py`
+now verifies all seven phandles, their distinct namespace, every
+storage/WLAN/baseband `Fact` target, and S3E IOMMU parent graph.
+An amended `Fact` callback still must **not** be invoked as a PMGR
+register write, and no DMA isolation or storage activation is yet
+authorized by this result.
+
 ## Hardware qualification still needed
 
 The callback's actual implementation and register-level power/clock

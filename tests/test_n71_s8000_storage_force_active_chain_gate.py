@@ -30,7 +30,53 @@ def fake_pmgr_entries() -> bytes:
         raw[i+32:i+32+len(name)] = name
     return bytes(raw)
 
+def phandle_graph() -> dict[str, dict[str, bytes]]:
+    result = {}
+    for number, path in gate.EXPECTED_FORCE_ACTIVE_PHANDLES.items():
+        result[gate.ADT.ROOT+path] = {
+            "AAPL,phandle": struct.pack("<I",number)}
+    for name, functions in gate.EXPECTED_BRIDGE_FACT_ACTIONS.items():
+        result[gate.ADT.ROOT+name] = {
+            key:struct.pack("<II",value,gate.FOURCC)
+            for key,value in functions.items()}
+    result[gate.ADT.PORT0] = {
+        "iommu-parent": struct.pack("<III",0x81,0x81,0x82)}
+    return result
+
+
 class StorageCallbackGateTests(unittest.TestCase):
+    def test_fact_target_phandles_are_real_registry_nodes(self):
+        gate.resolve_fact_phandle_graph(phandle_graph())
+    def test_renumber_dart0_phandle_must_fail(self):
+        graph=phandle_graph()
+        graph[gate.ADT.ROOT+"dart-apcie0"]["AAPL,phandle"]=struct.pack("<I",0x90)
+        with self.assertRaises(gate.UnsafeSource):
+            gate.resolve_fact_phandle_graph(graph)
+    def test_dart0_controller_and_mapper_must_be_separate(self):
+        graph=phandle_graph()
+        graph[gate.ADT.ROOT+"dart-apcie0/mapper-apcie0"]["AAPL,phandle"]=struct.pack("<I",0x80)
+        with self.assertRaises(gate.UnsafeSource):
+            gate.resolve_fact_phandle_graph(graph)
+    def test_duplicate_phandle_must_fail(self):
+        graph=phandle_graph()
+        graph[gate.ADT.ROOT+"extra"]= {"AAPL,phandle":struct.pack("<I",0x80)}
+        with self.assertRaises(gate.UnsafeSource):
+            gate.resolve_fact_phandle_graph(graph)
+    def test_swapping_wifi_and_storage_fact_callback_fails(self):
+        graph=phandle_graph()
+        graph[gate.ADT.ROOT+"apcie/pci-bridge1"]["function-dart_force_active"]=struct.pack("<II",0x80,gate.FOURCC)
+        with self.assertRaises(gate.UnsafeSource):
+            gate.resolve_fact_phandle_graph(graph)
+    def test_storage_iommu_parent_missing_nvmmu_fails(self):
+        graph=phandle_graph()
+        graph[gate.ADT.PORT0]["iommu-parent"]=struct.pack("<III",0x81,0x81,0x80)
+        with self.assertRaises(gate.UnsafeSource):
+            gate.resolve_fact_phandle_graph(graph)
+    def test_malformed_fact_fourcc_fails(self):
+        graph=phandle_graph()
+        graph[gate.ADT.ROOT+"apcie/pci-bridge2"]["function-dart_force_active"]=struct.pack("<II",0x85,0x11111111)
+        with self.assertRaises(gate.UnsafeSource):
+            gate.resolve_fact_phandle_graph(graph)
     def test_valid_descriptors(self):
         gate.check_callback_properties(bridge())
     def test_missing_nvme_mode(self):

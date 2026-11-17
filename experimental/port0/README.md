@@ -86,6 +86,14 @@ owner's original Apple N71 **iOS 15.8.8** Mach-O kernelcache and original
 N71 Apple Device Tree. The live phone runs iOS 15.7.9 when not in
 Linux; do not conflate the two iOS build versions.
 
+Stock S8000 `Fact` callback selectors have since been resolved
+against the original Apple `AAPL,phandle` registry: storage DART0
+is device `0x80`, its mapper `0x81`, and NVMMU0 device `0x82`;
+WLAN DART1 is device `0x83`, mapper `0x84`. The live Linux FDT
+currently lacks dedicated DART0/NVMMU0 platform devices. This
+verifies the **target identity** of the callback, not an MMIO or
+power-on implementation.
+
 The stock Apple initialization sequence additionally requests
 `function-dart_force_active` and
 `function-nvme_mmu_force_active` (separate encoded callback
