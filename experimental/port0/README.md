@@ -49,6 +49,44 @@ Defaults inert; explicitly use `armed=1` for the bounded reads.
 snapshot, rebuilt for the active N71 kernel. Does not request or
 change the reset lines.
 
+### Follow-up physical S8000 storage MMIO results
+
+The following additional native modules have been **executed on the iPhone**:
+
+- `n71_s3e_p0_mode_ro.c`: root common mode `+0x14 = 0x101`,
+  `+0x24 = 0`, while Wi-Fi was active.
+- `n71_s3e_p0_iommu_ro.c`: with port0 powered for 25 ms, reads of
+  DART0 at `0x601008000`, NVMMU0 at `0x601004000` and storage port0
+  at `0x601000000` **all returned `0xffffffff`**. These are invalid
+  register reads, NOT successful device enumeration.
+- `n71_s3e_p0_nvme_mode.c`: temporarily enabled and verified root
+  `+0x24 = 1`, following original **N71/S8000** Apple root vtable
+  instructions, then restored `+0x24 = 0`. The inaccessible bus
+  windows remained `0xffffffff`.
+- `n71_s3e_p0_rootstart.c`: RMW-preserving the actual physical
+  baseline `port0 ID3 = 0x00000100` and
+  `port0 ID2 = 0x01000110`, temporarily set only bit 0 in each,
+  observed positive hardware readbacks, then restored both original
+  register values. Storage PERST GPIO160 remained LOW. DART0/NVMMU
+  still returned `0xffffffff`, PCIe port0 ID5 link bit remained 0,
+  and no NAND block device appeared.
+- All experiments returned the port0 power domain OFF; native WLAN
+  and USB SSH stayed operational. Battery was approximately 58–59%.
+
+These findings are grounded in actual Linux MMIO, combined with the
+owner's original Apple N71 **iOS 15.8.8** Mach-O kernelcache and original
+N71 Apple Device Tree. The live phone runs iOS 15.7.9 when not in
+Linux; do not conflate the two iOS build versions.
+
+The stock Apple initialization sequence additionally requests
+`function-dart_force_active` and
+`function-nvme_mmu_force_active` (separate encoded callback
+identifiers in the genuine ADT). Their electrical and DMA behavior
+is not yet validated, so these calls are **not** replayed. The actual
+S8000 code was also traced through the original port-local and root
+controller vtables; merely duplicating the S8003 PHY bring-up would
+be unjustified.
+
 All modules are narrowly targeted to N71/S8000. They must not be
 loaded on other Apple hardware; do not use them without physical
 recovery access and an existing recoverable backup. They have no

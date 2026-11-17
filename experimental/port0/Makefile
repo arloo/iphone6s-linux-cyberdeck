@@ -1,3 +1,7 @@
 obj-m += n71_s3e_port0_power.o
 obj-m += n71_s3e_port0_root_ro.o
 obj-m += n71_s3e_p0_gpio_ro.o
+obj-m += n71_s3e_p0_iommu_ro.o
+obj-m += n71_s3e_p0_mode_ro.o
+obj-m += n71_s3e_p0_nvme_mode.o
+obj-m += n71_s3e_p0_rootstart.o
