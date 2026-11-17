@@ -15,8 +15,10 @@ empty roots during bounded NAND PERST release. **BAR0 is a64-bit,
 16KiB memory BAR** (mask `ffffc004:ffffffff`); its original pair was
 restored with decode and bus mastering OFF. Port0 power, GPIO160 and
 inherited DART state restored; native WLAN remained functional.
-NVMe capability reads, command queues and a readable Linux namespace
-remain pending. [Physical results](../../docs/N71_S8000_S3E_2002_PHYSICAL_PCIE_ID_2026_11_17.md).
+NVMe BAR0 reads also passed: CAP `0x00000020f00103ff`, VS `0x00010001`
+(NVMe1.0.1), CC0 and CSTS0. Bus mastering remained OFF, all mappings
+and PCI state restored. Command queues and a readable Linux namespace
+remain pending. [Register result](../../docs/N71_S8000_S3E_NVME_BAR0_REGISTERS_2026_11_17.md). [Physical results](../../docs/N71_S8000_S3E_2002_PHYSICAL_PCIE_ID_2026_11_17.md).
 
 The following earlier trial notes preserve their individual test states;
 the current result above supersedes earlier unresolved/quarantine states.

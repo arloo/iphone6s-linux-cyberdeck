@@ -7,7 +7,9 @@
  * Explicit endpoint_id_trial may release PERST only inside active empty
  * roots on all four DART0 streams. It reads three endpoint config words
  * through temporarily reserved bus2. Optional bar0_size_trial sizes and
- * restores BAR0 with decode/master OFF. It then restores routing, reasserts
+ * restores BAR0 with decode/master OFF. Optional nvme_mmio_trial maps
+ * an exclusively reserved BAR0 and reads five NVMe DWORDs with MSE only.
+ * It then restores routing, reasserts
  * reset and restores local0x80 before the DART guard can be removed.
  * Root controls and PMGR return to baseline before restoring GPIO INPUT.
  * Failed rollback retains tables, module, power consumer and GPIO claim.
@@ -22,6 +24,8 @@
 #include "../port1/n71-port-local-trial.h"
 #include "n71_s3e_endpoint_cfg_ro.h"
 #include "n71_s3e_bar0_size.h"
+#include "n71_s3e_nvme_mmio_ro.h"
+#include <linux/ioport.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/init.h>
@@ -57,6 +61,7 @@
 #define P0_PORT_PHYS 0x601000000ULL
 #define P0_ROOT_ECAM_PHYS 0x610000000ULL
 #define P0_EP_BUS2_ECAM_PHYS 0x610200000ULL
+#define S3E_BAR0_CPU_PHYS 0x7c1000000ULL
 #define S8000_PINCTRL_PHYS 0x20f100000ULL
 #define DWELL_MS 25U
 #define S8000_GPIO_CHIP "20f100000.pinctrl"
@@ -81,6 +86,11 @@ static bool dart0_all_streams;
 static bool observe_p0_config;
 static bool endpoint_id_trial;
 static bool bar0_size_trial;
+static bool nvme_mmio_trial;
+static void __iomem *n71_nvme_mmio;
+static bool n71_nvme_region_held;
+module_param(nvme_mmio_trial, bool, 0400);
+MODULE_PARM_DESC(nvme_mmio_trial, "five read-only NVMe register words through isolated BAR0; MSE only, bus mastering OFF, complete PCI rollback");
 module_param(bar0_size_trial, bool, 0400);
 MODULE_PARM_DESC(bar0_size_trial, "probe and restore only S3E BAR0 geometry while both decode and bus mastering are disabled");
 module_param(endpoint_id_trial, bool, 0400);
@@ -394,6 +404,62 @@ static void n71_storage_endpoint_bar_write(void *ctx,unsigned int off,unsigned i
     if (WARN_ON_ONCE(off!=0x10 && off!=0x14)) return;
     writel(val,(u8 __iomem *)m->endpoint+off);
 }
+static void n71_storage_root_window(void *ctx,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    writel(val,(u8 __iomem *)m->cfg+0x20);
+}
+static void n71_storage_root_command(void *ctx,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    if (WARN_ON_ONCE(val!=0 && val!=2)) return;
+    writew(val,(u8 __iomem *)m->cfg+4);
+}
+static void n71_storage_endpoint_command(void *ctx,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    if (WARN_ON_ONCE(val!=0 && val!=2)) return;
+    writew(val,(u8 __iomem *)m->endpoint+4);
+}
+static unsigned int n71_storage_nvme_read(void *ctx,unsigned int off)
+{
+    if (WARN_ON_ONCE(!n71_nvme_mmio ||
+        (off!=0 && off!=4 && off!=8 && off!=0x14 && off!=0x1c))) return ~0U;
+    return readl((u8 __iomem *)n71_nvme_mmio+off);
+}
+static int n71_storage_nvme_mmio_observe(void *ctx)
+{
+    const struct n71_s3e_mmio_ops ops={
+        .ready=n71_storage_endpoint_ready,.root_read=n71_storage_root_read,
+        .endpoint_read=n71_storage_endpoint_read,
+        .root_window=n71_storage_root_window,.endpoint_bar=n71_storage_endpoint_bar_write,
+        .root_command=n71_storage_root_command,.endpoint_command=n71_storage_endpoint_command,
+        .nvme_read=n71_storage_nvme_read,
+    };
+    struct n71_s3e_mmio_result r;
+    int rc;
+    if (n71_nvme_region_held || n71_nvme_mmio) return -EALREADY;
+    if (!request_mem_region(S3E_BAR0_CPU_PHYS,SZ_16K,"n71-s3e-bar0-readonly"))
+        return -EBUSY;
+    n71_nvme_region_held=true;
+    n71_nvme_mmio=ioremap(S3E_BAR0_CPU_PHYS,SZ_16K);
+    if (!n71_nvme_mmio) {
+        release_mem_region(S3E_BAR0_CPU_PHYS,SZ_16K);
+        n71_nvme_region_held=false;return -ENOMEM;
+    }
+    rc=n71_s3e_nvme_mmio_ro_trial(&ops,ctx,&r);
+    pr_info("n71-s3e-p0: S3E_MMIO_GUARD stage=%u root_window=%08x pref_window=%08x pref_base_hi=%08x pref_limit_hi=%08x\n",
+        r.stage,r.root_window,r.pref_window,r.pref_hi_base,r.pref_hi_limit);
+    pr_info("n71-s3e-p0: S3E_NVME_MMIO_READONLY rc=%d cap_hi=%08x cap_lo=%08x vs=%08x cc=%08x csts=%08x reads=%u restored=%u bus_mastering_never_enabled=YES\n",
+        rc,r.cap_hi,r.cap_lo,r.vs,r.cc,r.csts,r.reads,r.restored);
+    if (rc==-3) {
+        pr_err("n71-s3e-p0: BAR0_MMIO_RESOURCE_QUARANTINED_KEEP_MAPPING_AND_DART_ROOTS\n");
+        return rc;
+    }
+    iounmap(n71_nvme_mmio);n71_nvme_mmio=NULL;
+    release_mem_region(S3E_BAR0_CPU_PHYS,SZ_16K);n71_nvme_region_held=false;
+    return rc;
+}
 static int n71_storage_bar0_observe(void *ctx)
 {
     const struct n71_s3e_bar_ops ops={
@@ -406,6 +472,10 @@ static int n71_storage_bar0_observe(void *ctx)
     rc=n71_s3e_bar0_size_trial(&ops,ctx,&r);
     pr_info("n71-s3e-p0: S3E_BAR0_SIZE_TRIAL rc=%d lo=%08x hi=%08x mask_lo=%08x mask_hi=%08x is64=%u bytes=%llu restored=%u decode_and_master_OFF=YES\n",
         rc,r.lo,r.hi,r.mask_lo,r.mask_hi,r.is64,r.size,r.restored);
+    if (!rc && nvme_mmio_trial) {
+        if (!r.is64 || r.size!=SZ_16K) return -EPROTO;
+        rc=n71_storage_nvme_mmio_observe(ctx);
+    }
     return rc;
 }
 static int n71_storage_endpoint_identify(void *ctx)
@@ -587,6 +657,7 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (nvme_mmio_trial && !bar0_size_trial) {ret=-EPERM;goto out_put;}
     if (bar0_size_trial && !endpoint_id_trial) {ret=-EPERM;goto out_put;}
     if (endpoint_id_trial && !observe_p0_config) {ret=-EPERM;goto out_put;}
     if (observe_p0_config && !dart0_all_streams) {ret=-EPERM;goto out_put;}
