@@ -262,6 +262,24 @@ replay that command, as its electrical behavior and side effects
 are not qualified. See the
 [physical and original-code analysis](../../docs/N71_S8000_ORIGINAL_ROOT_PORT_SCOPED_4020_LIVE_READ_2026_11_17.md).
 
+## Original stock Apple startup command and IOMMU sequence (verified)
+
+Original N71/S8000 kernelcache confirms **both** command values:
+root vslot2040 writes `3`, and distinct root vslot2048 writes `7`,
+to the same port-scoped root register `0x4020+0x40*port`. Both are
+dispatched through separately constructed port vtable methods. The
+real Apple startup method calls write-`3` **before** its additional
+port configuration, then calls DART and NVMMU force-active functions
+with argument state `1`. The separate source method using state
+`0` is not proof of immediate runtime ordering.
+
+The source-gated new [original N71 storage command and callback
+sequence](../../docs/N71_S8000_STOCK_STORAGE_PORT_COMMAND_3_7_CALLBACK_ORDER_2026_11_17.md)
+uses authentic Apple ARM64 instructions and constructed original
+vtables, with no hardware access. This clarifies missing stages in
+the previous safe power-on diagnostic; it does **not** authorize
+writing `3` or `7`, enabling DMA or deasserting NAND PERST.
+
 ## Next engineering milestone
 
 1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock

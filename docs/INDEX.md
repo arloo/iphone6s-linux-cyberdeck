@@ -9,6 +9,7 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 - [S8000 storage: physical DART0/NVMMU0 comparison and verified Apple force-active callback chain](N71_S8000_STORAGE_FORCE_ACTIVE_DART0_DIAG_2026_11_17.md)
 - [S8000 storage: physically asserted NAND PERST160 during bounded PCIe root0 power](N71_S8000_STORAGE_ASSERTED_PERST_COMBINED_ROOTSTART_2026_11_17.md)
 - [N71 S8000 original PCIe root per-port read-only live comparison](N71_S8000_ORIGINAL_ROOT_PORT_SCOPED_4020_LIVE_READ_2026_11_17.md)
+- [Stock N71/S8000 storage port command 3/7 and exact original DART/NVMMU callback order](N71_S8000_STOCK_STORAGE_PORT_COMMAND_3_7_CALLBACK_ORDER_2026_11_17.md)
 - [S8000 storage: full original PHY 41/41 and port0-vs-WLAN local MMIO 0/16 differential](N71_S8000_PHY_41_AND_PORT0_MMIO_DIFFERENTIAL_2026_11_17.md)
 
 - [AI companion briefing and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)
