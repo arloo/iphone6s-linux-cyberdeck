@@ -14,6 +14,7 @@ A [complete documentation index](docs/INDEX.md) links current guides and the ret
 | Inspect what genuinely works on the phone | [Hardware state](docs/HARDWARE_STATUS.md) and [engineering assessment](docs/PROJECT_STATE_2026_11_16.md) |
 | Understand build/runtime/recovery boundaries | [Operations and reproducibility](docs/OPERATIONS_AND_REPRODUCIBILITY.md) |
 | Plan Kali and select tool packages | [Kali ARM64 integration](docs/KALI_ARM64_INTEGRATION.md) and [profile manifest](manifests/kali-tool-profiles.json) |
+| Manage music, documents and file backups while internal NAND is unavailable | [A9 NAND blocker and file/media workspace](docs/N71_INTERNAL_STORAGE_AND_MEDIA_WORKSPACE_2026_11_17.md) |
 | Build the AI briefing and persistent storage | [Companion briefing and storage](docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md) |
 | Choose current work | [Roadmap](docs/ROADMAP.md) and [GitHub issue map](docs/ISSUE_STATUS_2026_11_16.md) |
 | Review historical reverse engineering | [Driver worklog](docs/DRIVER_WORKLOG.md), dated reports and [historical README](docs/history/README_BEFORE_2026_11_16_REFRESH.md) |
