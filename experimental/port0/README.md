@@ -56,6 +56,28 @@ The live phone was discharging (~51%) during registration, so no
 further hardware power/PHY reset tests were run. Resume invasive
 qualification only with a reliable charging supply.
 
+## Power-domain dependency module — built, hardware activation deferred
+
+`n71_s3e_genpd_attach.c` adds the real DART0 and NVMMU0 platform
+devices to the **existing** Apple PMGR `pcie_link0` generic-power-domain
+provider using `of_genpd_add_device()`. It explicitly validates the
+N71/S8000 board, the physical PMGR node, that the provider's link domain
+is **off**, and the preserved Wi-Fi PCIe endpoint. Both genpd links are
+detached before platform devices are unregistered.
+
+It contains **no** `pm_runtime_get`, `pm_runtime_enable`, MMIO write,
+NVMe command, reset release or DMA enable. It is default-inert and
+requires explicit parameters `armed=1 attach_domains=1` to attach.
+This module is compiled for the exact N71 booted ARM64 kernel, and
+its static safety contract tests pass. The live genpd-attachment path
+has **not yet been hardware tested**; do not mistake source validation
+for physical power-on or a proven DMA translation setup.
+
+The owner's existing SN2400 bounded-input charger was restored to a
+300-mA monitored lease when the previous lease expired. The
+storage-driver staging checks still refuse power-dependent testing
+while battery and supply preflights are inadequate.
+
 ## Sources
 
 `n71_s3e_port0_power.c` — opt-in PMGR 25-ms physical power lease,
