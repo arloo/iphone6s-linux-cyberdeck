@@ -46,7 +46,11 @@ static int battery_ok(void)
     ret = power_supply_get_property(battery, POWER_SUPPLY_PROP_VOLTAGE_NOW, &voltage);
     if (ret) return ret;
     if (cap.intval <= 10 || temp.intval < 100 || temp.intval >= 400 ||
-        voltage.intval < 3300000 || voltage.intval > 4200000) return -ERANGE;
+        voltage.intval < 3300000 || voltage.intval > 4200000) {
+        pr_err("n71-sn2400-trial: BATTERY_GUARD capacity=%d temp_tenths=%d voltage_uV=%d\n",
+               cap.intval, temp.intval, voltage.intval);
+        return -ERANGE;
+    }
     return 0;
 }
 static int vbus_read(int *uv)
@@ -81,6 +85,7 @@ static void monitor_work(struct work_struct *work)
 {
     unsigned int status, value;
     int uv = 0, ret;
+    const char *phase = "battery";
     mutex_lock(&trial_lock);
     if (!changed) goto out;
     if (time_after_eq(jiffies, deadline)) {
@@ -88,14 +93,16 @@ static void monitor_work(struct work_struct *work)
         goto out;
     }
     ret = battery_ok();
-    if (!ret) ret = regmap_read(chip_map, REG_STATUS, &status);
-    if (!ret && !(status & BIT(5))) ret = -ENOLINK;
-    if (!ret) ret = vbus_read(&uv);
-    if (!ret && (uv < 4400000 || uv > 5500000 || baseline_uv - uv > 400000)) ret = -ERANGE;
-    if (!ret) ret = regmap_read(chip_map, REG_INPUT, &value);
-    if (!ret && value != (input_ua - 90000) / 10000) ret = -EIO;
+    if (!ret) { phase = "status-read"; ret = regmap_read(chip_map, REG_STATUS, &status); }
+    if (!ret && !(status & BIT(5))) { phase = "vbus-status"; ret = -ENOLINK; }
+    if (!ret) { phase = "vbus-adc"; ret = vbus_read(&uv); }
+    if (!ret && (uv < 4400000 || uv > 5500000 || baseline_uv - uv > 400000)) {
+        phase = "vbus-bounds"; ret = -ERANGE;
+    }
+    if (!ret) { phase = "input-read"; ret = regmap_read(chip_map, REG_INPUT, &value); }
+    if (!ret && value != (input_ua - 90000) / 10000) { phase = "input-mismatch"; ret = -EIO; }
     if (ret) {
-        pr_err("n71-sn2400-trial: MONITOR_STOP rc=%d VBUS_uV=%d\n", ret, uv);
+        pr_err("n71-sn2400-trial: MONITOR_STOP rc=%d VBUS_uV=%d phase=%s\n", ret, uv, phase);
         restore_input("monitor-stop");
         goto out;
     }
@@ -171,4 +178,4 @@ static void __exit trial_exit(void)
 module_init(trial_init);
 module_exit(trial_exit);
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("N71 SN2400 30-second input-current trial with automatic rollback");
+MODULE_DESCRIPTION("N71 SN2400 bounded input-current lease with guarded automatic rollback");

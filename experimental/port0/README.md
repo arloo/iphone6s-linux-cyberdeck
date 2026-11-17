@@ -15,6 +15,10 @@ empty roots during bounded NAND PERST release. **BAR0 is a64-bit,
 16KiB memory BAR** (mask `ffffc004:ffffffff`); its original pair was
 restored with decode and bus mastering OFF. Port0 power, GPIO160 and
 inherited DART state restored; native WLAN remained functional.
+Owned NVMMU 16 KiB/4 KiB table replacement, bounded invalidation and exact
+inherited-pointer restoration also passed around the nested endpoint trial.
+[NVMMU ownership result](../../docs/N71_S8000_NVMMU_OWNED_TABLES_2026_11_17.md).
+
 NVMe BAR0 reads also passed: CAP `0x00000020f00103ff`, VS `0x00010001`
 (NVMe1.0.1), CC0 and CSTS0. Bus mastering remained OFF, all mappings
 and PCI state restored. Command queues and a readable Linux namespace
