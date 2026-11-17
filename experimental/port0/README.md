@@ -250,6 +250,18 @@ was enumerated. Do not misrepresent this as functional NAND.
 
 [Full original-hardware test details](../../docs/N71_S8000_STORAGE_ASSERTED_PERST_COMBINED_ROOTSTART_2026_11_17.md).
 
+## Original root vslot2040 port-local register: hardware comparison
+
+One physically executed, read-only N71/S8000 ARM64 probe measured
+`root+0x4020` (storage) and `root+0x4060` (live WLAN) plus corresponding
+ports2/3: **all four read `0x00000000`**. The WLAN link status was 1
+(up), port0 0 (down), so this port-scoped register value is **not**
+a direct indication of link training. Original Apple source calls
+root vslot2040 to **write 3** to these offsets; we did **not**
+replay that command, as its electrical behavior and side effects
+are not qualified. See the
+[physical and original-code analysis](../../docs/N71_S8000_ORIGINAL_ROOT_PORT_SCOPED_4020_LIVE_READ_2026_11_17.md).
+
 ## Next engineering milestone
 
 1. Derive port0-specific PHY/REFCLK/PERST sequencing from the stock
