@@ -8,6 +8,7 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 - [Internal Apple A9 NAND blocker and validated media/file workspace](N71_INTERNAL_STORAGE_AND_MEDIA_WORKSPACE_2026_11_17.md)
 - [S8000 storage: physical DART0/NVMMU0 comparison and verified Apple force-active callback chain](N71_S8000_STORAGE_FORCE_ACTIVE_DART0_DIAG_2026_11_17.md)
 - [S8000 storage: physically asserted NAND PERST160 during bounded PCIe root0 power](N71_S8000_STORAGE_ASSERTED_PERST_COMBINED_ROOTSTART_2026_11_17.md)
+- [S8000 storage: full original PHY 41/41 and port0-vs-WLAN local MMIO 0/16 differential](N71_S8000_PHY_41_AND_PORT0_MMIO_DIFFERENTIAL_2026_11_17.md)
 
 - [AI companion briefing and persistent storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md)
 - [Personal WhatsApp On-Device connector and private contact exclusions](WHATSAPP_PERSONAL_COMPANION_2026_11_16.md)

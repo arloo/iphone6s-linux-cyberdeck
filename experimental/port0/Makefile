@@ -10,3 +10,5 @@ obj-m += n71_s3e_platform_inventory.o
 obj-m += n71_s3e_genpd_attach.o
 obj-m += n71_s3e_perst160_low.o
 obj-m += n71_s3e_p0_asserted_reset_rootstart.o
+obj-m += n71_s3e_phy_stock_ro.o
+obj-m += n71_s3e_p0_local_window_compare.o

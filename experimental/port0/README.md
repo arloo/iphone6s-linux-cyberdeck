@@ -129,6 +129,35 @@ until that verification passes.
 This is a true GPIO160 reset-control milestone, **not** successful
 PCIe link training or S3E/NAND enumeration.
 
+## Full PHY and physical port0/port1 comparison (17 November)
+
+The source gate `tools/n71_s8000_stock_phy_local_clock_gate.py`
+authenticates the original Samsung S8000 PCIe resource topology,
+41 shared PHY tunables, six+two identical per-port records and
+the distinct Apple `PCIE_APP` clock descriptor.
+
+The physically executed `n71_s3e_phy_stock_ro.c` read all
+**41/41 shared PHY** tunable registers. All were responsive, and
+all 41 matched the original Apple masked register values.
+No power, reset or MMIO writes were made by this probe.
+
+A separate bounded, owner-supervised
+`n71_s3e_p0_local_window_compare.c` physical trial held
+GPIO160 **OUTPUT LOW** during a 25-ms `pcie_link0` power lease.
+It returned **0/8 valid** per-port tuning register reads in each
+port0 bank, versus **8/8 valid** in each of the identical
+WLAN port1 banks. DART0/NVMMU0 also remained unreadable.
+All root registers, PMGR domains and GPIO160 restored
+successfully; both test modules were unloaded.
+
+**Conclusion:** The shared PHY is reachable and stock-conforming.
+The remaining target is the **storage port0-specific register
+decode / clock / force-active path**, not wholesale common PHY
+initialization. The exact gating condition is still unproven.
+Do not release NAND PERST or enable DMA based on this alone.
+
+[Real-device results and limitation details](../../docs/N71_S8000_PHY_41_AND_PORT0_MMIO_DIFFERENTIAL_2026_11_17.md).
+
 ## Sources
 
 `n71_s3e_port0_power.c` — opt-in PMGR 25-ms physical power lease,
