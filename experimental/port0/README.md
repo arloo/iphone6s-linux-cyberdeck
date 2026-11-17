@@ -93,6 +93,42 @@ register windows still require verified electrical power/clock
 sequencing and DMA quarantine before the real S3E PCIe endpoint
 can be brought up.
 
+## Physical S3E reset GPIO160 control and safe recovery
+
+**Tested on real Samsung S8000 N71 hardware, 17 November 2026:**
+
+- Original Apple N71 storage `function-perst` identifies physical
+  **GPIO160**, distinct from WLAN PERST **GPIO161**.
+- A bounded first-stage kernel GPIO experiment exclusively acquired
+  GPIO160 and actively drove it **LOW for 50 ms**, keeping NAND reset
+  asserted while `pcie_link0` remained OFF. Hardware readback confirmed
+  `0x00072202`; WLAN stayed operational. The pin was never driven HIGH.
+- Native `gpiod_direction_input()` then left pin160 in Linux input
+  IRQ-disabled mode `0x0007220e`, not the original firmware mode
+  `0x00072200`. The experimental module correctly quarantined itself
+  and retained exclusive pin ownership instead of assuming restoration.
+- A separate private recovery module, using the **already registered
+  Apple pinctrl device regmap** and a strictly masked `regmap_update_bits`,
+  restored `0x0007220e -> 0x00072200`. A **separate independent raw MMIO
+  reader** confirmed exact original hardware `GPIO160=0x00072200`,
+  `GPIO161=0x00072203`, and untouched storage CLKREQ164. Port0 remained
+  powered OFF, and WLAN/USB/OS stayed functional.
+- The quarantine owner's kernel-module reference and GPIO reservation
+  are still present. **Do not forcibly unload this module.** A clean RAM
+  reboot is required before the next GPIO160 ownership test.
+
+The version-controlled `n71_s3e_perst160_low.c` incorporates the
+confirmed correction: it obtains the **existing pinctrl driver's
+`dev_get_regmap()`** and restores all changed bits before releasing
+the GPIO line. It builds for the actual N71 Linux ARM64 kernel and
+passes its source-contract checks, but its **combined corrected
+acquire/restore path has not yet been hardware-retested** after a fresh
+boot. Keep `pcie_link0`, S3E DMA and endpoint PERST release disabled
+until that verification passes.
+
+This is a true GPIO160 reset-control milestone, **not** successful
+PCIe link training or S3E/NAND enumeration.
+
 ## Sources
 
 `n71_s3e_port0_power.c` — opt-in PMGR 25-ms physical power lease,
