@@ -45,6 +45,15 @@ ORIGINAL_PTE_BUILDER_WORDS={
     0x1ff4:0xf8295903,  # STR X3, [X8,W9,UXTW #3] (64-bit PTE)
 }
 
+# The original upper-level table builder, distinct from the leaf writer.
+# It masks a child-table PA to bits 12..35, ORs 3, then stores 64 bits.
+ORIGINAL_NONLEAF_TABLE_WORDS={
+    0x1520:0x92745c08,
+    0x1524:0xb2400508,
+    0x1528:0xf9400749,
+    0x152c:0xf83c7928,
+}
+
 class FormatNotQualified(ValueError):
     pass
 
@@ -55,7 +64,7 @@ def verify_native_instruction_format(code):
     must(len(code)==BASE.ORIGINAL.EXPECTED_LENGTHS[BASE.ORIGINAL.S5L],
          "Wrong original Apple S5L private executable length")
     for at,w in {**ORIGINAL_TTBR_PROGRAM_WORDS,
-                 **ORIGINAL_PTE_BUILDER_WORDS}.items():
+                 **ORIGINAL_PTE_BUILDER_WORDS,**ORIGINAL_NONLEAF_TABLE_WORDS}.items():
         must(BASE.ORIGINAL.word(code,at)==w,
              "Original Apple TTBR/PTE map field layout changed")
     return True
@@ -121,16 +130,27 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument("original_n71_macho",type=Path)
     ap.add_argument("original_n71_apple_adt",type=Path)
-    ap.add_argument("linux_apple_dart_driver_c",type=Path)
-    ap.add_argument("linux_io_pgtable_dart_c",type=Path)
+    ap.add_argument("--original-only",action="store_true",
+                    help="verify original Apple table encoding only; make no Linux source claim")
+    ap.add_argument("linux_apple_dart_driver_c",type=Path,nargs="?")
+    ap.add_argument("linux_io_pgtable_dart_c",type=Path,nargs="?")
     a=ap.parse_args()
     try:
         # Use read-only owner-held sources; never log private source paths.
         kernel=source_bytes(a.original_n71_macho,BASE.ORIGINAL.MAX_KERNEL)
         adt=source_bytes(a.original_n71_apple_adt,BASE.ORIGINAL.ADT.ADT.MAX_FILE)
-        ls=source_bytes(a.linux_apple_dart_driver_c,300000).decode("utf-8")
-        ps=source_bytes(a.linux_io_pgtable_dart_c,300000).decode("utf-8")
-        check_all(kernel,adt,ls,ps)
+        if a.original_only:
+            must(BASE.original_ttbr_layout(kernel,adt),
+                 "Original N71 TTBR topology not qualified")
+            _,modules=BASE.ORIGINAL.extract_original_modules(kernel)
+            verify_native_instruction_format(modules[BASE.ORIGINAL.S5L]["code"])
+        else:
+            must(a.linux_apple_dart_driver_c is not None and
+                 a.linux_io_pgtable_dart_c is not None,
+                 "Linux comparison requires both source files")
+            ls=source_bytes(a.linux_apple_dart_driver_c,300000).decode("utf-8")
+            ps=source_bytes(a.linux_io_pgtable_dart_c,300000).decode("utf-8")
+            check_all(kernel,adt,ls,ps)
     except Exception:
         print("N71_ORIGINAL_APPLE_S5L_DART1_TTBR_PTE_FORMAT_FAIL_CLOSED",
               file=sys.stderr)
@@ -143,7 +163,12 @@ def main():
     print("ORIGINAL_APPLE_DART_PTE_CALLER_VALID_BIT",0)
     print("ORIGINAL_APPLE_DART_PTE_FIXED_FLAG_BIT",1)
     print("ORIGINAL_APPLE_DART_PTE_WRITE_WIDTH_BITS",64)
-    print("LINUX_APPLE_DART1_SOFTWARE_ENCODING_MATCH=YES")
+    print("ORIGINAL_APPLE_NONLEAF_FLAGS",3)
+    if not a.original_only:
+        print("LINUX_APPLE_DART1_LEAF_SOFTWARE_ENCODING_MATCH=YES")
+    else:
+        print("LINUX_SOURCE_COMPARISON=NOT_REQUESTED")
+    print("GENERIC_LINUX_NONLEAF_PA_OR_1_IS_NOT_S8000_PROOF=YES")
     print("PHYSICAL_WLAN_PCIE_REQUESTER_TO_DART_SID_PROVEN=NO")
     print("LIVE_DART1_DMA_TRANSLATION_SAFETY_OR_FAULT_RECOVERY_PROVEN=NO")
     print("AUTHORIZATION_TO_WRITE_DART1_MMIO_OR_TTBR=NO")

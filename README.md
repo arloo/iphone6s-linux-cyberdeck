@@ -1,6 +1,8 @@
 # iPhone 6s Linux Cyberdeck — N71 / Apple A9
 
-Latest physical storage result (2026-11-18): the S8000 ANS controller requests an **8 MiB HMB**, measured with CC.EN and bus mastering off inside owned DART0/NVMMU guards. A subsequent physical checkpoint installed the owned 8 MiB SART/HMB descriptor, verified it and fully restored it with CC.EN/BME still off. All state restored and native WLAN survived. [Evidence and limits](docs/N71_S8000_ANS_HMB_REQUEST_2026_11_18.md).
+Latest controller result (2026-11-18): ANS reached **NVMe Ready** with the owned 8 MiB HMB. The first Identify submission hit a DART0 upper-level table fault at the SQ address; no Identify or block I/O succeeded. A source-verified PA|3 descriptor candidate is compiled and awaits a fresh physical boot. [Evidence, quarantine and pending correction](docs/N71_S8000_NVME_READY_FIRST_QUEUE_FAULT_2026_11_18.md).
+
+Earlier HMB result (2026-11-18): the S8000 ANS controller requests an **8 MiB HMB**, measured with CC.EN and bus mastering off inside owned DART0/NVMMU guards. A subsequent physical checkpoint installed the owned 8 MiB SART/HMB descriptor, verified it and fully restored it with CC.EN/BME still off. All state restored and native WLAN survived. [Evidence and limits](docs/N71_S8000_ANS_HMB_REQUEST_2026_11_18.md).
 
 
 A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation, Wi-Fi and Bluetooth, a local terminal and a targeted Kali ARM64 tool environment. The intended experience is a fullscreen touch-first console for diagnostics, authorized security assessments and selected companion workflows.

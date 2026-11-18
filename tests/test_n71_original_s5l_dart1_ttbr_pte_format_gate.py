@@ -12,7 +12,7 @@ G=importlib.util.module_from_spec(SP);SP.loader.exec_module(G)
 
 def native():
     data=bytearray(G.BASE.ORIGINAL.EXPECTED_LENGTHS[G.BASE.ORIGINAL.S5L])
-    for at,w in {**G.ORIGINAL_TTBR_PROGRAM_WORDS,**G.ORIGINAL_PTE_BUILDER_WORDS}.items():
+    for at,w in {**G.ORIGINAL_TTBR_PROGRAM_WORDS,**G.ORIGINAL_PTE_BUILDER_WORDS,**G.ORIGINAL_NONLEAF_TABLE_WORDS}.items():
         struct.pack_into("<I",data,at,w)
     return bytes(data)
 
@@ -55,6 +55,13 @@ class TestOriginalA9S5LTTBRPTEFormat(unittest.TestCase):
                 b=bytearray(native());b[at]^=1
                 with self.assertRaises(G.FormatNotQualified):
                     G.verify_native_instruction_format(bytes(b))
+
+    def test_nonleaf_valid_flags_are_three_in_original_builder(self):
+        data=bytearray(native())
+        # ARM64 ORR #1 in place of the genuine ORR #3 must be rejected.
+        struct.pack_into("<I",data,0x1524,0xb2400108)
+        with self.assertRaises(G.FormatNotQualified):
+            G.verify_native_instruction_format(bytes(data))
 
     def test_wrong_apple_text_length_rejected(self):
         with self.assertRaises(G.FormatNotQualified):
