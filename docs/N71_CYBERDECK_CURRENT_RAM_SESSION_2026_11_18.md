@@ -87,8 +87,10 @@ results**, not simulated snapshots. No internal NAND block I/O is claimed.
 
 ## Battery and safe supervision
 
-- BQ27540 capacity remained roughly **71–72%**, with temperature
-  steadily falling into the mid-35 °C range.
+- BQ27540 capacity drifted from roughly **72% down to 70%** over
+  the prolonged working session, despite the 300 mA input pilot.
+  Temperature steadily fell into the mid-35 °C range. This is
+  **not a sustainable net-positive charging result**.
 - An SN2400 **300 mA USB input-current** pilot remained active with
   two-second VBUS telemetry; observed net cell current alternated
   between slightly positive, zero and discharge. This is NOT proof
@@ -131,10 +133,12 @@ addresses, private filenames, messages, credentials and raw logs.
 If the phone reboots or the trusted host key changes, the monitor
 **fails closed** until the owner revalidates the endpoint.
 
-A separate Linux Mint PC can display the Dell terminal after the
-Dell's SSH server is explicitly enabled and an authorized SSH login
-is configured. On inspection, the Dell's system SSH server was
-**inactive**; no unauthenticated remote listener was opened.
+A separate Linux Mint PC can display the Dell terminal after an
+**authorized SSH server is installed and configured on the Dell**.
+On inspection, the Dell reported **`ssh.service` not found**, and
+no TCP SSH listener was active. User session lingering is enabled, so
+user-level timers may remain running while the Dell is powered on.
+No inbound desktop SSH service was installed or opened by this task.
 
 ## Next physical checkpoint
 
