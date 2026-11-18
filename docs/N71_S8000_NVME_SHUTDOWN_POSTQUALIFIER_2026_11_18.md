@@ -191,3 +191,77 @@ skip the staged queue, HMB/SART, NVMMU and DART teardown order.
 
 This is a controller-admin proof and teardown-diagnostics milestone,
 **not** a mounted namespace, read-only filesystem or persistent OS.
+
+
+### Fifth physical boot: controller queues and translation state
+
+On a fresh N71/S8000 RAM Linux boot, with a unique verified boot ID,
+USB SSH authentication, 72% battery and all eight temperature/voltage
+preflight samples passing (37.4–37.5 °C), the next one-shot module
+(SHA-256 `c5ffb202c7511d67b55a8bb4407660086075846b2b7928c607ff444995865f54`)
+again completed **Identify Namespace 1**, confirmed normal NVMe shutdown
+(`CSTS=0x9`), disabled the controller (`CC=CSTS=0`) and turned
+both PCIe bus-master bits off. Its read-only snapshot showed:
+
+```text
+ADMIN_POST_STOP_DMA_SNAPSHOT hmb_descriptor_zero=1
+  queues_zero=0 queues_owned_io_va=1 dart_queues_mapped=1
+  dart_fault=00000500 nvmmu_fifo=00000301
+  no_dma_release_attempted=YES quarantine_unchanged=YES
+```
+
+**New physical finding:** the NVMe controller clears the host-memory
+buffer *descriptor* on shutdown but **does not clear the admin queue
+registers**. The same Linux-owned SQ/CQ IOVAs remain programmed, and
+DART queue leaf mappings remain installed by the pilot. A nonzero DART
+fault and NVMMU FIFO readback were also observed. These values are
+diagnostics, **not proof of active outstanding DMA** and not proof
+that device-side DMA has fully retired.
+
+The driver again returned `-3` and kept its DMA, HMB, NVMMU and DART
+memory pinned, with NAND reset low. Linux USB SSH, WLAN and the UI
+continued functioning. No block device, filesystem mount, partition
+read or NAND write was attempted.
+
+### First controlled queue register retirement pilot: built, NOT loaded
+
+The next step is deliberately smaller than full DMA teardown. A new
+explicit module parameter `ans_queue_retire_probe=1` will authorize
+**only** writing zero to NVMe `AQA/ASQ/ACQ` *after* a successful
+Identify + acknowledged shutdown + disable + readback of BME-off,
+CC/CSTS zero, the observed cleared HMB descriptor, owned queue IOVAs,
+NAND reset low, and still-owned DART/SART mappings.
+
+Every prerequisite is fail-closed; all 52 S3E host tests pass, including
+a separately compiled C gate model that rejects each missing
+precondition. Default parameter remains **off**, and after any trial,
+successful or not, the module **always forces the original `-3`
+quarantine**. There is no DART unmapping, NVMMU invalidation, page
+freeing, HMB release or block I/O in this new probe.
+
+The private AArch64 candidate was compiled but has **not been
+physically loaded**. SHA-256:
+
+`9eeb73fe5e02b8b65bcfd11cb01b1266482449efb21aa6f6cc29ba02f3d8428c`
+
+A fresh phone boot, independently verified USB host key, validated
+backup and eight gauge samples are mandatory before any use. The
+present boot already contains a pinned module and must not be reused.
+
+### Boot payload provenance caveat
+
+An independent on-phone runtime-archive SHA-256 check identified the
+current running filesystem as the **2026-11-17 three-pillars runtime**,
+not the newer hold8/chargepilot bundle, despite native Linux and
+connectivity starting normally. The newer shell supervisor was
+therefore absent, although the kernel-side 300 mA SN2400 pilot
+remained active. The supervisor was staged in the phone's `/run`
+RAM filesystem and successfully passed a read-only power preflight.
+**Continuous automatic renewal was not enabled.**
+
+A private fail-closed attestation helper now checks the exact runtime
+archive checksum, available charging script and splash before a boot
+can be called a verified Showcase/chargepilot build. This finding does
+not undermine the physically logged NVMe register behavior, but
+future test records must distinguish the base Linux runtime from the
+intended user-interface bundle.

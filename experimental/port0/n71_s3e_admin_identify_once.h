@@ -4,6 +4,7 @@
 #include <linux/nvme.h>
 #include <linux/dma-map-ops.h>
 #include "n71_s3e_admin_once_core.h"
+#include "n71_s3e_queue_retire_gate.h"
 /* Included after the storage/HMB guard definitions in the owning pilot. */
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
@@ -301,6 +302,61 @@ static int n71_admin_unprepare(void *ctx)
     pr_info("n71-s3e-p0: ADMIN_UNPREPARED queue_regs_restored=1 DART_leaves_removed=1 TCB_aux_zero=1 NVMMU_flush_pass=1 BME_OFF=1 buffers_retained_until_PERST_LOW=YES\n");
     return 0;
 }
+/* Optional, explicitly armed first-stage queue register retirement trial.
+ * NOT equivalent to DMA retirement: always leave HMB, DART, NVMMU and
+ * all backing pages pinned afterward, even if every queue register clears.
+ * No additional NVMe command, no DART/NVMMU writes and no NAND block I/O.
+ */
+static void n71_admin_queue_register_retire_probe(void *ctx,
+        const struct n71_admin_once_result *r)
+{
+    struct n71_queue_retire_observation v={};
+    unsigned int i;
+    bool cleared=true;
+    if (!ans_queue_retire_probe) return;
+    if (!ans_identify_once || !r->shutdown_attempted ||
+        r->shutdown_rc || r->disable_rc || r->inner_rc ||
+        !r->master_off || !n71_storage_hmb_owned_ready(ctx)) {
+        pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE refused=1 phase_gate=0 DMA_QUARANTINE=YES\n");
+        return;
+    }
+    v.shutdown_attempted=r->shutdown_attempted;
+    v.shutdown_rc=r->shutdown_rc;
+    v.shutdown_csts=r->shutdown_csts;
+    v.disable_rc=r->disable_rc;
+    v.disable_csts=r->disable_csts;
+    v.master_off=r->master_off;
+    v.cc=n71_admin_reg(0x14);
+    v.csts=n71_admin_reg(0x1c);
+    v.root_command=n71_storage_root_read(ctx,4)&0xffffU;
+    v.endpoint_command=n71_storage_endpoint_read(ctx,4)&0xffffU;
+    v.reset_low=n71_storage_reset_level(ctx)==0;
+    v.prepared=n71_admin_memory.prepared;
+    v.regs_saved=n71_admin_memory.regs_saved;
+    v.dart_mapped=n71_admin_memory.dart_mapped;
+    v.hmb_owned=n71_storage_hmb_owned_ready(ctx);
+    v.hmb_lo=n71_storage_ans_hmb_read(ctx,0x1810);
+    v.hmb_hi=n71_storage_ans_hmb_read(ctx,0x1814);
+    v.hmb_size=n71_storage_ans_hmb_read(ctx,0x1818);
+    v.intms=n71_admin_reg(0x0c);
+    v.aqa=n71_admin_reg(0x24);
+    v.asq_lo=n71_admin_reg(0x28);
+    v.asq_hi=n71_admin_reg(0x2c);
+    v.acq_lo=n71_admin_reg(0x30);
+    v.acq_hi=n71_admin_reg(0x34);
+    if (!n71_queue_retire_gate(&v)) {
+        pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE refused=1 exact_gate=0 DMA_QUARANTINE=YES\n");
+        return;
+    }
+    /* CC=0, CSTS=0, both PCI commands=2, SHST=2, HMB descriptor=0,
+     * NAND reset asserted and all queue registers match owned values.
+     * No DMA buffers or page tables are released here. */
+    for (i=0x24;i<=0x34;i+=4) n71_admin_write(i,0);
+    for (i=0x24;i<=0x34;i+=4)
+        if (n71_admin_reg(i)) cleared=false;
+    pr_info("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE armed=1 queue_regs_zero=%u controller_disabled=YES BME_OFF=YES HMB_DESCRIPTOR_ZERO=YES DART_STILL_MAPPED=YES NVMMU_UNTOUCHED=YES DMA_QUARANTINE=YES\n",
+            cleared);
+}
 static int n71_storage_admin_identify_once(void *ctx)
 {
     const struct n71_admin_once_ops o={
@@ -370,6 +426,12 @@ static int n71_storage_admin_identify_once(void *ctx)
                     dart_fault,nvmmu_fifo);
             }
         }
+    }
+    /* Even on successful queue register clear, this opt-in pilot NEVER
+     * authorizes DART/HMB/NVMMU retirement, power-off or DMA free. */
+    if (ans_queue_retire_probe) {
+        n71_admin_queue_register_retire_probe(ctx,&r);
+        rc=-3; /* pin every owned DMA resource until full phone restart */
     }
     pr_info("n71-s3e-p0: ADMIN_STAGE rc=%d prepare_stage=%u dart_fault=%08x nvmmu_fifo=%08x\n",
         rc,n71_admin_memory.stage,

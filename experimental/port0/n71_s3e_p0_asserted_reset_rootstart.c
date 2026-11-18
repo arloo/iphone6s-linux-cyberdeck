@@ -101,6 +101,11 @@ static bool nvmmu_owned_tables;
 static bool ans_hmb_ro;
 static bool ans_hmb_owned;
 static bool ans_identify_once;
+/* The queue-only retirement pilot is explicitly opt-in, never automatic.
+ * It always retains all DMA, HMB, DART and NVMMU backing allocations. */
+static bool ans_queue_retire_probe;
+module_param(ans_queue_retire_probe, bool, 0400);
+MODULE_PARM_DESC(ans_queue_retire_probe, "one-shot post-shutdown NVMe admin queue register zeroing, only after all ownership/shutdown guards; DMA and power remain quarantined");
 module_param(ans_identify_once, bool, 0400);
 MODULE_PARM_DESC(ans_identify_once, "single Identify NS1 with owned HMB/DART queues/FlatDMA; explicitly permits bounded BME/CC.EN then qualified shutdown, no block I/O");
 module_param(ans_hmb_owned, bool, 0400);
