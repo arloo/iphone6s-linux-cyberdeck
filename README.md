@@ -1,5 +1,7 @@
 # iPhone 6s Linux Cyberdeck — N71 / Apple A9
 
+**CYBERDECK // ARLO visual milestone (2026-11-18):** The owner-approved portrait boot splash now **renders on the real N71/S8000 in RAM-only Linux**, with USB SSH-confirmed framebuffer output, `quiet loglevel=3`, native touch-first UI, Wi-Fi and Bluetooth. The original debug boot image is retained. This was a visual/showcase boot, **not** a persistent-storage test. [Physical test evidence and charging caveats](docs/N71_ARLO_SHOWCASE_PHYSICAL_BOOT_2026_11_18.md).
+
 Latest **physical storage breakthrough (2026-11-18)**: On a real N71/S8000, the source-verified PA|3 DART non-leaf descriptor **successfully completed NVMe Identify Namespace 1** with an independently arrived DMA payload. The namespace reports **64,000,000,000 bytes (64 GB decimal), 4 KiB logical LBAs** using the owned 8 MiB HMB. **This is not a mounted block device or filesystem**: controller shutdown did not satisfy the full DMA teardown gate, so the module remains pinned in safe quarantine with bus mastering off. Next step is logging the exact shutdown-phase status on a **fresh qualified boot**, not repeating I/O in the held state. [Physical proof and retention limits](docs/N71_S8000_NVME_IDENTIFY_SUCCESS_2026_11_18.md).
 
 Previous controller failure (2026-11-18): PA|1 DART non-leaf descriptors caused `NO_PMD` at the queue IOVA; this was the blocker that PA|3 overcame for Identify. [Earlier fault analysis](docs/N71_S8000_NVME_READY_FIRST_QUEUE_FAULT_2026_11_18.md).

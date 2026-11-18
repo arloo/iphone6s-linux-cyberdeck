@@ -40,10 +40,13 @@ should render real subsystem states.
 artwork is embedded in a separately generated RAM-only candidate, and an
 optional second variant adds `quiet loglevel=3` to the kernel command line.
 The original, physically proven debug payload and its command line remain
-unaltered. Neither new candidate has yet been physically booted. The splash
-runs once the integrated userspace and framebuffer are ready; it does not
-hide m1n1's own early output, and the quiet variant may still display
-critical kernel diagnostics. No claim of a fully silent boot is made.
+unaltered. The **quiet-showcase** variant was physically booted on 2026-11-18.
+USB-pinned SSH verified `N71_SPLASH_DISPLAYED_RAM_ONLY`, framebuffer geometry,
+`quiet loglevel=3` and the normal integrated UI startup. [Read the first
+physical boot checkpoint](N71_ARLO_SHOWCASE_PHYSICAL_BOOT_2026_11_18.md).
+The splash runs once the integrated userspace and framebuffer are ready;
+it does not hide m1n1's own early output, and the quiet variant may still
+display critical kernel diagnostics. No claim of a fully silent boot is made.
 
 **Charging safety:** the optional Dell-side guarded charge renewal is not
 a substitute for the kernel VBUS, temperature or cell-voltage guards.
