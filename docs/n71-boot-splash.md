@@ -44,6 +44,16 @@ unaltered. The **quiet-showcase** variant was physically booted on 2026-11-18.
 USB-pinned SSH verified `N71_SPLASH_DISPLAYED_RAM_ONLY`, framebuffer geometry,
 `quiet loglevel=3` and the normal integrated UI startup. [Read the first
 physical boot checkpoint](N71_ARLO_SHOWCASE_PHYSICAL_BOOT_2026_11_18.md).
+The user separately **saw the artwork on the physical screen** during a
+20-second RAM-only preview on 2026-11-18. The live framebuffer was read back
+and byte-verified against the uncompressed source, and the original UI was
+restored afterward. The original 3-second automatic handoff was too brief
+for visual confirmation. The startup script now holds a successfully displayed
+Showcase splash for **8 seconds** before launching the original UI, while
+Debug/no-splash retains its original 3-second startup. A new SHA-pinned private
+RAM image has been built and passed offline checks; **the 8-second variant
+has not yet been physically boot-tested**.
+
 The splash runs once the integrated userspace and framebuffer are ready;
 it does not hide m1n1's own early output, and the quiet variant may still
 display critical kernel diagnostics. No claim of a fully silent boot is made.
