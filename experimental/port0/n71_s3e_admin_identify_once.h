@@ -348,6 +348,27 @@ static int n71_storage_admin_identify_once(void *ctx)
             pr_info("n71-s3e-p0: ADMIN_POST_DISABLE_HMB_DESCRIPTOR accessible=%u iova_base_low=%08x iova_base_high=%08x size_bytes=%08x base_zero=%u size_zero=%u no_physical_addresses=YES quarantine_unchanged=YES\n",
                 ready,hmb_lo,hmb_hi,hmb_size,
                 ready && !hmb_lo && !hmb_hi,ready && !hmb_size);
+            /* Post-stop queue/translation snapshot only. ASQ/ACQ are
+             * controller IOVAs, not backing physical addresses, and
+             * are intentionally compared rather than printed. A zeroed
+             * HMB descriptor alone is insufficient to release DMA. */
+            {
+                u32 aqa=n71_admin_reg(0x24);
+                u32 asq_lo=n71_admin_reg(0x28);
+                u32 asq_hi=n71_admin_reg(0x2c);
+                u32 acq_lo=n71_admin_reg(0x30);
+                u32 acq_hi=n71_admin_reg(0x34);
+                u32 dart_fault=readl((u8 __iomem *)m->dart+0x10);
+                u32 nvmmu_fifo=readl((u8 __iomem *)m->local+0x22c);
+                unsigned int queues_zero=!(aqa|asq_lo|asq_hi|acq_lo|acq_hi);
+                unsigned int queues_owned=aqa==0x000f000fU &&
+                    asq_lo==N71_ADMIN_SQ_IOVA && !asq_hi &&
+                    acq_lo==N71_ADMIN_CQ_IOVA && !acq_hi;
+                pr_info("n71-s3e-p0: ADMIN_POST_STOP_DMA_SNAPSHOT hmb_descriptor_zero=%u queues_zero=%u queues_owned_io_va=%u dart_queues_mapped=%u dart_fault=%08x nvmmu_fifo=%08x no_dma_release_attempted=YES quarantine_unchanged=YES\n",
+                    ready && !hmb_lo && !hmb_hi && !hmb_size,
+                    queues_zero,queues_owned,n71_admin_memory.dart_mapped,
+                    dart_fault,nvmmu_fifo);
+            }
         }
     }
     pr_info("n71-s3e-p0: ADMIN_STAGE rc=%d prepare_stage=%u dart_fault=%08x nvmmu_fifo=%08x\n",

@@ -91,11 +91,11 @@ condition on this hardware. Exactly which post-stop values are in
 those registers is still unknown: the failed comparisons alone do not
 establish that the fields cleared to zero.
 
-The next experimental candidate reads the HMB **IOVA descriptor**
-base-low/base-high and size once after shutdown, *only* while the
-ANS MMIO window remains qualified, recording whether each field is
-zero. It adds **no cleanup behavior** and keeps the same quarantine.
-It is not yet physically boot-tested.
+The next fresh-boot experiment subsequently read the HMB **IOVA
+descriptor** base-low/base-high and size after shutdown, with the
+ANS MMIO window verified accessible. Its exact results are recorded
+below. The implementation added **no cleanup behavior**, and the
+quarantine remained intact.
 
 Do **not** remove the gate or free DMA buffers simply because shutdown
 succeeded. DART0 reported a retained fault and NVMMU still had FIFO
@@ -122,11 +122,67 @@ next AArch64 module is compiled with SHA-256:
 
 `e1dff6a7fd61a9d4508db4d8011e54178e5da7a7fccde36bc88a4fc00063cd88`
 
-**This successor has not been physically loaded**. It requires a
-full fresh phone boot, fresh eight-sample battery qualification,
-verified backup and confirmed reset of the previous quarantined
-controller session. Do not execute another Identify or unload the
-pinned module during the current boot.
+### Fourth physical boot: ANS HMB is cleared by shutdown
+
+The successor with SHA-256
+`e1dff6a7fd61a9d4508db4d8011e54178e5da7a7fccde36bc88a4fc00063cd88`
+was physically exercised in **one further fresh RAM Linux boot** on
+2026-11-18. All eight battery samples passed at 74% state of charge,
+37.3 °C, voltage approximately 4.03–4.09 V. It successfully completed
+the same single Identify Namespace 1 and both shutdown phases:
+
+```text
+IDENTIFY_NAMESPACE_REAL nsid=1 nsze=15625000 lba_bytes=4096
+    capacity_bytes=64000000000 data_tail_arrived=1
+ADMIN_SHUTDOWN_TRACE attempted=1 rc=0 csts=00000009
+    disable_rc=0 disable_csts=00000000 inner_rc=0 master_off=1
+ADMIN_POST_DISABLE_PREDICATES qualified=0 prepared=1 dart_mapped=1
+    hmb_owned=1 ans_ready=1 ans_hmb_base_ok=0 ans_hmb_size_ok=0
+ADMIN_POST_DISABLE_HMB_DESCRIPTOR accessible=1
+    iova_base_low=00000000 iova_base_high=00000000
+    size_bytes=00000000 base_zero=1 size_zero=1
+ADMIN_STAGE rc=-3 dart_fault=00000500 nvmmu_fifo=00000501
+```
+
+**Confirmed hardware behavior:** all three ANS HMB descriptor
+registers (`0x1810`, `0x1814`, `0x1818`) are **zero after normal
+shutdown and disable**. The apparent post-stop qualification failure
+was therefore caused by comparing an expected *pre-start* descriptor
+against an intentionally cleared *post-stop* descriptor. It is no
+longer necessary to guess whether these fields clear or change to
+other nonzero values.
+
+**Crucial distinction:** this proves the controller cleared its HMB
+*descriptor*, not that all DMA writes are drained, all FlatDMA
+descriptors have retired, DART queue translations have been unmapped,
+NVMMU invalidations are acknowledged, or SART/HMB physical backing
+pages can be freed. The DART fault and NVMMU FIFO remain recorded.
+The fourth physical session is left in the original **pinned
+quarantine** with bus mastering off and NAND reset low. No Linux
+block device, filesystem mount or NAND write has occurred.
+
+### Next offline candidate
+
+A new **read-only** snapshot extends the post-disable diagnostic log with
+booleans for queue register zero-state vs. the owned queue IOVAs, DART
+queue-translation ownership, the DART fault register, and NVMMU FIFO
+status. It does **not** call the DMA release path. The successor was
+compiled for the same AArch64 kernel with SHA-256:
+
+`c5ffb202c7511d67b55a8bb4407660086075846b2b7928c607ff444995865f54`
+
+All **50 S3E tests** (including three offline snapshot contract checks)
+pass. A private one-shot test harness has been prepared, with the current
+kernel boot ID recorded to **reject this quarantined session**. The
+new candidate has **not** been physically loaded. A fresh boot must
+reverify the USB SSH host key and battery gates before its first and
+only Identify. This will separate a normal controller-local descriptor
+clear from remaining host/translation retirements.
+
+No further NVMe command is permitted in the currently quarantined
+session. A future physical experiment needs its own full restart,
+revalidated USB SSH host key, verified iOS backup, eight battery
+samples and a unique one-shot marker.
 
 Once the exact predicate is known, design a *separate* verified
 post-disable safety condition that proves every relevant DMA address
