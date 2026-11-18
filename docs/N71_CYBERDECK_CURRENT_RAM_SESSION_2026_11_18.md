@@ -96,9 +96,24 @@ results**, not simulated snapshots. No internal NAND block I/O is claimed.
 - The previously prepared fail-closed **phone-local** supervisor was
   actually started with its lock and 60-second monitoring loop.
   Kernel thermal/voltage checks and the driver's 3600-second
-  hardware rollback remain enabled. Automatic supervisor renewal
-  has **not yet been validated** unless a distinct future session
-  log records `CHARGE_SUPERVISOR_RENEW_CONFIRMED`.
+  hardware rollback remain enabled.
+- **Physical first automatic renewal proved on this boot:** at the
+  normal 2400-second supervisory threshold, with the existing
+  NVMe module still quarantined, the daemon detected a healthy lease
+  at age 2413 s and autonomously performed the guarded rollover:
+
+  ```text
+  CHARGE_SUPERVISOR_RENEW_START
+  RESTORE reason=module-exit input=00 rc=0
+  APPLIED input_uA=300000 original_uA=90000
+  automatic_restore_ms=3600000
+  CHARGE_SUPERVISOR_PASS lease_age_s=4
+  CHARGE_SUPERVISOR_RENEW_CONFIRMED
+  ```
+
+  USB, Wi-Fi and the native touch UI survived. This is a **single
+  automatic module re-arm milestone**, not multi-cycle battery-endurance
+  qualification and not proof of a sustained positive net charge.
 - The Dell-hosted legacy charge guard stays disabled.
 
 ## Read-only Dell terminal monitor
