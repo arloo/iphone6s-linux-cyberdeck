@@ -16,6 +16,7 @@
 *.pcap
 *.pcapng
 *.bgrx
+*.bgrx.gz
 *.raw
 *.log
 *.dump

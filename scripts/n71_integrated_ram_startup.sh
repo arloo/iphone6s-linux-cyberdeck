@@ -28,6 +28,10 @@ if [ -x /usr/bin/n71-ssh-provision-ram ]; then
 fi
 /bin/sh /usr/bin/n71-connectivity-autostart > /run/n71-connectivity-autostart-PRIVATE.log 2>&1
 N71_DISPLAY_ACTION=apply /bin/sh /usr/bin/n71-balanced-display > /run/n71-display-profile.log 2>&1
+# Optional verified, RAM-only showcase splash; failure never blocks debug/USB recovery.
+if [ -x /usr/bin/n71-boot-splash ]; then
+    /bin/sh /usr/bin/n71-boot-splash > /run/n71-boot-splash.log 2>&1 || true
+fi
 # Give the original init/getty handoff time to finish before owning the display.
 /bin/sh -c 'sleep 3; exec /run/n71-cyberdeck-shell' </dev/null > /run/n71-ui-runtime-PRIVATE.log 2>&1 &
 echo "$!" > /run/n71-cyberdeck-shell.pid
