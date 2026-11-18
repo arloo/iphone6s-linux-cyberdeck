@@ -320,6 +320,29 @@ static int n71_storage_admin_identify_once(void *ctx)
         pr_info("n71-s3e-p0: ADMIN_SHUTDOWN_TRACE attempted=%u rc=%d csts=%08x polls=%u disable_rc=%d disable_csts=%08x inner_rc=%d master_off=%u retained_on_uncertainty=YES\n",
             r.shutdown_attempted,r.shutdown_rc,r.shutdown_csts,r.shutdown_polls,
             r.disable_rc,r.disable_csts,r.inner_rc,r.master_off);
+        /* Read-only predicate breakdown: never changes the original
+         * quarantine outcome or programs the NVMe/HMB/SART/NVMMU registers.
+         * No physical DMA addresses or identifiers are printed. */
+        if (r.master_off && !r.disable_rc) {
+            struct n71_storage_dart_context *m=ctx;
+            unsigned int ready=n71_storage_ans_hmb_ready(ctx);
+            unsigned int owned=n71_storage_hmb_owned_ready(ctx);
+            unsigned int base_ok=ready &&
+                n71_storage_ans_hmb_read(ctx,0x1810)==0xbc000000U &&
+                !n71_storage_ans_hmb_read(ctx,0x1814);
+            unsigned int size_ok=ready &&
+                n71_storage_ans_hmb_read(ctx,0x1818)==SZ_8M;
+            pr_info("n71-s3e-p0: ADMIN_POST_DISABLE_PREDICATES qualified=%u prepared=%u dart_mapped=%u hmb_owned=%u ans_ready=%u ans_hmb_base_ok=%u ans_hmb_size_ok=%u endpoint_ready=%u root_cmd_2=%u endpoint_cmd_2=%u cc_zero=%u csts_zero=%u nvmmu_ctrl_1=%u nvmmu_inv_zero=%u retained_on_uncertainty=YES\n",
+                r.post_disable_qualified,
+                n71_admin_memory.prepared,n71_admin_memory.dart_mapped,
+                owned,ready,base_ok,size_ok,
+                n71_storage_endpoint_ready(ctx),
+                (n71_storage_root_read(ctx,4)&0xffffU)==2,
+                (n71_storage_endpoint_read(ctx,4)&0xffffU)==2,
+                n71_admin_reg(0x14)==0,n71_admin_reg(0x1c)==0,
+                readl(m->nvmmu)==1,
+                readl((u8 __iomem *)m->nvmmu+4)==0);
+        }
     }
     pr_info("n71-s3e-p0: ADMIN_STAGE rc=%d prepare_stage=%u dart_fault=%08x nvmmu_fifo=%08x\n",
         rc,n71_admin_memory.stage,

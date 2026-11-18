@@ -12,7 +12,7 @@ struct n71_admin_once_ops {
 struct n71_admin_once_result {
     unsigned int master_seen,started,ready,stopped,master_off;
     unsigned int enable_polls,shutdown_polls,disable_polls,last_csts;
-    unsigned int shutdown_attempted,shutdown_csts,disable_csts;
+    unsigned int shutdown_attempted,shutdown_csts,disable_csts,post_disable_qualified;
     int inner_rc,shutdown_rc,disable_rc;
 };
 static int n71_admin_wait(const struct n71_admin_once_ops *o,void *ctx,
@@ -39,7 +39,7 @@ static int n71_admin_once_core(const struct n71_admin_once_ops *o,void *ctx,
     int rc,shutdown_ok=1,disable_ok;
     r->master_seen=r->started=r->ready=r->stopped=r->master_off=0;
     r->enable_polls=r->shutdown_polls=r->disable_polls=r->last_csts=0;
-    r->shutdown_attempted=r->shutdown_csts=r->disable_csts=0;
+    r->shutdown_attempted=r->shutdown_csts=r->disable_csts=r->post_disable_qualified=0;
     r->inner_rc=-1;r->shutdown_rc=r->disable_rc=0;
     if (!o->qualified(ctx)) return -1;
     rc=o->master(ctx,1);
@@ -71,7 +71,12 @@ static int n71_admin_once_core(const struct n71_admin_once_ops *o,void *ctx,
     r->disable_csts=r->last_csts;
     disable_ok=!r->disable_rc;
     r->master_off=!o->master(ctx,0);
-    r->stopped=shutdown_ok && disable_ok && r->master_off && o->qualified(ctx);
+    /* Preserve original short-circuit: qualified() is only sampled after
+     * completed shutdown, disable, and readback-verified BME-off.
+     * This is DIAGNOSTIC ONLY, not permission to release quarantined DMA. */
+    if (shutdown_ok && disable_ok && r->master_off)
+        r->post_disable_qualified=!!o->qualified(ctx);
+    r->stopped=shutdown_ok && disable_ok && r->master_off && r->post_disable_qualified;
     return r->stopped ? rc : -3;
 }
 #endif
