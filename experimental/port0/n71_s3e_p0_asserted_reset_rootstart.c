@@ -15,6 +15,8 @@
  * Failed rollback retains tables, module, power consumer and GPIO claim.
  * Optional nvmmu_owned_tables nests owned TCB/aux roots and bounded
  * invalidation around the endpoint observer, restoring inherited roots.
+ * Optional ans_hmb_ro reads vendor HMB descriptors while both commands
+ * are MSE-only and CC/CSTS are zero; GPIO141 is sampled without changes.
  * No NVMMU control/SART/FIFO write, NVMe command or NAND data operation.
  */
 #include <linux/delay.h>
@@ -27,6 +29,7 @@
 #include "n71_s3e_endpoint_cfg_ro.h"
 #include "n71_s3e_bar0_size.h"
 #include "n71_s3e_nvme_mmio_ro.h"
+#include "n71_s3e_ans_hmb_ro.h"
 #include "n71_s3e_nvmmu_owned_tables.h"
 #include <linux/ioport.h>
 #include <linux/device.h>
@@ -91,6 +94,9 @@ static bool endpoint_id_trial;
 static bool bar0_size_trial;
 static bool nvme_mmio_trial;
 static bool nvmmu_owned_tables;
+static bool ans_hmb_ro;
+module_param(ans_hmb_ro, bool, 0400);
+MODULE_PARM_DESC(ans_hmb_ro, "read ANS HMB descriptor only inside owned NVMMU/DART guards with MSE-only BAR0; no NVMe writes or bus mastering");
 module_param(nvmmu_owned_tables, bool, 0400);
 MODULE_PARM_DESC(nvmmu_owned_tables, "temporary owned NVMMU TCB/aux roots with bounded invalidate and complete restoration inside all-stream DART guard");
 static void __iomem *n71_nvme_mmio;
@@ -434,6 +440,56 @@ static unsigned int n71_storage_nvme_read(void *ctx,unsigned int off)
         (off!=0 && off!=4 && off!=8 && off!=0x14 && off!=0x1c))) return ~0U;
     return readl((u8 __iomem *)n71_nvme_mmio+off);
 }
+struct n71_nvmmu_owned_memory {
+    struct device *dev;
+    void *page[2];
+    dma_addr_t dma[2];
+    bool mapped[2];
+};
+static struct n71_nvmmu_owned_memory n71_nvmmu_memory;
+static int n71_storage_ans_hmb_ready(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    if (!ans_hmb_ro || !nvmmu_owned_tables || !m->nvmmu ||
+        !n71_nvme_mmio || !n71_nvmmu_memory.dev ||
+        !n71_nvmmu_memory.mapped[0] || !n71_nvmmu_memory.mapped[1] ||
+        !n71_storage_endpoint_ready(ctx) ||
+        (n71_storage_root_read(ctx,4)&0xffffU)!=2 ||
+        (n71_storage_endpoint_read(ctx,4)&0xffffU)!=2 ||
+        n71_storage_nvme_read(ctx,0x14) || n71_storage_nvme_read(ctx,0x1c) ||
+        readl(m->nvmmu)!=1 || readl((u8 __iomem *)m->nvmmu+4)!=0)
+        return 0;
+    return readl((u8 __iomem *)m->nvmmu+8)==lower_32_bits(n71_nvmmu_memory.dma[0]) &&
+        readl((u8 __iomem *)m->nvmmu+0x0c)==upper_32_bits(n71_nvmmu_memory.dma[0]) &&
+        readl((u8 __iomem *)m->nvmmu+0x10)==lower_32_bits(n71_nvmmu_memory.dma[1]) &&
+        readl((u8 __iomem *)m->nvmmu+0x14)==upper_32_bits(n71_nvmmu_memory.dma[1]);
+}
+static unsigned int n71_storage_ans_hmb_read(void *ctx,unsigned int off)
+{
+    if (WARN_ON_ONCE(!n71_storage_ans_hmb_ready(ctx) ||
+        (off!=0x1808 && off!=0x1810 && off!=0x1814 && off!=0x1818))) return ~0U;
+    return readl((u8 __iomem *)n71_nvme_mmio+off);
+}
+static int n71_storage_ans_hmb_observe(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    const struct n71_ans_hmb_ops o={
+        .ready=n71_storage_ans_hmb_ready,.read=n71_storage_ans_hmb_read,
+    };
+    struct n71_ans_hmb_result r;
+    unsigned int strap_before,strap_after;
+    int rc;
+    /* Original N71 ADT function-boot_from_host names GPIO141.
+     * Read the pin only. Its direction and level are never changed here. */
+    strap_before=readl((u8 __iomem *)m->pinctrl+4U*141U);
+    rc=n71_ans_hmb_ro(&o,ctx,&r);
+    strap_after=readl((u8 __iomem *)m->pinctrl+4U*141U);
+    pr_info("n71-s3e-p0: ANS_HMB_READONLY rc=%d requested_bytes=%u configured_bytes=%u base_present=%u reads=%u stable=%u nonzero=%u aligned_4k=%u controller_disabled=YES bus_mastering_OFF=YES addresses_redacted=YES\n",
+        rc,r.request,r.size,!!(r.base_lo|r.base_hi),r.reads,r.stable,r.nonzero,r.aligned);
+    pr_info("n71-s3e-p0: ANS_BOOT_FROM_HOST_GPIO141 before=%08x after=%08x unchanged=%u read_only=YES\n",
+        strap_before,strap_after,strap_before==strap_after);
+    return rc ? rc : strap_before==strap_after ? 0 : -EIO;
+}
 static int n71_storage_nvme_mmio_observe(void *ctx)
 {
     const struct n71_s3e_mmio_ops ops={
@@ -442,6 +498,7 @@ static int n71_storage_nvme_mmio_observe(void *ctx)
         .root_window=n71_storage_root_window,.endpoint_bar=n71_storage_endpoint_bar_write,
         .root_command=n71_storage_root_command,.endpoint_command=n71_storage_endpoint_command,
         .nvme_read=n71_storage_nvme_read,
+        .active_readonly=ans_hmb_ro ? n71_storage_ans_hmb_observe : NULL,
     };
     struct n71_s3e_mmio_result r;
     int rc;
@@ -524,13 +581,7 @@ static int n71_storage_endpoint_release_trial(void *ctx)
     iounmap(m->endpoint);m->endpoint=NULL;
     return rc;
 }
-struct n71_nvmmu_owned_memory {
-    struct device *dev;
-    void *page[2];
-    dma_addr_t dma[2];
-    bool mapped[2];
-};
-static struct n71_nvmmu_owned_memory n71_nvmmu_memory;
+
 static void n71_storage_nvmmu_free(void)
 {
     unsigned int i;
@@ -770,6 +821,7 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (ans_hmb_ro && (!nvme_mmio_trial || !nvmmu_owned_tables)) {ret=-EPERM;goto out_put;}
     if (nvmmu_owned_tables && !endpoint_id_trial) {ret=-EPERM;goto out_put;}
     if (nvme_mmio_trial && !bar0_size_trial) {ret=-EPERM;goto out_put;}
     if (bar0_size_trial && !endpoint_id_trial) {ret=-EPERM;goto out_put;}

@@ -10,6 +10,7 @@ struct n71_s3e_mmio_ops {
     void (*root_command)(void *,unsigned int);
     void (*endpoint_command)(void *,unsigned int);
     unsigned int (*nvme_read)(void *,unsigned int);
+    int (*active_readonly)(void *); /* optional, while BAR decode is active */
 };
 struct n71_s3e_mmio_result {
     unsigned int cap_lo,cap_hi,vs,cc,csts,reads,restored;
@@ -19,7 +20,7 @@ struct n71_s3e_mmio_result {
  * Supervisor exclusively reserves CPU7c1000000..7c1003fff, corresponding
  * to bus c1000000 in the original N71 apcie non-prefetchable range.
  * Only BAR0, bridge memory window and 16-bit MSE command change.
- * Bus mastering never enabled. Exactly five NVMe DWORD reads, no writes.
+ * Bus mastering never enabled. Five NVMe DWORD reads plus an optional read-only observer, no NVMe writes.
  * Return -3 retains DART roots and the CPU resource reservation.
  */
 static int n71_s3e_nvme_mmio_ro_trial(const struct n71_s3e_mmio_ops *o,
@@ -78,6 +79,11 @@ static int n71_s3e_nvme_mmio_ro_trial(const struct n71_s3e_mmio_ops *o,
         (r->vs>>16)<1 || (r->vs>>16)>2 || r->cc==~0U || r->csts==~0U)
         rc=-2;
     if (!o->ready(ctx)) rc=-1;
+    if (!rc && o->active_readonly) {
+        rc=o->active_readonly(ctx);
+        if (rc==-3) {r->restored=0;return -3;}
+        if (!o->ready(ctx)) rc=-1;
+    }
 restore:
     o->endpoint_command(ctx,0);o->root_command(ctx,0);
     if ((o->endpoint_read(ctx,4)&0xffffU) ||

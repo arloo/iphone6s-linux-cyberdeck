@@ -41,11 +41,14 @@ static unsigned nvme(void *c,unsigned off) {
  struct model *m=c;assert(m->rootcmd==2&&m->epcmd==2&&m->lo==0xc1000004U&&m->window==0xc100c100U);m->reads++;
  switch(off){case 0:return 0x001003ff;case 4:return 0x20;case 8:return m->vs;case 0x14:return 0;case 0x1c:return 0;default:assert(0);return ~0U;}
 }
+static int observe_ok(void *c) {struct model *m=c;assert(m->rootcmd==2&&m->epcmd==2&&m->reads==5);return 0;}
+static int observe_fail(void *c) {assert(!observe_ok(c));return -2;}
+static int observe_unsafe(void *c) {assert(!observe_ok(c));return -3;}
 static void init(struct model *m) {memset(m,0,sizeof(*m));m->lo=4;m->window=m->pf=0x0000fff0U;m->vs=0x00010100;}
 static void baseline(struct model *m) {assert(!m->rootcmd&&!m->epcmd&&m->lo==4&&!m->hi&&m->window==0x0000fff0U);}
 int main(void) {
  struct model m;struct n71_s3e_mmio_result r;int result;
- const struct n71_s3e_mmio_ops o={ready,root,ep,window,bar,rc,ec,nvme};
+ struct n71_s3e_mmio_ops o={ready,root,ep,window,bar,rc,ec,nvme,0};
  init(&m);result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);
  assert(!result&&r.restored&&r.reads==5&&m.reads==5&&r.vs==0x00010100);baseline(&m);
  init(&m);m.vs=~0U;result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(result==-2&&r.restored);baseline(&m);
@@ -58,6 +61,9 @@ int main(void) {
  init(&m);m.lose_ready=1;result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(result==-1&&r.restored&&!m.reads);baseline(&m);
  init(&m);m.fail_restore=1;result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(result==-3&&!r.restored&&m.lo==0xc1000004U&&!m.rootcmd&&!m.epcmd);
  init(&m);m.fail_clear=1;result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(result==-3&&!r.restored&&m.epcmd==2&&m.lo==0xc1000004U&&m.window==0xc100c100U);
+ o.active_readonly=observe_ok;init(&m);result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(!result&&r.restored);baseline(&m);
+ o.active_readonly=observe_fail;init(&m);result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(result==-2&&r.restored);baseline(&m);
+ o.active_readonly=observe_unsafe;init(&m);result=n71_s3e_nvme_mmio_ro_trial(&o,&m,&r);assert(result==-3&&!r.restored&&m.epcmd==2&&m.rootcmd==2&&m.lo==0xc1000004U&&m.window==0xc100c100U);
  puts("S3E_NVME_RO_AND_UNSAFE_ROLLBACK_CASES_PASS");return 0;
 }
 """

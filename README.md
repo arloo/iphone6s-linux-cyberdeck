@@ -1,5 +1,8 @@
 # iPhone 6s Linux Cyberdeck — N71 / Apple A9
 
+Latest physical storage result (2026-11-18): the S8000 ANS controller requests an **8 MiB HMB**, measured with CC.EN and bus mastering off inside owned DART0/NVMMU guards. All state restored and native WLAN survived. [Evidence and limits](docs/N71_S8000_ANS_HMB_REQUEST_2026_11_18.md).
+
+
 A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation, Wi-Fi and Bluetooth, a local terminal and a targeted Kali ARM64 tool environment. The intended experience is a fullscreen touch-first console for diagnostics, authorized security assessments and selected companion workflows.
 
 **Physical milestone, 17 November 2026:** native Linux on the real **N71 / Samsung S8000** now runs a **six-tab KALI / TODAY / AI Cyberdeck**, retaining HOME, TERM and SYS. Automatic multitouch, Wi-Fi and Bluetooth from 16 November remain available. A first-stage Kali-compatible tool profile and genuine ARM64 static tcpdump 4.99.7 passed physical tests; TODAY receives a privacy-checked AI briefing via pinned USB SSH; and the text AI tab connects via an owner-only Dell USB bridge to the OpenAI Responses API without placing an OpenAI key on the phone. A private next-boot RAM payload has been built but **not physically boot-tested**. Full Kali userspace, manual ergonomic acceptance, standalone storage and automatic per-boot provisioning remain open. This is a RAM-only research system, not a persistent phone OS. [Detailed evidence and limits](docs/N71_THREE_PILLARS_KALI_TODAY_AI_2026_11_17.md).

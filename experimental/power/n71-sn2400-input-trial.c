@@ -20,6 +20,7 @@
 #define REG_ADC_CTL 0x11
 #define REG_ADC_DATA 0x12
 static bool armed;
+/* 120mA is the owner-requested support profile; it does not imply net charge. */
 static unsigned int input_ua = 300000;
 static unsigned int lease_seconds = 30;
 module_param(lease_seconds, uint, 0400);
@@ -116,7 +117,7 @@ static int __init trial_init(void)
     unsigned int status, control, adc;
     int ret;
     INIT_DELAYED_WORK(&monitor, monitor_work);
-    if ((input_ua != 300000 && input_ua != 500000) ||
+    if ((input_ua != 120000 && input_ua != 300000 && input_ua != 500000) ||
         lease_seconds < 30 || lease_seconds > 3600) return -EINVAL;
     if (!armed) {
         pr_info("n71-sn2400-trial: UNARMED no hardware access\n");
