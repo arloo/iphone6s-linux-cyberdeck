@@ -33,3 +33,16 @@ At the physical HMB observation the gauge showed 85%, about 33.2 C, and negative
 ## Next hardware gate
 
 An exclusively owned, physically contiguous 8 MiB HMB must be mapped through the verified S8000 NVMMU SART path. Submission/completion queues require independent DART mappings. Identify payloads use Apple FlatDMA TCBs, not an ordinary DART data mapping. Bus mastering and CC.EN remain disabled until those ownership and rollback paths are complete. No APFS modification, formatting or iOS partition change is included.
+
+
+## Owned HMB/SART physical checkpoint
+
+A dedicated 8 MiB Linux allocation succeeded with physical contiguity, 1 MiB alignment, a 36-bit direct DMA address and no overlap with inherited DART/NVMMU roots. Overlap checks ran before zeroing any allocation. The S8000 SART setter in the original driver independently proves registers 0x24/0x28/0x2c/0x20, inclusive last-MiB end and physical-base units of 1 MiB.
+
+Physical readback exposed a real S8000 detail: writing VA offsets 0x3c000000/0x3c700000 reads back as 0xbc000000/0xbc700000. Bit31 is forced high on these address registers. An initial strict comparison rejected this representation and safely rolled back; a second diagnostic isolated the mismatch before enabling SART. The corrected observer compares the measured read representation and passed.
+
+With all empty DART guards and owned NVMMU roots active, SART mapped only the owned 8 MiB HMB. The controller reported the same 8 MiB request. ANS HMB base and size were programmed, read back and restored to zero with CC/CSTS=0 and both PCI commands=2. No INIT, CC.EN, queue, doorbell or NAND data operation was issued. After reasserting PERST, every inherited SART field and NVMMU root was restored, the HMB remained entirely zero and was freed. DART roots, GPIO160, port0 power and native WLAN passed postflight; normal module unload succeeded.
+
+Successful ARM64 pilot SHA-256: d0fbc8ac298aecf5935bc8d7df46d191359874baa1d13a580cc450c95689809f. The 46 S3E host regressions include refusal and retention for missing reset assertion, callback failure and incomplete SART rollback. These remain transaction tests, not proof that queue DMA or Identify works.
+
+The next gate is owned submission/completion queue mappings and a bounded Identify-only controller transaction. Internal storage is still not exposed as a block device.

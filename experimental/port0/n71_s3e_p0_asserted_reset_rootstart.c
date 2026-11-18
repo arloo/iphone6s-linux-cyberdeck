@@ -30,6 +30,7 @@
 #include "n71_s3e_bar0_size.h"
 #include "n71_s3e_nvme_mmio_ro.h"
 #include "n71_s3e_ans_hmb_ro.h"
+#include "n71_s3e_sart_hmb_owned.h"
 #include "n71_s3e_nvmmu_owned_tables.h"
 #include <linux/ioport.h>
 #include <linux/device.h>
@@ -95,6 +96,9 @@ static bool bar0_size_trial;
 static bool nvme_mmio_trial;
 static bool nvmmu_owned_tables;
 static bool ans_hmb_ro;
+static bool ans_hmb_owned;
+module_param(ans_hmb_owned, bool, 0400);
+MODULE_PARM_DESC(ans_hmb_owned, "owned contiguous 8 MiB HMB/SART plus reversible HMB descriptor programming; controller and bus mastering remain OFF");
 module_param(ans_hmb_ro, bool, 0400);
 MODULE_PARM_DESC(ans_hmb_ro, "read ANS HMB descriptor only inside owned NVMMU/DART guards with MSE-only BAR0; no NVMe writes or bus mastering");
 module_param(nvmmu_owned_tables, bool, 0400);
@@ -447,6 +451,11 @@ struct n71_nvmmu_owned_memory {
     bool mapped[2];
 };
 static struct n71_nvmmu_owned_memory n71_nvmmu_memory;
+static struct {
+    void *page;
+    dma_addr_t dma;
+    bool mapped;
+} n71_hmb_memory;
 static int n71_storage_ans_hmb_ready(void *ctx)
 {
     struct n71_storage_dart_context *m=ctx;
@@ -470,6 +479,44 @@ static unsigned int n71_storage_ans_hmb_read(void *ctx,unsigned int off)
         (off!=0x1808 && off!=0x1810 && off!=0x1814 && off!=0x1818))) return ~0U;
     return readl((u8 __iomem *)n71_nvme_mmio+off);
 }
+static int n71_storage_hmb_owned_ready(void *ctx)
+{
+    struct n71_storage_dart_context *m=ctx;
+    return n71_hmb_memory.page && n71_hmb_memory.mapped &&
+        n71_storage_ans_hmb_ready(ctx) &&
+        readl((u8 __iomem *)m->nvmmu+0x20)==1 &&
+        readl((u8 __iomem *)m->nvmmu+0x24)==0xbc000000U &&
+        readl((u8 __iomem *)m->nvmmu+0x28)==0xbc700000U &&
+        readl((u8 __iomem *)m->nvmmu+0x2c)==(n71_hmb_memory.dma>>20);
+}
+static int n71_storage_hmb_descriptor_owned(void *ctx)
+{
+    int rc=0;
+    unsigned int req;
+    if (!n71_storage_hmb_owned_ready(ctx)) return -EPERM;
+    req=n71_storage_ans_hmb_read(ctx,0x1808);
+    if (req!=SZ_8M || n71_storage_ans_hmb_read(ctx,0x1810) ||
+        n71_storage_ans_hmb_read(ctx,0x1814) ||
+        n71_storage_ans_hmb_read(ctx,0x1818)) return -EPROTO;
+    /* No INIT/CC/doorbell write: prove HMB descriptor programming alone. */
+    writel(0,(u8 __iomem *)n71_nvme_mmio+0x1814);
+    writel(0xbc000000U,(u8 __iomem *)n71_nvme_mmio+0x1810);
+    writel(SZ_8M,(u8 __iomem *)n71_nvme_mmio+0x1818);
+    if (!n71_storage_hmb_owned_ready(ctx) ||
+        n71_storage_ans_hmb_read(ctx,0x1810)!=0xbc000000U ||
+        n71_storage_ans_hmb_read(ctx,0x1814) ||
+        n71_storage_ans_hmb_read(ctx,0x1818)!=SZ_8M) rc=-EIO;
+    if (!n71_storage_hmb_owned_ready(ctx)) return -3;
+    writel(0,(u8 __iomem *)n71_nvme_mmio+0x1818);
+    writel(0,(u8 __iomem *)n71_nvme_mmio+0x1814);
+    writel(0,(u8 __iomem *)n71_nvme_mmio+0x1810);
+    if (n71_storage_ans_hmb_read(ctx,0x1810) ||
+        n71_storage_ans_hmb_read(ctx,0x1814) ||
+        n71_storage_ans_hmb_read(ctx,0x1818) ||
+        !n71_storage_hmb_owned_ready(ctx)) return -3;
+    pr_info("n71-s3e-p0: HMB_DESCRIPTOR_OWNED rc=%d bytes=%u restored=1 controller_disabled=YES BME_OFF=YES no_NVMe_command=YES\n",rc,SZ_8M);
+    return rc;
+}
 static int n71_storage_ans_hmb_observe(void *ctx)
 {
     struct n71_storage_dart_context *m=ctx;
@@ -488,7 +535,9 @@ static int n71_storage_ans_hmb_observe(void *ctx)
         rc,r.request,r.size,!!(r.base_lo|r.base_hi),r.reads,r.stable,r.nonzero,r.aligned);
     pr_info("n71-s3e-p0: ANS_BOOT_FROM_HOST_GPIO141 before=%08x after=%08x unchanged=%u read_only=YES\n",
         strap_before,strap_after,strap_before==strap_after);
-    return rc ? rc : strap_before==strap_after ? 0 : -EIO;
+    if (!rc && strap_before!=strap_after) rc=-EIO;
+    if (!rc && ans_hmb_owned) rc=n71_storage_hmb_descriptor_owned(ctx);
+    return rc;
 }
 static int n71_storage_nvme_mmio_observe(void *ctx)
 {
@@ -582,6 +631,52 @@ static int n71_storage_endpoint_release_trial(void *ctx)
     return rc;
 }
 
+static void n71_storage_hmb_free(void)
+{
+    if (n71_hmb_memory.mapped)
+        dma_unmap_single(n71_nvmmu_memory.dev,n71_hmb_memory.dma,SZ_8M,DMA_BIDIRECTIONAL);
+    if (n71_hmb_memory.page)
+        free_pages((unsigned long)n71_hmb_memory.page,get_order(SZ_8M));
+    memset(&n71_hmb_memory,0,sizeof(n71_hmb_memory));
+}
+static int n71_storage_hmb_alloc(void *ctx,const u64 old[2])
+{
+    struct n71_storage_dart_context *m=ctx;
+    u64 pa,old_sart_pa,old_sart_size;
+    u32 v[4];
+    unsigned int j;
+    for (j=0;j<4;j++) v[j]=readl((u8 __iomem *)m->nvmmu+0x20+4*j);
+    if (v[0]>1 || n71_hmb_memory.page) return -EPERM;
+    if (v[0] && ((v[1]&0xfffffU) || (v[2]&0xfffffU) ||
+        v[1]>v[2] || (v[1]&0xc0000000U)!=0x80000000U ||
+        (v[2]&0xc0000000U)!=0x80000000U || v[3]>=0x10000U))
+        return -EPROTO;
+    n71_hmb_memory.page=(void *)__get_free_pages(GFP_KERNEL|__GFP_NOWARN|__GFP_NORETRY,get_order(SZ_8M));
+    if (!n71_hmb_memory.page) return -ENOMEM;
+    pa=virt_to_phys(n71_hmb_memory.page);
+    if ((pa&(SZ_1M-1)) || pa>((1ULL<<36)-SZ_8M)) return -EPERM;
+    /* The allocator has not zeroed this buffer. Reject inherited overlap first. */
+    for (j=0;j<2;j++) {
+        u64 size=j ? SZ_4K : SZ_16K;
+        if (old[j] && pa<old[j]+size && old[j]<pa+SZ_8M) return -EPERM;
+    }
+    for (j=0;j<16;j++)
+        if (m->inherited_dart_pa[j] && pa<m->inherited_dart_pa[j]+SZ_4K &&
+            m->inherited_dart_pa[j]<pa+SZ_8M) return -EPERM;
+    if (v[0]) {
+        old_sart_pa=(u64)v[3]<<20;
+        old_sart_size=(u64)v[2]-v[1]+SZ_1M;
+        if (old_sart_pa>((1ULL<<36)-old_sart_size) ||
+            (pa<old_sart_pa+old_sart_size && old_sart_pa<pa+SZ_8M)) return -EPERM;
+    }
+    memset(n71_hmb_memory.page,0,SZ_8M);
+    n71_hmb_memory.dma=dma_map_single(n71_nvmmu_memory.dev,n71_hmb_memory.page,SZ_8M,DMA_BIDIRECTIONAL);
+    if (dma_mapping_error(n71_nvmmu_memory.dev,n71_hmb_memory.dma)) return -EIO;
+    n71_hmb_memory.mapped=true;
+    if (n71_hmb_memory.dma!=pa) return -EPERM;
+    pr_info("n71-s3e-p0: HMB_OWNED_ALLOC bytes=%u contiguous=1 aligned_1M=1 pa36=1 direct_dma=1 inherited_overlap_rejected_before_zero=YES addresses_redacted=YES\n",SZ_8M);
+    return 0;
+}
 static void n71_storage_nvmmu_free(void)
 {
     unsigned int i;
@@ -609,9 +704,32 @@ static int n71_storage_nvmmu_ready(void *ctx)
 {
     return n71_storage_dart_perst(ctx) && n71_storage_full_dart_guard(ctx);
 }
+static void n71_storage_sart_write(void *ctx,unsigned int off,unsigned int val)
+{
+    struct n71_storage_dart_context *m=ctx;
+    if (WARN_ON_ONCE(!n71_storage_nvmmu_ready(ctx) ||
+        off<0x20 || off>0x2c || (off&3) || (off==0x20 && val>1))) return;
+    writel(val,(u8 __iomem *)m->nvmmu+off);
+    readl((u8 __iomem *)m->nvmmu+off);
+}
 static int n71_storage_nvmmu_guarded_endpoint(void *ctx)
 {
-    return endpoint_id_trial ? n71_storage_endpoint_release_trial(ctx) : 0;
+    const struct n71_sart_ops ops={
+        .ready=n71_storage_nvmmu_ready,.read=n71_storage_nvmmu_read,
+        .write=n71_storage_sart_write,.active_hold=n71_storage_endpoint_release_trial,
+    };
+    struct n71_sart_result r;
+    int rc;
+    if (!ans_hmb_owned)
+        return endpoint_id_trial ? n71_storage_endpoint_release_trial(ctx) : 0;
+    if (!n71_hmb_memory.page || !n71_hmb_memory.mapped) return -EPERM;
+    rc=n71_sart_hmb_owned_trial(&ops,ctx,n71_hmb_memory.dma,&r);
+    pr_info("n71-s3e-p0: HMB_SART_READBACK stage=%u ctrl=%08x va_base=%08x va_end=%08x pa_match=%u addresses_redacted=YES\n",
+        r.stage,r.observed[0],r.observed[1],r.observed[2],
+        r.observed[3]==(n71_hmb_memory.dma>>20));
+    pr_info("n71-s3e-p0: HMB_SART_OWNED rc=%d inherited_enabled=%u installed=%u restored=%u inner_rc=%d perst_low=%u BME_OFF=YES addresses_redacted=YES\n",
+        rc,r.inherited_enabled,r.installed,r.restored,r.inner_rc,n71_storage_reset_level(ctx)==0);
+    return rc;
 }
 static int n71_storage_nvmmu_owned_trial(void *ctx)
 {
@@ -657,6 +775,10 @@ static int n71_storage_nvmmu_owned_trial(void *ctx)
         if (n71_nvmmu_memory.dma[i]!=pa) goto alloc_fail;
         dma_sync_single_for_device(n71_nvmmu_memory.dev,n71_nvmmu_memory.dma[i],PAGE_SIZE,DMA_BIDIRECTIONAL);
     }
+    if (ans_hmb_owned) {
+        rc=n71_storage_hmb_alloc(ctx,old);
+        if (rc) goto alloc_fail;
+    }
     dma_wmb();
     rc=n71_nvmmu_owned_tables_trial(&ops,ctx,n71_nvmmu_memory.dma[0],n71_nvmmu_memory.dma[1],&result);
     free_safe=rc!=-3 && result.restored && n71_storage_nvmmu_ready(ctx) &&
@@ -665,6 +787,12 @@ static int n71_storage_nvmmu_owned_trial(void *ctx)
         for (i=0;i<2;i++) {
             dma_sync_single_for_cpu(n71_nvmmu_memory.dev,n71_nvmmu_memory.dma[i],PAGE_SIZE,DMA_BIDIRECTIONAL);
             if (memchr_inv(n71_nvmmu_memory.page[i],0,PAGE_SIZE)) zero=false;
+        }
+        if (ans_hmb_owned) {
+            dma_sync_single_for_cpu(n71_nvmmu_memory.dev,n71_hmb_memory.dma,SZ_8M,DMA_BIDIRECTIONAL);
+            if (memchr_inv(n71_hmb_memory.page,0,SZ_8M)) zero=false;
+            n71_storage_hmb_free();
+            pr_info("n71-s3e-p0: HMB_MEMORY_RELEASED bytes=%u free_safe=1 all_owned_buffers_zero=%u\n",SZ_8M,zero);
         }
         n71_storage_nvmmu_free();
     } else {
@@ -675,6 +803,7 @@ static int n71_storage_nvmmu_owned_trial(void *ctx)
         rc,result.owned_polls,result.restore_polls,result.last,result.restored,zero,free_safe,2UL*PAGE_SIZE);
     return !zero && !rc ? -EIO : rc;
 alloc_fail:
+    n71_storage_hmb_free();
     n71_storage_nvmmu_free();
     return rc;
 }
@@ -821,6 +950,7 @@ static int __init n71_port0_init(void)
         if (!root_mmio) { ret=-ENOMEM; goto out_put; }
     }
     if (rootstart_p0 && !stock_nvme_mode) {ret=-EPERM;goto out_put;}
+    if (ans_hmb_owned && !ans_hmb_ro) {ret=-EPERM;goto out_put;}
     if (ans_hmb_ro && (!nvme_mmio_trial || !nvmmu_owned_tables)) {ret=-EPERM;goto out_put;}
     if (nvmmu_owned_tables && !endpoint_id_trial) {ret=-EPERM;goto out_put;}
     if (nvme_mmio_trial && !bar0_size_trial) {ret=-EPERM;goto out_put;}
