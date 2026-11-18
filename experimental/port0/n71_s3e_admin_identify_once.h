@@ -327,11 +327,14 @@ static int n71_storage_admin_identify_once(void *ctx)
             struct n71_storage_dart_context *m=ctx;
             unsigned int ready=n71_storage_ans_hmb_ready(ctx);
             unsigned int owned=n71_storage_hmb_owned_ready(ctx);
-            unsigned int base_ok=ready &&
-                n71_storage_ans_hmb_read(ctx,0x1810)==0xbc000000U &&
-                !n71_storage_ans_hmb_read(ctx,0x1814);
-            unsigned int size_ok=ready &&
-                n71_storage_ans_hmb_read(ctx,0x1818)==SZ_8M;
+            /* These are *controller IOVA descriptor registers*, never a
+             * physical HMB pointer. Read them once, only if the qualified
+             * MMIO window is still accessible, with no hardware writes. */
+            u32 hmb_lo=ready ? n71_storage_ans_hmb_read(ctx,0x1810) : ~0U;
+            u32 hmb_hi=ready ? n71_storage_ans_hmb_read(ctx,0x1814) : ~0U;
+            u32 hmb_size=ready ? n71_storage_ans_hmb_read(ctx,0x1818) : ~0U;
+            unsigned int base_ok=ready && hmb_lo==0xbc000000U && !hmb_hi;
+            unsigned int size_ok=ready && hmb_size==SZ_8M;
             pr_info("n71-s3e-p0: ADMIN_POST_DISABLE_PREDICATES qualified=%u prepared=%u dart_mapped=%u hmb_owned=%u ans_ready=%u ans_hmb_base_ok=%u ans_hmb_size_ok=%u endpoint_ready=%u root_cmd_2=%u endpoint_cmd_2=%u cc_zero=%u csts_zero=%u nvmmu_ctrl_1=%u nvmmu_inv_zero=%u retained_on_uncertainty=YES\n",
                 r.post_disable_qualified,
                 n71_admin_memory.prepared,n71_admin_memory.dart_mapped,
@@ -342,6 +345,9 @@ static int n71_storage_admin_identify_once(void *ctx)
                 n71_admin_reg(0x14)==0,n71_admin_reg(0x1c)==0,
                 readl(m->nvmmu)==1,
                 readl((u8 __iomem *)m->nvmmu+4)==0);
+            pr_info("n71-s3e-p0: ADMIN_POST_DISABLE_HMB_DESCRIPTOR accessible=%u iova_base_low=%08x iova_base_high=%08x size_bytes=%08x base_zero=%u size_zero=%u no_physical_addresses=YES quarantine_unchanged=YES\n",
+                ready,hmb_lo,hmb_hi,hmb_size,
+                ready && !hmb_lo && !hmb_hi,ready && !hmb_size);
         }
     }
     pr_info("n71-s3e-p0: ADMIN_STAGE rc=%d prepare_stage=%u dart_fault=%08x nvmmu_fifo=%08x\n",

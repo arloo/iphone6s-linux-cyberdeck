@@ -64,34 +64,69 @@ starting NVMe. It includes `n71_admin_memory.prepared`, the installed
 DART queue mapping, HMB ownership, NVMMU state, and the ANS HMB base/size
 registers.
 
-Some hardware registers may legitimately change upon NVMe shutdown,
-but it is **not yet proven** which specific predicate failed on this
-S8000. This finding does **not** authorize removal of the gate or the
-freeing of DMA buffers.
+### Follow-up: actual post-disable predicates isolated on hardware
 
-## Prepared next step — diagnostic only
+A third one-shot physical Identify was completed in a **new** Linux boot
+after the USB transport was recovered. The BQ27540 temperature cooled
+below 38.0 °C; all eight independent preflight samples passed with
+75% SOC, 37.7–37.8 °C and no cell-voltage breach.
 
-A stricter post-disable predicate recorder has been added to the
-public research sources. It reports only boolean / comparison
-results for each precondition (prepared flag, DART mapping, HMB
-owner, ANS readiness and base/size, endpoint/root command bits,
-CC/CSTS zero, NVMMU control/invalidations) and **retains exactly the
-same quarantine behavior**. The core's qualification callback keeps
-the original short-circuit ordering.
+```text
+IDENTIFY_NAMESPACE_REAL nsze=15625000 lba_bytes=4096 capacity_bytes=64000000000
+ADMIN_SHUTDOWN_TRACE attempted=1 rc=0 csts=00000009
+  disable_rc=0 disable_csts=00000000 inner_rc=0 master_off=1
+ADMIN_POST_DISABLE_PREDICATES qualified=0 prepared=1 dart_mapped=1
+  hmb_owned=1 ans_ready=1 ans_hmb_base_ok=0 ans_hmb_size_ok=0
+  endpoint_ready=1 root_cmd_2=1 endpoint_cmd_2=1 cc_zero=1
+  csts_zero=1 nvmmu_ctrl_1=1 nvmmu_inv_zero=1
+ADMIN_STAGE rc=-3 dart_fault=00000500 nvmmu_fifo=00000401
+```
 
-Host tests: 47 S3E test cases pass, including a modeled case with
-successful NVMe shutdown and controller disable but a failed
-post-disable qualifier. The matching AArch64 kernel module has been
-compiled, SHA-256:
+**Root cause of the immediate quarantine decision is now isolated:**
+after acknowledged shutdown/disabling, the **ANS HMB base comparison
+and HMB size comparison both fail**, while every other logged
+qualification predicate remains true. The original pre-start
+qualification is therefore unsuitable as an *identical* post-stop
+condition on this hardware. Exactly which post-stop values are in
+those registers is still unknown: the failed comparisons alone do not
+establish that the fields cleared to zero.
 
-`5c38e7a2fd2af773847abbc3b1b68cb6e6955e39fac88d1cb65e0da9af240555`
+The next experimental candidate reads the HMB **IOVA descriptor**
+base-low/base-high and size once after shutdown, *only* while the
+ANS MMIO window remains qualified, recording whether each field is
+zero. It adds **no cleanup behavior** and keeps the same quarantine.
+It is not yet physically boot-tested.
 
-**This next candidate has not been physically loaded**. It must be
-tested only after a full phone reboot, fresh battery/USB preflight,
-owner-verified backup and confirmation that the previous quarantined
-controller session has been cleared. The presently booted device
-remains in its intentional quarantine state. No further Identify
-should be attempted in the current RAM session.
+Do **not** remove the gate or free DMA buffers simply because shutdown
+succeeded. DART0 reported a retained fault and NVMMU still had FIFO
+status; queue, HMB/SART, NVMMU and DART retirement remain independently
+unproven. The actual phone session is again quarantined with GPIO160
+low, BME off, WLAN and USB functional. Full reboot is required before
+another storage-controller hardware experiment.
+
+## Next experimental checkpoint — exact HMB register readback
+
+The post-disable predicate recorder (module hash
+`5c38e7a2fd2af773847abbc3b1b68cb6e6955e39fac88d1cb65e0da9af240555`)
+**has now been physically tested** in the third one-shot boot, producing
+the mismatch matrix above. It retained its full quarantine safeguards.
+
+The successor adds **read-only** capture of the *IOVA descriptor*
+registers `0x1810`, `0x1814` and `0x1818`, only if the MMIO
+window is accessible. It reports their values and zero-state bits;
+these are NOT HMB physical backing addresses. It does not clear the
+descriptor, change bus-master state, call a release path or skip the
+original post-start qualification check. Host tests: all 47 S3E test
+cases pass, including a modeled post-stop qualifier failure. The
+next AArch64 module is compiled with SHA-256:
+
+`e1dff6a7fd61a9d4508db4d8011e54178e5da7a7fccde36bc88a4fc00063cd88`
+
+**This successor has not been physically loaded**. It requires a
+full fresh phone boot, fresh eight-sample battery qualification,
+verified backup and confirmed reset of the previous quarantined
+controller session. Do not execute another Identify or unload the
+pinned module during the current boot.
 
 Once the exact predicate is known, design a *separate* verified
 post-disable safety condition that proves every relevant DMA address
