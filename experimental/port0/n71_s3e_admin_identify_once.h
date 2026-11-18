@@ -317,6 +317,9 @@ static int n71_storage_admin_identify_once(void *ctx)
             rc,r.master_seen,r.started,r.ready,n71_admin_memory.submitted,
             n71_admin_memory.completed,n71_admin_memory.data_arrived,r.stopped,
             r.master_off,r.enable_polls,r.shutdown_polls,r.disable_polls,r.last_csts);
+        pr_info("n71-s3e-p0: ADMIN_SHUTDOWN_TRACE attempted=%u rc=%d csts=%08x polls=%u disable_rc=%d disable_csts=%08x inner_rc=%d master_off=%u retained_on_uncertainty=YES\n",
+            r.shutdown_attempted,r.shutdown_rc,r.shutdown_csts,r.shutdown_polls,
+            r.disable_rc,r.disable_csts,r.inner_rc,r.master_off);
     }
     pr_info("n71-s3e-p0: ADMIN_STAGE rc=%d prepare_stage=%u dart_fault=%08x nvmmu_fifo=%08x\n",
         rc,n71_admin_memory.stage,

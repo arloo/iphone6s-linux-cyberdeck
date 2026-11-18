@@ -1,6 +1,8 @@
 # iPhone 6s Linux Cyberdeck — N71 / Apple A9
 
-Latest controller result (2026-11-18): ANS reached **NVMe Ready** with the owned 8 MiB HMB. The first Identify submission hit a DART0 upper-level table fault at the SQ address; no Identify or block I/O succeeded. A source-verified PA|3 descriptor candidate is compiled and awaits a fresh physical boot. [Evidence, quarantine and pending correction](docs/N71_S8000_NVME_READY_FIRST_QUEUE_FAULT_2026_11_18.md).
+Latest **physical storage breakthrough (2026-11-18)**: On a real N71/S8000, the source-verified PA|3 DART non-leaf descriptor **successfully completed NVMe Identify Namespace 1** with an independently arrived DMA payload. The namespace reports **64,000,000,000 bytes (64 GB decimal), 4 KiB logical LBAs** using the owned 8 MiB HMB. **This is not a mounted block device or filesystem**: controller shutdown did not satisfy the full DMA teardown gate, so the module remains pinned in safe quarantine with bus mastering off. Next step is logging the exact shutdown-phase status on a **fresh qualified boot**, not repeating I/O in the held state. [Physical proof and retention limits](docs/N71_S8000_NVME_IDENTIFY_SUCCESS_2026_11_18.md).
+
+Previous controller failure (2026-11-18): PA|1 DART non-leaf descriptors caused `NO_PMD` at the queue IOVA; this was the blocker that PA|3 overcame for Identify. [Earlier fault analysis](docs/N71_S8000_NVME_READY_FIRST_QUEUE_FAULT_2026_11_18.md).
 
 Earlier HMB result (2026-11-18): the S8000 ANS controller requests an **8 MiB HMB**, measured with CC.EN and bus mastering off inside owned DART0/NVMMU guards. A subsequent physical checkpoint installed the owned 8 MiB SART/HMB descriptor, verified it and fully restored it with CC.EN/BME still off. All state restored and native WLAN survived. [Evidence and limits](docs/N71_S8000_ANS_HMB_REQUEST_2026_11_18.md).
 

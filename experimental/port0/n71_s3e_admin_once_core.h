@@ -12,7 +12,8 @@ struct n71_admin_once_ops {
 struct n71_admin_once_result {
     unsigned int master_seen,started,ready,stopped,master_off;
     unsigned int enable_polls,shutdown_polls,disable_polls,last_csts;
-    int inner_rc;
+    unsigned int shutdown_attempted,shutdown_csts,disable_csts;
+    int inner_rc,shutdown_rc,disable_rc;
 };
 static int n71_admin_wait(const struct n71_admin_once_ops *o,void *ctx,
         unsigned int mask,unsigned int want,unsigned int bound,int fatal,
@@ -38,7 +39,8 @@ static int n71_admin_once_core(const struct n71_admin_once_ops *o,void *ctx,
     int rc,shutdown_ok=1,disable_ok;
     r->master_seen=r->started=r->ready=r->stopped=r->master_off=0;
     r->enable_polls=r->shutdown_polls=r->disable_polls=r->last_csts=0;
-    r->inner_rc=-1;
+    r->shutdown_attempted=r->shutdown_csts=r->disable_csts=0;
+    r->inner_rc=-1;r->shutdown_rc=r->disable_rc=0;
     if (!o->qualified(ctx)) return -1;
     rc=o->master(ctx,1);
     if (rc) {
@@ -56,13 +58,18 @@ static int n71_admin_once_core(const struct n71_admin_once_ops *o,void *ctx,
     r->inner_rc=rc;
     r->last_csts=o->csts(ctx);
     if ((r->last_csts&3)==1) {
+        r->shutdown_attempted=1;
         o->cc(ctx,0x00464001U);
-        shutdown_ok=!n71_admin_wait(o,ctx,12,8,2000,1,
+        r->shutdown_rc=n71_admin_wait(o,ctx,12,8,2000,1,
             &r->shutdown_polls,&r->last_csts);
+        r->shutdown_csts=r->last_csts;
+        shutdown_ok=!r->shutdown_rc;
     }
     o->cc(ctx,0);
-    disable_ok=!n71_admin_wait(o,ctx,1,0,2000,0,
+    r->disable_rc=n71_admin_wait(o,ctx,1,0,2000,0,
         &r->disable_polls,&r->last_csts);
+    r->disable_csts=r->last_csts;
+    disable_ok=!r->disable_rc;
     r->master_off=!o->master(ctx,0);
     r->stopped=shutdown_ok && disable_ok && r->master_off && o->qualified(ctx);
     return r->stopped ? rc : -3;
