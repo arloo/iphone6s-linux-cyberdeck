@@ -36,5 +36,20 @@ For the approved illustration, lines such as `[OK] DART` are decorative.
 They must not be interpreted as hardware readiness; a future live overlay
 should render real subsystem states.
 
+**Offline build checkpoint (2026-11-18):** The owner-approved 750×1334
+artwork is embedded in a separately generated RAM-only candidate, and an
+optional second variant adds `quiet loglevel=3` to the kernel command line.
+The original, physically proven debug payload and its command line remain
+unaltered. Neither new candidate has yet been physically booted. The splash
+runs once the integrated userspace and framebuffer are ready; it does not
+hide m1n1's own early output, and the quiet variant may still display
+critical kernel diagnostics. No claim of a fully silent boot is made.
+
+**Charging safety:** the optional Dell-side guarded charge renewal is not
+a substitute for the kernel VBUS, temperature or cell-voltage guards.
+A real 4.201 V gauge sample stopped a separate 500 mA test despite
+remaining time on its lease; see
+[the charging follow-up](N71_S8000_CHARGING_GUARD_FOLLOWUP_2026_11_18.md).
+
 Never copy private identity keys, calibration, pairing data or device identifiers
 into this public repository or a shared image.
