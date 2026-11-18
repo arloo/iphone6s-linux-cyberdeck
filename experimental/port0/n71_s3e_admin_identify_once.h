@@ -345,6 +345,25 @@ static void n71_admin_queue_register_retire_probe(void *ctx,
     v.acq_lo=n71_admin_reg(0x30);
     v.acq_hi=n71_admin_reg(0x34);
     if (!n71_queue_retire_gate(&v)) {
+        /* Distinguish the precise failed prerequisite without printing
+         * register IOVAs, DMA/physical backing addresses or IDs.
+         * Every item is a read-only boolean; refusal stays fail closed. */
+        pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_GATES shn=%u disable=%u master_off=%u controller_zero=%u command_words_2=%u reset_low=%u prepared=%u regs_saved=%u dart_mapped=%u hmb_owned=%u hmb_zero=%u intms_bit0=%u queue_owned=%u action=REFUSE_KEEP_QUARANTINE\n",
+            v.shutdown_attempted==1 && !v.shutdown_rc && v.shutdown_csts==9,
+            !v.disable_rc && !v.disable_csts,
+            v.master_off==1,
+            !v.cc && !v.csts,
+            v.root_command==2 && v.endpoint_command==2,
+            v.reset_low==1,
+            v.prepared==1,
+            v.regs_saved==1,
+            v.dart_mapped==1,
+            v.hmb_owned==1,
+            !v.hmb_lo && !v.hmb_hi && !v.hmb_size,
+            !!(v.intms & 1),
+            v.aqa==0x000f000fU &&
+                v.asq_lo==N71_ADMIN_SQ_IOVA && !v.asq_hi &&
+                v.acq_lo==N71_ADMIN_CQ_IOVA && !v.acq_hi);
         pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE refused=1 exact_gate=0 DMA_QUARANTINE=YES\n");
         return;
     }

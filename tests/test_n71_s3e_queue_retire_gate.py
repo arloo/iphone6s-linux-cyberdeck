@@ -67,6 +67,24 @@ class QueueGateTests(unittest.TestCase):
             self.assertEqual(r.returncode,0,r.stderr)
             self.assertIn("QUEUE_REGISTER_PROBE_FAIL_CLOSED_GATES_PASS",r.stdout)
 
+    def test_refusal_diagnostics_preserve_exact_gate_and_private_addresses(self):
+        source=(ROOT/"experimental/port0/n71_s3e_admin_identify_once.h").read_text()
+        start=source.index("if (!n71_queue_retire_gate(&v))")
+        end=source.index("/* CC=0, CSTS=0", start)
+        refusal=source[start:end]
+        self.assertIn("ADMIN_QUEUE_RETIRE_GATES", refusal)
+        for gate in ("shn=%u", "disable=%u", "master_off=%u", "controller_zero=%u",
+                     "command_words_2=%u", "reset_low=%u", "prepared=%u",
+                     "regs_saved=%u", "dart_mapped=%u", "hmb_owned=%u",
+                     "hmb_zero=%u", "intms_bit0=%u", "queue_owned=%u"):
+            with self.subTest(gate=gate):
+                self.assertIn(gate, refusal)
+        self.assertIn("action=REFUSE_KEEP_QUARANTINE", refusal)
+        self.assertIn("return;", refusal)
+        for forbidden in ("n71_admin_write(", "writel(", "writew(", "free_page(",
+                          "dma_unmap_single(", "pr_info(\"physical", "iova_base_low=%08x"):
+            self.assertNotIn(forbidden, refusal)
+
     def test_opt_in_and_no_release_path(self):
         owner=(ROOT/"experimental/port0/n71_s3e_p0_asserted_reset_rootstart.c").read_text()
         source=(ROOT/"experimental/port0/n71_s3e_admin_identify_once.h").read_text()

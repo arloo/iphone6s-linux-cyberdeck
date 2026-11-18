@@ -265,3 +265,49 @@ can be called a verified Showcase/chargepilot build. This finding does
 not undermine the physically logged NVMe register behavior, but
 future test records must distinguish the base Linux runtime from the
 intended user-interface bundle.
+
+
+### Sixth physical boot: queue-retirement safety gate refused
+
+A fresh **exact-runtime-attested** CYBERDECK // ARLO RAM Linux boot
+was established over the USB gadget. Unlike the earlier runtime-image
+mismatch, the on-device integrated archive SHA-256 matched the
+2026-11-18 hold8/chargepilot build and the phone-side SN2400
+supervisor script was installed.
+
+The one-shot opt-in queue-register retirement pilot, module SHA-256
+`9eeb73fe5e02b8b65bcfd11cb01b1266482449efb21aa6f6cc29ba02f3d8428c`,
+passed the verified iOS backup, unique kernel boot ID and all eight
+battery preflight samples (72% SOC, ~37.3 °C, ~4.05–4.09 V).
+It once again completed the real 64 GB Identify Namespace 1, normal
+shutdown, controller disable and PCIe bus-master disable.
+
+At the queue retirement step the fail-closed qualification refused:
+
+```text
+ADMIN_POST_STOP_DMA_SNAPSHOT hmb_descriptor_zero=1 queues_zero=0
+  queues_owned_io_va=1 dart_queues_mapped=1 dart_fault=00000500
+  nvmmu_fifo=00000201 no_dma_release_attempted=YES
+ADMIN_QUEUE_RETIRE_PROBE refused=1 exact_gate=0 DMA_QUARANTINE=YES
+```
+
+**No queue registers were modified or cleared** by this probe; all
+DART/HMB/NVMMU allocations stayed pinned and NAND reset was held low.
+The existing snapshot establishes most of the prerequisites, but does
+**not** identify the exact failing extra condition. In particular,
+`INTMS` after shutdown is not necessarily required to retain its
+pre-shutdown value; it is a diagnostic hypothesis rather than a proven
+cause. Do not remove this gate or retry in the same boot.
+
+The next AArch64 diagnostics-only build logs each of 13 guard outcomes
+as a **boolean**, without printing DMA addresses or sensitive
+identifiers. The original strict qualification and no-free quarantine
+logic are unchanged. This successor is not physically boot-tested.
+Compiled module SHA-256:
+
+`f101215566511f7b638ca33f09ab6000c97a2a3249d7d562a1b762dd7cd570d7`
+
+This checkpoint clarifies the engineering sequence: first determine
+why the queue-clearing safety gate refuses; only then consider queue
+register retirement. Proving DART/NVMMU/HMB DMA retirement and building
+a read-only Linux block device are **separate later milestones**.
