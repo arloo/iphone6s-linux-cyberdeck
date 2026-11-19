@@ -174,7 +174,7 @@ button{background:#60dab0;color:#0a2120;font-weight:700;border:0;border-radius:8
 </style></head><body>
 <a href="/">← Dashboard</a><h1>CYBERDECK // Setup Debian 13 KDE Plasma</h1>
 <p>Apri Konsole su Debian 13 con il tuo normale utente, premi «Copia tutti i comandi» e incolla il blocco.
-Il browser non esegue nulla; la password sudo/root rimane sul computer Debian. Il collegamento SSH è limitato al Dell.</p>
+Questa fase non richiede alcuna password e non usa sudo o root. Installa soltanto la chiave pubblica autorizzata per il Dell; gli aggiornamenti e il firewall verranno gestiti dopo.</p>
 <p><button id="copy" type="button">Copia tutti i comandi</button><span id="result" role="status"></span></p>
 <textarea id="commands" aria-label="Comandi SSH da eseguire su Debian" readonly spellcheck="false">""" + command + """</textarea>
 <p>Se il pulsante non copia (restrizioni del browser su HTTP): fai clic nel riquadro, poi <strong>Ctrl+A</strong>, <strong>Ctrl+C</strong>, infine incolla in Konsole con <strong>Ctrl+Shift+V</strong>.</p>
