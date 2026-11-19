@@ -36,6 +36,26 @@ class PhaseTraceTests(unittest.TestCase):
                           "dma_unmap_single(", "free_page("):
             self.assertNotIn(forbidden,block)
 
+    def test_bme_transition_trace_only_brackets_two_existing_writes(self):
+        source=HEADER.read_text()
+        start=source.index("static int n71_admin_master(")
+        end=source.index("static void n71_admin_cc(",start)
+        block=source[start:end]
+        self.assertEqual(block.count("writew(value,(u8 __iomem *)m->cfg+4);"),1)
+        self.assertEqual(block.count("writew(value,(u8 __iomem *)m->endpoint+4);"),1)
+        self.assertEqual(block.count("if (ans_phase_trace_ro && !enable)"),3)
+        self.assertEqual(block.count("n71_admin_reg(0x0c)&1"),3)
+        self.assertEqual(block.count("n71_storage_reset_level(ctx)==1"),3)
+        i=block.index("edge=before_root")
+        j=block.index("writew(value,(u8 __iomem *)m->cfg+4);")
+        k=block.index("edge=after_root")
+        l=block.index("writew(value,(u8 __iomem *)m->endpoint+4);")
+        m=block.index("edge=after_endpoint")
+        self.assertTrue(i<j<k<l<m)
+        for forbidden in ("n71_admin_write(", "writel(", "dma_unmap_single(",
+                          "free_page(", "gpiod_set_value("):
+            self.assertNotIn(forbidden,block)
+
     def test_post_core_trace_stays_readonly_and_quarantined(self):
         source=HEADER.read_text()
         start=source.index('if (ans_phase_trace_ro)\n                    pr_info("n71-s3e-p0: ADMIN_POST_CORE_RO')

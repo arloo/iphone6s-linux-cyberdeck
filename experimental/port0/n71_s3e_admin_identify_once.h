@@ -5,6 +5,7 @@
 #include <linux/dma-map-ops.h>
 #include "n71_s3e_admin_once_core.h"
 #include "n71_s3e_queue_retire_gate.h"
+#include "n71_s3e_post_reset_protocol.h"
 /* Included after the storage/HMB guard definitions in the owning pilot. */
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
@@ -130,8 +131,21 @@ static int n71_admin_master(void *ctx,int enable)
     unsigned int value=enable ? 6 : 2;
     if (enable && (!ans_identify_once || !n71_admin_qualified(ctx))) return -EPERM;
     /* These are 16-bit command writes. Never touch W1C PCI status. */
+    /* Additional READS only under the already opt-in observer.
+     * Samples bracket the EXISTING root and endpoint BME writes without
+     * changing their order, values, timing requirements, or guards.
+     * Do not interpret an INTMS change as proof of DMA retirement. */
+    if (ans_phase_trace_ro && !enable)
+        pr_info("n71-s3e-p0: ADMIN_BME_INTMS_RO edge=before_root intms_bit0=%u perst_high=%u no_dma_release=YES\n",
+            !!(n71_admin_reg(0x0c)&1),n71_storage_reset_level(ctx)==1);
     writew(value,(u8 __iomem *)m->cfg+4);
+    if (ans_phase_trace_ro && !enable)
+        pr_info("n71-s3e-p0: ADMIN_BME_INTMS_RO edge=after_root intms_bit0=%u perst_high=%u no_dma_release=YES\n",
+            !!(n71_admin_reg(0x0c)&1),n71_storage_reset_level(ctx)==1);
     writew(value,(u8 __iomem *)m->endpoint+4);
+    if (ans_phase_trace_ro && !enable)
+        pr_info("n71-s3e-p0: ADMIN_BME_INTMS_RO edge=after_endpoint intms_bit0=%u perst_high=%u no_dma_release=YES\n",
+            !!(n71_admin_reg(0x0c)&1),n71_storage_reset_level(ctx)==1);
     if ((n71_storage_root_read(ctx,4)&0xffffU)!=value ||
         (n71_storage_endpoint_read(ctx,4)&0xffffU)!=value) return -EIO;
     pr_info("n71-s3e-p0: ADMIN_BME_STATE enabled=%d both_command_words=%u\n",enable,value);
@@ -472,6 +486,31 @@ static int n71_storage_admin_identify_once(void *ctx)
                         n71_storage_reset_level(ctx)==0,
                         ready && !hmb_lo && !hmb_hi && !hmb_size,
                         queues_owned);
+                if (ans_phase_trace_ro) {
+                    const struct n71_post_reset_protocol_observation p={
+                        .shutdown_attempted=r.shutdown_attempted,
+                        .shutdown_rc=r.shutdown_rc,
+                        .shutdown_csts=r.shutdown_csts,
+                        .disable_rc=r.disable_rc,
+                        .disable_csts=r.disable_csts,
+                        .master_off=r.master_off,
+                        .cc=n71_admin_reg(0x14),
+                        .csts=n71_admin_reg(0x1c),
+                        .root_command=n71_storage_root_read(ctx,4)&0xffffU,
+                        .endpoint_command=n71_storage_endpoint_read(ctx,4)&0xffffU,
+                        .intms=n71_admin_reg(0x0c),
+                        .perst_high=n71_storage_reset_level(ctx)==1,
+                        .hmb_descriptor_zero=ready && !hmb_lo && !hmb_hi && !hmb_size,
+                        .queues_owned=queues_owned,
+                        .prepared=n71_admin_memory.prepared,
+                        .dart_mapped=n71_admin_memory.dart_mapped,
+                        .hmb_owned=owned,
+                    };
+                    /* Read-only protocol interpretation, NOT a DMA or
+                     * queue-retirement decision. Keep existing -3 path. */
+                    pr_info("n71-s3e-p0: ADMIN_POST_RESET_PROTOCOL_RO consistent=%u queue_write_authorized=NO DMA_QUARANTINE=YES\n",
+                        n71_post_reset_protocol_consistent(&p));
+                }
                 pr_info("n71-s3e-p0: ADMIN_POST_STOP_DMA_SNAPSHOT hmb_descriptor_zero=%u queues_zero=%u queues_owned_io_va=%u dart_queues_mapped=%u dart_fault=%08x nvmmu_fifo=%08x no_dma_release_attempted=YES quarantine_unchanged=YES\n",
                     ready && !hmb_lo && !hmb_hi && !hmb_size,
                     queues_zero,queues_owned,n71_admin_memory.dart_mapped,
