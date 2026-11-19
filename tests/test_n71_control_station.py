@@ -86,6 +86,29 @@ class ControlStationTests(unittest.TestCase):
         self.assertEqual(x["runtime"],"Wi-Fi attivo · UI attiva")
         self.assertNotIn("wifi_ip",x)
 
+    def test_linux_battery_margin_warns_before_shutdown(self):
+        base={"capacity":"60","temp_tenths":"345","current_uA":"-180000",
+              "wlan":"1","ui":"running","charge_supervisor":"inactive"}
+        with patch.object(station,"run",return_value="USB ID 05ac:4142"):
+            with patch.object(station,"linux_live_status",return_value=base):
+                x=station.device_state()
+        self.assertTrue(x["power_warning"])
+        self.assertIn("ATTENZIONE",x["power_margin"])
+        base["capacity"]="35"
+        with patch.object(station,"run",return_value="USB ID 05ac:4142"):
+            with patch.object(station,"linux_live_status",return_value=base):
+                x=station.device_state()
+        self.assertIn("CRITICO",x["power_margin"])
+
+    def test_linux_battery_margin_does_not_infer_charging_from_link(self):
+        base={"capacity":"81","temp_tenths":"345","current_uA":"-170000",
+              "wlan":"1","ui":"running","charge_supervisor":"inactive"}
+        with patch.object(station,"run",return_value="USB ID 05ac:4142"):
+            with patch.object(station,"linux_live_status",return_value=base):
+                x=station.device_state()
+        self.assertFalse(x["power_warning"])
+        self.assertIn("In scarica",x["power_margin"])
+
     def test_linux_ssh_failure_does_not_invent_battery(self):
         with patch.object(station,"run",return_value="Bus 001 ID 05ac:4142 HoolockLinux"):
             with patch.object(station,"linux_live_status",side_effect=RuntimeError("pin mismatch")):

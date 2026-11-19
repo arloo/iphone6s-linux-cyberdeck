@@ -69,6 +69,7 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <div class="line"><span>Ricarica / percentuale</span><strong id="battery">—</strong></div>
 <div class="line"><span>Wi-Fi / UI Linux</span><strong id="phoneRuntime">—</strong></div>
 <div class="line"><span>Supervisore carica</span><strong id="chargeGuard">—</strong></div>
+<div class="line"><span>Margine batteria</span><strong id="powerMargin">—</strong></div>
 <div class="note">Se sul caricatore esterno, la batteria non è leggibile dal Dell. Non indica un guasto.</div></section>
 <section><h2>DEBIAN · MONITOR</h2><div class="stat" id="mintState">—</div>
 <div class="line"><span>IP previsto</span><strong id="mintIP">—</strong></div>
@@ -109,7 +110,7 @@ if(!response.ok)throw Error("HTTP "+response.status);
 const x=await response.json();
 set("connection","LIVE / AGGIORNATO");set("now",new Date().toLocaleString("it-IT"));
 set("hostState","ONLINE");set("uptime",x.host.uptime);set("load",x.host.load);set("memory",x.host.memory_mib+" MiB");set("hostIP",x.host.ip);
-set("phoneState",x.phone.state);set("usbMode",x.phone.detail);set("linuxUSB",x.phone.linux_usb?"Attivo":"Non collegato");set("battery",x.phone.battery);set("phoneRuntime",x.phone.runtime);set("chargeGuard",x.phone.charge_guard);
+set("phoneState",x.phone.state);set("usbMode",x.phone.detail);set("linuxUSB",x.phone.linux_usb?"Attivo":"Non collegato");set("battery",x.phone.battery);set("phoneRuntime",x.phone.runtime);set("chargeGuard",x.phone.charge_guard);set("powerMargin",x.phone.power_margin);document.getElementById("powerMargin").classList.toggle("warn",x.phone.power_warning===true);
 set("mintState",x.mint.online?"LAN OK":"Non raggiungibile");set("mintIP",x.mint.ip);set("mintPing",x.mint.online?x.mint.latency:"Offline");
 set("gitBranch",x.git.branch);set("gitCommit",x.git.commit);set("gitDirty",x.git.clean?"Pulito":"Modifiche locali");set("build",x.host.build);
 set("brief",x.services.briefing);set("usbmux",x.services.usbmuxd);set("sample",x.timestamp);
@@ -284,6 +285,19 @@ def device_state():
                 device["runtime"]=("Wi-Fi "+("attivo" if v["wlan"]=="1" else "offline")
                                    +" · UI "+("attiva" if v["ui"]=="running" else "assente"))
                 device["charge_guard"]=v["charge_supervisor"]
+                # Coarse, read-only safety margin; never claim active charging
+                # solely from a module being present or a USB cable connected.
+                warn = cap <= 60 or temp >= 39 or current <= -350
+                if cap <= 35 or temp >= 42:
+                    margin = "CRITICO · salvare i file sul Dell"
+                elif warn:
+                    margin = "ATTENZIONE · autonomia in diminuzione"
+                elif current < 0:
+                    margin = "In scarica · osservare la corrente"
+                else:
+                    margin = "Nessun allarme nel campione"
+                device["power_margin"]=margin
+                device["power_warning"]=warn
         except (OSError,RuntimeError,ValueError,KeyError,subprocess.TimeoutExpired):
             pass # Fail closed: do not infer battery or host-key authenticity.
     elif "05ac:12a8" in usb:
