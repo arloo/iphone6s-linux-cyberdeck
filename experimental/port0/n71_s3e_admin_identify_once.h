@@ -463,6 +463,15 @@ static int n71_storage_admin_identify_once(void *ctx)
                 unsigned int queues_owned=aqa==0x000f000fU &&
                     asq_lo==N71_ADMIN_SQ_IOVA && !asq_hi &&
                     acq_lo==N71_ADMIN_CQ_IOVA && !acq_hi;
+                /* Post-core READ-ONLY evidence at the same lifetime point
+                 * as the optional retired-queue gate. Not DMA authority.
+                 * No new MMIO writes, reset changes or memory release. */
+                if (ans_phase_trace_ro)
+                    pr_info("n71-s3e-p0: ADMIN_POST_CORE_RO intms_bit0=%u reset_low=%u hmb_descriptor_zero=%u queues_owned=%u master_off=1 no_dma_release=YES\n",
+                        !!(n71_admin_reg(0x0c)&1),
+                        n71_storage_reset_level(ctx)==0,
+                        ready && !hmb_lo && !hmb_hi && !hmb_size,
+                        queues_owned);
                 pr_info("n71-s3e-p0: ADMIN_POST_STOP_DMA_SNAPSHOT hmb_descriptor_zero=%u queues_zero=%u queues_owned_io_va=%u dart_queues_mapped=%u dart_fault=%08x nvmmu_fifo=%08x no_dma_release_attempted=YES quarantine_unchanged=YES\n",
                     ready && !hmb_lo && !hmb_hi && !hmb_size,
                     queues_zero,queues_owned,n71_admin_memory.dart_mapped,

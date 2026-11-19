@@ -36,6 +36,20 @@ class PhaseTraceTests(unittest.TestCase):
                           "dma_unmap_single(", "free_page("):
             self.assertNotIn(forbidden,block)
 
+    def test_post_core_trace_stays_readonly_and_quarantined(self):
+        source=HEADER.read_text()
+        start=source.index('if (ans_phase_trace_ro)\n                    pr_info("n71-s3e-p0: ADMIN_POST_CORE_RO')
+        end=source.index('pr_info("n71-s3e-p0: ADMIN_POST_STOP_DMA_SNAPSHOT',start)
+        section=source[start:end]
+        for part in ("intms_bit0=%u","reset_low=%u","hmb_descriptor_zero=%u",
+                     "queues_owned=%u","no_dma_release=YES",
+                     "n71_storage_reset_level(ctx)==0","n71_admin_reg(0x0c)&1"):
+            self.assertIn(part,section)
+        for forbidden in ("n71_admin_write(", "writel(", "writew(",
+                          "gpiod_direction_output(", "dma_unmap_single(",
+                          "free_page("):
+            self.assertNotIn(forbidden,section)
+
     def test_existing_safety_gate_unchanged(self):
         q=(ROOT/"experimental/port0/n71_s3e_queue_retire_gate.h").read_text()
         self.assertIn("v->reset_low == 1",q)
