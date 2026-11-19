@@ -85,6 +85,27 @@ class QueueGateTests(unittest.TestCase):
                           "dma_unmap_single(", "pr_info(\"physical", "iova_base_low=%08x"):
             self.assertNotIn(forbidden, refusal)
 
+    def test_prephase_refusal_identifies_all_guards_without_unqualified_hmb_read(self):
+        source=(ROOT/"experimental/port0/n71_s3e_admin_identify_once.h").read_text()
+        start=source.index("static void n71_admin_queue_register_retire_probe(")
+        end=source.index("v.shutdown_attempted=",start)
+        phase=source[start:end]
+        self.assertIn("if (!ans_queue_retire_probe) return;",phase)
+        self.assertIn("phase_ok=ans_identify_once && r->shutdown_attempted &&",phase)
+        self.assertIn("if (phase_ok)\n        hmb_owned=n71_storage_hmb_owned_ready(ctx);",phase)
+        self.assertIn("if (!phase_ok || !hmb_owned)",phase)
+        self.assertIn("ADMIN_QUEUE_RETIRE_PHASE_GATES",phase)
+        for gate in ("identify_armed=%u","shutdown_attempted=%u",
+                     "shutdown_ok=%u","disable_ok=%u","inner_ok=%u",
+                     "master_off=%u","hmb_checked=%u","hmb_owned=%u"):
+            with self.subTest(gate=gate):
+                self.assertIn(gate,phase)
+        self.assertIn("action=REFUSE_KEEP_QUARANTINE",phase)
+        self.assertIn("phase_gate=0 DMA_QUARANTINE=YES",phase)
+        for forbidden in ("n71_admin_write(", "writel(", "writew(",
+                          "free_page(", "dma_unmap_single(", "iova_base_low="):
+            self.assertNotIn(forbidden,phase)
+
     def test_opt_in_and_no_release_path(self):
         owner=(ROOT/"experimental/port0/n71_s3e_p0_asserted_reset_rootstart.c").read_text()
         source=(ROOT/"experimental/port0/n71_s3e_admin_identify_once.h").read_text()

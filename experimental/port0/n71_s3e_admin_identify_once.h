@@ -313,10 +313,22 @@ static void n71_admin_queue_register_retire_probe(void *ctx,
     struct n71_queue_retire_observation v={};
     unsigned int i;
     bool cleared=true;
+    bool phase_ok, hmb_owned=false;
     if (!ans_queue_retire_probe) return;
-    if (!ans_identify_once || !r->shutdown_attempted ||
-        r->shutdown_rc || r->disable_rc || r->inner_rc ||
-        !r->master_off || !n71_storage_hmb_owned_ready(ctx)) {
+    /* Keep the original short-circuit contract: never inspect HMB
+     * ownership on a failed shutdown, disabled controller or command.
+     * Report each boolean even when the 13 register predicates cannot
+     * safely be read. This branch never touches NVMe queue registers. */
+    phase_ok=ans_identify_once && r->shutdown_attempted &&
+        !r->shutdown_rc && !r->disable_rc && !r->inner_rc &&
+        r->master_off;
+    if (phase_ok)
+        hmb_owned=n71_storage_hmb_owned_ready(ctx);
+    if (!phase_ok || !hmb_owned) {
+        pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PHASE_GATES identify_armed=%u shutdown_attempted=%u shutdown_ok=%u disable_ok=%u inner_ok=%u master_off=%u hmb_checked=%u hmb_owned=%u action=REFUSE_KEEP_QUARANTINE\n",
+            !!ans_identify_once, !!r->shutdown_attempted,
+            !r->shutdown_rc, !r->disable_rc, !r->inner_rc,
+            !!r->master_off, phase_ok, hmb_owned);
         pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE refused=1 phase_gate=0 DMA_QUARANTINE=YES\n");
         return;
     }
