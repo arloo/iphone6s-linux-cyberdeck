@@ -49,7 +49,8 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <body><main><header>
 <div><h1>CYBERDECK <span class="good">//</span> CONTROL STATION</h1>
 <div class="subtitle">N71 • Apple A9 • Linux Development Lab — Dell XPS host / Mint monitor</div>
-<div class="subtitle"><a href="/setup" style="color:#68eac0">Configura accesso SSH a Mint · Apri comandi da copiare</a></div></div>
+<div class="subtitle"><a href="/setup" style="color:#68eac0">Configura accesso SSH a Mint · Apri comandi da copiare</a>
+· <a href="/usb" style="color:#ffcf7d">Prepara installer Debian su USB · Un comando</a></div></div>
 <div style="text-align:right"><div class="live"><span class="dot"></span><span id="connection">CONNESSIONE INIZIALE</span></div>
 <div class="small" id="now">—</div><button id="refresh" type="button">Aggiorna ora</button></div></header>
 <div class="grid">
@@ -114,6 +115,45 @@ finally{clearTimeout(timeout);inflight=false;}
 document.getElementById("refresh").addEventListener("click",refresh);
 refresh();setInterval(refresh,5000);
 </script></body></html>"""
+
+def usb_writer_html():
+    """Read-only, copyable single-command handoff for owner-authenticated Mint GUI."""
+    return """<!doctype html><html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CYBERDECK // Installer USB Debian</title><style>
+:root{color-scheme:dark}body{margin:auto;max-width:940px;background:#08121c;color:#e6f3fa;font:16px/1.5 system-ui,sans-serif;padding:32px}
+a{color:#93c7ff}.box{padding:22px;border:1px solid #2c4862;border-radius:12px;background:#102236}h1{font-size:26px}p{color:#aec1cf}
+textarea{box-sizing:border-box;width:100%;min-height:130px;padding:15px;background:#061421;color:#b9f8df;border:1px solid #46657c;border-radius:9px;font:14px/1.7 ui-monospace,monospace}
+button{margin-top:12px;padding:12px 20px;background:#65e0b4;color:#0b241d;font-weight:bold;border:none;border-radius:7px;cursor:pointer}
+li{margin:9px 0}.warn{color:#ffd898}
+</style></head><body>
+<a href="/">← Torna alla Control Station</a>
+<h1>Debian 13.7 · Scrittura USB protetta</h1>
+<p>Supporto identificato: <b>Kingston DataTraveler /dev/sdc, 29 GiB</b>.
+La ISO è già stata autenticata e verificata. Il controllo preliminare ha dato esito positivo.</p>
+<div class="box"><p class="warn"><b>Attenzione:</b> questa operazione cancellerà soltanto la chiavetta USB Kingston.
+Lo script controlla modello, vendor, capacità e identificatore fisico prima di scrivere.
+I dischi SATA Toshiba e Seagate sono esclusi.</p>
+<label for="cmd">Comando unico da incollare nella Konsole di Mint</label>
+<textarea id="cmd" readonly spellcheck="false">sudo bash /home/victor/Downloads/Debian-13.7-verified/write-installer-verified.sh --write</textarea>
+<button type="button" id="copy">Copia comando</button><span id="status" role="status"></span>
+</div>
+<ol><li>Fai clic su «Copia comando» e apri Konsole sul computer Mint.</li>
+<li>Incolla con <b>Ctrl+Shift+V</b> e premi Invio.</li>
+<li>Inserisci <b>solo in Konsole</b> la password sudo di victor.</li>
+<li>Attendi il messaggio <b>DEBIAN13_7_INSTALLER_USB_SUCCESS_AND_READBACK_VERIFIED</b>.</li>
+</ol>
+<p>Se la copia automatica è bloccata dal browser, seleziona il testo con Ctrl+A, premi Ctrl+C e incollalo in Konsole.
+Non scollegare la chiavetta durante la scrittura e la verifica.</p>
+<script>
+document.getElementById("copy").addEventListener("click",async()=>{
+const x=document.getElementById("cmd"),s=document.getElementById("status");
+x.focus();x.select();let ok=false;
+try{if(navigator.clipboard&&isSecureContext){await navigator.clipboard.writeText(x.value);ok=true;}}catch(e){}
+if(!ok){try{ok=document.execCommand("copy");}catch(e){}}
+s.textContent=ok?" Copiato!":" Testo selezionato: premi Ctrl+C.";
+});
+</script></body></html>""".encode("utf-8")
 
 def setup_html():
     """Render a local read-only owner-provisioning snippet, never execute it."""
@@ -264,6 +304,8 @@ class Dashboard(BaseHTTPRequestHandler):
         if self.client_address[0] not in ALLOWED:
             return self.answer(403,"text/plain; charset=utf-8",b"Forbidden")
         path=urlsplit(self.path).path
+        if path=="/usb":
+            return self.answer(200,"text/html; charset=utf-8",usb_writer_html())
         if path=="/setup":
             page=setup_html()
             return self.answer(200,"text/html; charset=utf-8",page) if page is not None else self.answer(404,"text/plain; charset=utf-8",b"Not configured")

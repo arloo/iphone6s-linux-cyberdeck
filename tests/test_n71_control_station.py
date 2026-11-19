@@ -29,6 +29,21 @@ class ControlStationTests(unittest.TestCase):
         obj.do_GET()
         self.assertEqual(results,[(403,b"Forbidden")])
 
+    def test_usb_page_only_renders_owner_local_command(self):
+        obj=station.Dashboard.__new__(station.Dashboard)
+        obj.client_address=("127.0.0.1",4000)
+        obj.path="/usb"
+        results=[]
+        obj.answer=lambda code,ctype,payload: results.append((code,ctype,payload))
+        obj.do_GET()
+        self.assertEqual(results[0][0],200)
+        text=results[0][2].decode()
+        self.assertIn("Copia comando",text)
+        self.assertIn("--write",text)
+        self.assertIn("DEBIAN13_7_INSTALLER_USB_SUCCESS",text)
+        self.assertNotIn("fetch(",text)
+        self.assertNotIn("WebSocket",text)
+
     def test_unknown_or_mutating_route_refused(self):
         obj=station.Dashboard.__new__(station.Dashboard)
         obj.client_address=("127.0.0.1",4000)
