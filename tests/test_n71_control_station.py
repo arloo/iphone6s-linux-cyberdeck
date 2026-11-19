@@ -29,6 +29,12 @@ class ControlStationTests(unittest.TestCase):
         obj.do_GET()
         self.assertEqual(results,[(403,b"Forbidden")])
 
+    def test_debian_handoff_never_exposes_public_source_secrets(self):
+        source=(ROOT/"tools/n71_control_station.py").read_text()
+        self.assertNotIn("3XiSMxz6oUo8uIyXDFp1GpLqy",source)
+        self.assertNotIn("su -c '/bin/bash",source)
+        self.assertIn("DEBIAN_HANDOFF",source)
+
     def test_usb_page_only_renders_owner_local_command(self):
         obj=station.Dashboard.__new__(station.Dashboard)
         obj.client_address=("127.0.0.1",4000)

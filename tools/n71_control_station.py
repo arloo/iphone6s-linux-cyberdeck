@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 REPO = Path.home() / "Documenti/iphone6s-linux-cyberdeck-public"
 EVENTS = Path.home() / ".local/share/cyberdeck/control-station/events.jsonl"
 SETUP = Path.home() / ".local/share/cyberdeck/control-station/setup-mint.sh"
+DEBIAN_HANDOFF = Path.home() / ".local/share/cyberdeck/control-station/debian-security-setup.html"
 MINT_IP = os.environ.get("N71_MINT_IP", "")
 HOST_IP = os.environ.get("N71_HOST_IP", "127.0.0.1")
 PORT = 8765
@@ -50,7 +51,8 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <div><h1>CYBERDECK <span class="good">//</span> CONTROL STATION</h1>
 <div class="subtitle">N71 • Apple A9 • Linux Development Lab — Dell XPS host / Debian 13 KDE monitor</div>
 <div class="subtitle"><a href="/setup" style="color:#68eac0">Configura accesso SSH a Debian 13 · Apri comandi da copiare</a>
-· <a href="/usb" style="color:#ffcf7d">Prepara installer Debian su USB · Un comando</a></div></div>
+· <a href="/usb" style="color:#ffcf7d">Prepara installer Debian su USB · Un comando</a>
+· <a href="/debian" style="color:#68eac0">Debian 13: completa la sicurezza SSH e sudo</a></div></div>
 <div style="text-align:right"><div class="live"><span class="dot"></span><span id="connection">CONNESSIONE INIZIALE</span></div>
 <div class="small" id="now">—</div><button id="refresh" type="button">Aggiorna ora</button></div></header>
 <div class="grid">
@@ -115,6 +117,15 @@ finally{clearTimeout(timeout);inflight=false;}
 document.getElementById("refresh").addEventListener("click",refresh);
 refresh();setInterval(refresh,5000);
 </script></body></html>"""
+
+def debian_hardening_html():
+    """Render a locally provisioned, read-only handoff; keep device info private."""
+    if DEBIAN_HANDOFF.is_symlink() or not DEBIAN_HANDOFF.is_file():
+        return None
+    info=DEBIAN_HANDOFF.stat()
+    if info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_size > 30000:
+        return None
+    return DEBIAN_HANDOFF.read_bytes()
 
 def usb_writer_html():
     """Read-only, copyable single-command handoff for owner-authenticated Mint GUI."""
@@ -304,6 +315,9 @@ class Dashboard(BaseHTTPRequestHandler):
         if self.client_address[0] not in ALLOWED:
             return self.answer(403,"text/plain; charset=utf-8",b"Forbidden")
         path=urlsplit(self.path).path
+        if path=="/debian":
+            page=debian_hardening_html()
+            return self.answer(200,"text/html; charset=utf-8",page) if page is not None else self.answer(404,"text/plain; charset=utf-8",b"Not configured")
         if path=="/usb":
             return self.answer(200,"text/html; charset=utf-8",usb_writer_html())
         if path=="/setup":
