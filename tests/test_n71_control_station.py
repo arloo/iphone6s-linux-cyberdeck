@@ -75,6 +75,33 @@ class ControlStationTests(unittest.TestCase):
         self.assertEqual(x["state"],"ESTERNO / ASSENTE")
         self.assertIn("Non rilevabile",x["battery"])
 
+    def test_linux_pinned_live_metrics_displayed_without_secrets(self):
+        values={"capacity":"97","temp_tenths":"321","current_uA":"-215000",
+                "wlan":"1","ui":"running","charge_supervisor":"inactive"}
+        with patch.object(station,"run",return_value="Bus 001 ID 05ac:4142 HoolockLinux"):
+            with patch.object(station,"linux_live_status",return_value=values):
+                x=station.device_state()
+        self.assertEqual(x["state"],"LINUX A9")
+        self.assertEqual(x["battery"],"97% · 32.1 °C · -215 mA")
+        self.assertEqual(x["runtime"],"Wi-Fi attivo · UI attiva")
+        self.assertNotIn("wifi_ip",x)
+
+    def test_linux_ssh_failure_does_not_invent_battery(self):
+        with patch.object(station,"run",return_value="Bus 001 ID 05ac:4142 HoolockLinux"):
+            with patch.object(station,"linux_live_status",side_effect=RuntimeError("pin mismatch")):
+                x=station.device_state()
+        self.assertTrue(x["linux_usb"])
+        self.assertEqual(x["battery"],"Non rilevabile via USB")
+        self.assertNotIn("runtime",x)
+
+    def test_linux_out_of_range_metrics_fail_display(self):
+        values={"capacity":"101","temp_tenths":"320","current_uA":"-200000",
+                "wlan":"1","ui":"running","charge_supervisor":"running"}
+        with patch.object(station,"run",return_value="Bus 001 ID 05ac:4142 HoolockLinux"):
+            with patch.object(station,"linux_live_status",return_value=values):
+                x=station.device_state()
+        self.assertEqual(x["battery"],"Non rilevabile via USB")
+
     def test_ios_battery_reports_only_valid_paired_percentage(self):
         with patch.object(station,"run",side_effect=[
             "Bus 001 Device 008: ID 05ac:12a8 Apple iPhone",

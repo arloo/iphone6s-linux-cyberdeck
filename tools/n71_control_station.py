@@ -8,6 +8,7 @@ Dell IPs, bind only on Dell's specific LAN interface. No third-party deps.
 import argparse
 from datetime import datetime, timezone
 import html
+import importlib.util
 import stat
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
@@ -66,6 +67,8 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <div class="line"><span>Stato collegamento</span><strong id="usbMode">—</strong></div>
 <div class="line"><span>Linux USB</span><strong id="linuxUSB">—</strong></div>
 <div class="line"><span>Ricarica / percentuale</span><strong id="battery">—</strong></div>
+<div class="line"><span>Wi-Fi / UI Linux</span><strong id="phoneRuntime">—</strong></div>
+<div class="line"><span>Supervisore carica</span><strong id="chargeGuard">—</strong></div>
 <div class="note">Se sul caricatore esterno, la batteria non è leggibile dal Dell. Non indica un guasto.</div></section>
 <section><h2>DEBIAN · MONITOR</h2><div class="stat" id="mintState">—</div>
 <div class="line"><span>IP previsto</span><strong id="mintIP">—</strong></div>
@@ -106,7 +109,7 @@ if(!response.ok)throw Error("HTTP "+response.status);
 const x=await response.json();
 set("connection","LIVE / AGGIORNATO");set("now",new Date().toLocaleString("it-IT"));
 set("hostState","ONLINE");set("uptime",x.host.uptime);set("load",x.host.load);set("memory",x.host.memory_mib+" MiB");set("hostIP",x.host.ip);
-set("phoneState",x.phone.state);set("usbMode",x.phone.detail);set("linuxUSB",x.phone.linux_usb?"Attivo":"Non collegato");set("battery",x.phone.battery);
+set("phoneState",x.phone.state);set("usbMode",x.phone.detail);set("linuxUSB",x.phone.linux_usb?"Attivo":"Non collegato");set("battery",x.phone.battery);set("phoneRuntime",x.phone.runtime);set("chargeGuard",x.phone.charge_guard);
 set("mintState",x.mint.online?"LAN OK":"Non raggiungibile");set("mintIP",x.mint.ip);set("mintPing",x.mint.online?x.mint.latency:"Offline");
 set("gitBranch",x.git.branch);set("gitCommit",x.git.commit);set("gitDirty",x.git.clean?"Pulito":"Modifiche locali");set("build",x.host.build);
 set("brief",x.services.briefing);set("usbmux",x.services.usbmuxd);set("sample",x.timestamp);
@@ -248,12 +251,41 @@ def append_event(value):
         h.write(json.dumps({"at":datetime.now().astimezone().strftime("%d/%m %H:%M"),
                             "message":value},ensure_ascii=False)+"\n")
 
+def linux_live_status():
+    """Only strict, per-boot pinned USB SSH telemetry; never execute UI input."""
+    source=REPO / "scripts/n71_live_monitor.py"
+    if not source.is_file() or source.is_symlink():
+        raise RuntimeError("Trusted Linux monitor source unavailable")
+    spec=importlib.util.spec_from_file_location("_n71_lan_phone_monitor",source)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Linux monitor module unavailable")
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    ssh=module.load_config(module.DEFAULT_CONFIG)
+    r=subprocess.run(ssh,input=module.PROBE,text=True,capture_output=True,
+                     timeout=5,stdin=None)
+    if r.returncode:
+        raise RuntimeError("Pinned USB SSH telemetry refused")
+    return module.parse_status(r.stdout)
+
 def device_state():
     usb=run("lsusb","-d","05ac:",timeout=2)
     device={"state":"ESTERNO / ASSENTE","detail":"Non collegato al Dell",
             "linux_usb":False,"battery":"Non rilevabile via USB"}
     if "05ac:4142" in usb:
         device.update(state="LINUX A9",detail="USB gadget 05ac:4142",linux_usb=True)
+        try:
+            v=linux_live_status()
+            cap=int(v["capacity"])
+            temp=int(v["temp_tenths"])/10
+            current=int(v["current_uA"])/1000
+            if 0<=cap<=100 and -5000<=current<=5000 and -20<=temp<=85:
+                device["battery"]=f"{cap}% · {temp:.1f} °C · {current:+.0f} mA"
+                device["runtime"]=("Wi-Fi "+("attivo" if v["wlan"]=="1" else "offline")
+                                   +" · UI "+("attiva" if v["ui"]=="running" else "assente"))
+                device["charge_guard"]=v["charge_supervisor"]
+        except (OSError,RuntimeError,ValueError,KeyError,subprocess.TimeoutExpired):
+            pass # Fail closed: do not infer battery or host-key authenticity.
     elif "05ac:12a8" in usb:
         device.update(state="iOS",detail="USB Apple 05ac:12a8")
         # iOS Lockdown returns a coarse percentage only when the owner has
