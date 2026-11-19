@@ -52,6 +52,46 @@ def interpret(text: str) -> tuple[str,str,list[str]]:
         return "MASK_CLEARED",";".join(transitions),[]
     return "MASK_ZERO_ALL_PHASES","none",[]
 
+POSTCORE_LINE=re.compile(
+    r"ADMIN_POST_CORE_RO intms_bit0=([01]) reset_low=([01]) "
+    r"hmb_descriptor_zero=([01]) queues_owned=([01]) "
+    r"master_off=1 no_dma_release=YES(?:\s|$)"
+)
+
+def classify_postcore(text: str) -> tuple[str,str]:
+    """Interpret pre/post-controller observations; never authorize DMA release."""
+    if "N71_ONE_SHOT_START" in text:
+        text=text.rsplit("N71_ONE_SHOT_START",1)[-1]
+    raw=[line for line in text.splitlines() if "ADMIN_POST_CORE_RO" in line]
+    if not raw:
+        return "NO_POSTCORE_SAMPLE","none"
+    if len(raw)!=1:
+        return "AMBIGUOUS_POSTCORE_SAMPLE","none"
+    match=POSTCORE_LINE.search(raw[0])
+    if not match:
+        return "MALFORMED_POSTCORE_SAMPLE","none"
+    status,_,_=interpret(text)
+    if status not in ("MASK_RETAINED","MASK_CLEARED","MASK_ZERO_ALL_PHASES"):
+        return "UNQUALIFIED_PHASE_SEQUENCE","none"
+    last_phase=[line for line in text.splitlines()
+                if "ADMIN_CC_INTMS_RO phase=disable edge=after " in line]
+    if len(last_phase)!=1:
+        return "UNQUALIFIED_LAST_PHASE","none"
+    final_match=LINE.search(last_phase[0])
+    if not final_match:
+        return "UNQUALIFIED_LAST_PHASE","none"
+    last_bit=int(final_match.group(3))
+    post_bit,reset_low,hmb_zero,queues_owned=map(int,match.groups())
+    if last_bit==1 and post_bit==0:
+        stage="AFTER_DISABLE_BEFORE_POSTCORE_MASK_FELL"
+    elif last_bit==post_bit:
+        stage="NO_MASK_CHANGE_IN_POSTCORE_WINDOW"
+    else:
+        stage="OTHER_POSTCORE_MASK_CHANGE"
+    # These flags are observations, not validation to free anything.
+    return stage,(f"cc_disable_after={last_bit} postcore={post_bit} "
+                  f"reset_low={reset_low} hmb_zero={hmb_zero} queues_owned={queues_owned}")
+
 def read_log(path: Path):
     if path.is_symlink() or not path.is_file() or path.stat().st_size>512*1024:
         raise ValueError("Refuse missing, symlinked, or oversized S3E log")
@@ -65,6 +105,9 @@ def main():
     print("CC_INTMS_TRACE="+status)
     print("CC_INTMS_OBSERVATION="+detail)
     print("MISSING_PHASES="+(",".join(missing) if missing else "none"))
+    post_stage,post_detail=classify_postcore(read_log(args.log))
+    print("CC_INTMS_POSTCORE="+post_stage)
+    print("POSTCORE_OBSERVATION="+post_detail)
     print("DMA_QUARANTINE=REQUIRED")
     print("NAND_BLOCK_ACCESS=NOT_PROVEN")
 

@@ -33,6 +33,31 @@ class PhaseTraceParseTests(unittest.TestCase):
     def test_unexpected_perst_refuses(self):
         self.assertEqual(mod.interpret(log([1]*6,high=0))[0],"PERST_UNEXPECTED")
 
+    def test_postcore_phase_transition_localized_to_short_window(self):
+        extra=("[ 303.537120] n71-s3e-p0: ADMIN_POST_CORE_RO "
+               "intms_bit0=0 reset_low=0 hmb_descriptor_zero=1 "
+               "queues_owned=1 master_off=1 no_dma_release=YES")
+        result,detail=mod.classify_postcore(log([1]*6)+"\n"+extra)
+        self.assertEqual(result,"AFTER_DISABLE_BEFORE_POSTCORE_MASK_FELL")
+        self.assertIn("postcore=0",detail)
+        self.assertIn("reset_low=0",detail)
+
+    def test_postcore_missing_or_duplicate_cannot_prove_transition(self):
+        self.assertEqual(mod.classify_postcore(log([1]*6))[0],"NO_POSTCORE_SAMPLE")
+        extra=("ADMIN_POST_CORE_RO intms_bit0=0 reset_low=0 "
+               "hmb_descriptor_zero=1 queues_owned=1 master_off=1 no_dma_release=YES")
+        self.assertEqual(mod.classify_postcore(log([1]*6)+"\n"+extra+"\n"+extra)[0],
+                         "AMBIGUOUS_POSTCORE_SAMPLE")
+
+    def test_postcore_malformed_and_phase_incomplete_fail_closed(self):
+        extra=("ADMIN_POST_CORE_RO intms_bit0=0 reset_low=0 "
+               "hmb_descriptor_zero=1 queues_owned=1 master_off=1 no_dma_release=YES")
+        self.assertEqual(mod.classify_postcore(log([1]*5)+"\n"+extra)[0],
+                         "UNQUALIFIED_PHASE_SEQUENCE")
+        self.assertEqual(mod.classify_postcore(log([1]*6)+"\n"+
+                                            extra.replace("intms_bit0=0","intms_bit0=9"))[0],
+                         "MALFORMED_POSTCORE_SAMPLE")
+
     def test_malformed_log_refuses(self):
         self.assertEqual(mod.interpret(log([1]*6).replace("intms_bit0=1","intms_bit0=9"))[0],
                          "MALFORMED")
