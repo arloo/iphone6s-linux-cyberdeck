@@ -311,3 +311,42 @@ This checkpoint clarifies the engineering sequence: first determine
 why the queue-clearing safety gate refuses; only then consider queue
 register retirement. Proving DART/NVMMU/HMB DMA retirement and building
 a read-only Linux block device are **separate later milestones**.
+
+
+### Seventh physical boot: queue qualification blockers (19 November 2026)
+
+The newly tested S8000 RAM-only session again successfully identified
+Namespace 1: 64,000,000,000 bytes, 4,096 bytes per LBA. A fresh
+authenticated USB SSH kernel boot, verified encrypted iOS logical backup,
+active charging lease and eight independent electrical samples all
+passed before this one physical S3E attempt. The tested AArch64 module
+SHA-256 was 4239d197308190b49594022af840c3cbae12d0e09d1501a78138bee618773849.
+
+The controller acknowledged shutdown at CSTS=0x9, was disabled with
+CC=CSTS=0 and both PCIe bus mastering command words restored to 2.
+The diagnostic reported 11/13 successful safety predicates, with
+exactly reset_low=0 and intms_bit0=0 failing. In particular, the storage
+reset was still released at the controller-local queue check, and the
+mask bit that was set during queue preparation did not survive into
+the post-disable check. No queue register was cleared.
+
+The separate admin-core post-disable qualification also failed because
+its original startup predicate still demands a configured 8 MiB HMB
+descriptor, whereas the real controller sets that descriptor to zero
+during normal shutdown. Startup qualification and post-stop teardown
+must be independently modeled; they cannot be treated as identical.
+
+On refusal, all DMA/HMB/DART/NVMMU memory remained pinned; reset GPIO160
+was asserted low by the subsequent unwind. The Linux USB, WLAN and UI
+continued operating. No block device was created, and there was no
+partition read, mount, or NAND write. Never repeat a storage experiment
+in the current quarantined kernel session.
+
+A successor, purely observational ARM64 module with opt-in
+ans_phase_trace_ro=1 and ans_queue_retire_probe=0, now records INTMS
+bit0 and PERST before and after the existing enable, shutdown, and
+disable CC operations. It changes no queue or DMA safety gate. The
+offline build SHA-256 is
+1fd780cad167f93cd0969a32a66436ce7857a17b2a40d8aa603e0f11e8fb6fcf.
+This candidate is compiled and host-tested, NOT physically loaded.
+No persistent NAND storage or safe DMA-release conclusion follows.
