@@ -71,7 +71,7 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <div class="line"><span>IP previsto</span><strong id="mintIP">—</strong></div>
 <div class="line"><span>Controllo LAN</span><strong id="mintPing">—</strong></div>
 <div class="line"><span>Interfaccia</span><strong>Web read-only</strong></div>
-<div class="note">La postazione Debian visualizza la dashboard; il Dell raccoglie i dati.</div></section>
+<div class="note">Hash.station con Debian visualizza la dashboard; il Dell raccoglie i dati.</div></section>
 <section><h2>GIT · DEVELOPMENT</h2><div class="stat" id="gitBranch" style="font-size:21px">—</div>
 <div class="line"><span>Ultimo commit</span><strong id="gitCommit">—</strong></div>
 <div class="line"><span>Working tree</span><strong id="gitDirty">—</strong></div>
@@ -82,7 +82,7 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <div class="line"><span>USB mux</span><strong id="usbmux">—</strong></div>
 <div class="line"><span>Control Station</span><strong class="good">ONLINE</strong></div>
 <div class="line"><span>Ultimo campionamento</span><strong id="sample">—</strong></div>
-<div class="note">Il monitor rimane disponibile quando Mint è acceso e il Dell è raggiungibile.</div></section>
+<div class="note">Il monitor rimane disponibile quando Debian è acceso e il Dell è raggiungibile.</div></section>
 <section><h2>STATO DEL PROGETTO</h2>
 <div class="line"><span>Touch + interfaccia</span><strong class="good">Provati su Linux</strong></div>
 <div class="line"><span>Wi-Fi + Bluetooth</span><strong class="good">Provati su Linux</strong></div>
@@ -92,7 +92,7 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <section class="wide"><h2>ATTIVITÀ · COMMIT RECENTI</h2><ol id="commits"><li>Caricamento...</li></ol></section>
 <section><h2>EVENTI DI LABORATORIO</h2><ol id="events"><li>Caricamento...</li></ol>
 <div class="note">Eventi annotati esplicitamente dal Dell; non cattura schermi o conversazioni.</div></section>
-</div><footer>CYBERDECK CONTROL STATION · LAN autorizzata · solo lettura · accesso limitato a Mint + Dell · nessuna API di esecuzione comandi · refresh 5 secondi</footer>
+</div><footer>CYBERDECK CONTROL STATION · LAN autorizzata · solo lettura · accesso limitato a Hash.station + Dell · nessuna API di esecuzione comandi · refresh 5 secondi</footer>
 </main><script>
 "use strict";
 function set(id,value){document.getElementById(id).textContent=String(value===null||value===undefined?"—":value);}
@@ -256,6 +256,16 @@ def device_state():
         device.update(state="LINUX A9",detail="USB gadget 05ac:4142",linux_usb=True)
     elif "05ac:12a8" in usb:
         device.update(state="iOS",detail="USB Apple 05ac:12a8")
+        # iOS Lockdown returns a coarse percentage only when the owner has
+        # paired this exact phone. No serial, UDID, contact or private payload
+        # is read or logged; failures remain "unknown" rather than guessed.
+        gauge=run("ideviceinfo","-q","com.apple.mobile.battery",timeout=3)
+        pct=re.search(r"(?m)^BatteryCurrentCapacity: (\d{1,3})$",gauge)
+        if pct and int(pct.group(1))<=100:
+            charging=re.search(r"(?m)^BatteryIsCharging: (true|false)$",gauge)
+            state=(" · in carica" if charging and charging.group(1)=="true" else
+                   " · non in carica" if charging else "")
+            device["battery"]=pct.group(1)+"%"+state
     elif "05ac:4141" in usb:
         device.update(state="PONGO",detail="USB bootloader")
     elif "05ac:1227" in usb:

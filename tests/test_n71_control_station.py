@@ -75,6 +75,23 @@ class ControlStationTests(unittest.TestCase):
         self.assertEqual(x["state"],"ESTERNO / ASSENTE")
         self.assertIn("Non rilevabile",x["battery"])
 
+    def test_ios_battery_reports_only_valid_paired_percentage(self):
+        with patch.object(station,"run",side_effect=[
+            "Bus 001 Device 008: ID 05ac:12a8 Apple iPhone",
+            "BatteryCurrentCapacity: 100\nBatteryIsCharging: true\nExternalConnected: true"
+        ]):
+            x=station.device_state()
+        self.assertEqual(x["state"],"iOS")
+        self.assertEqual(x["battery"],"100% · in carica")
+
+    def test_ios_battery_malformed_is_unknown(self):
+        with patch.object(station,"run",side_effect=[
+            "Bus 001 Device 008: ID 05ac:12a8 Apple iPhone",
+            "BatteryCurrentCapacity: 101\nBatteryIsCharging: true"
+        ]):
+            x=station.device_state()
+        self.assertEqual(x["battery"],"Non rilevabile via USB")
+
     def test_unknown_apple_mode_does_not_invent_linux(self):
         with patch.object(station,"run",return_value="Bus 001 Device 005: ID 05ac:12a8 Apple Inc"):
             x=station.device_state()
