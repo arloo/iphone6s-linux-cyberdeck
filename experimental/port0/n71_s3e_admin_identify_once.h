@@ -139,8 +139,20 @@ static int n71_admin_master(void *ctx,int enable)
 }
 static void n71_admin_cc(void *ctx,unsigned int value)
 {
+    const char *phase;
     if (WARN_ON_ONCE(value!=0 && value!=0x460001U && value!=0x464001U)) return;
+    phase=value==0x460001U ? "enable" :
+          value==0x464001U ? "shutdown" : "disable";
+    /* Optional READS only: CC transition INTMS and PERST snapshots.
+     * The existing CC write below is unchanged. Never zero a queue,
+     * unmap DART/NVMMU/HMB or infer that DMA has retired. */
+    if (ans_phase_trace_ro)
+        pr_info("n71-s3e-p0: ADMIN_CC_INTMS_RO phase=%s edge=before intms_bit0=%u perst_high=%u no_dma_release=YES\n",
+            phase,!!(n71_admin_reg(0x0c)&1),n71_storage_reset_level(ctx)==1);
     n71_admin_write(0x14,value);
+    if (ans_phase_trace_ro)
+        pr_info("n71-s3e-p0: ADMIN_CC_INTMS_RO phase=%s edge=after intms_bit0=%u perst_high=%u no_dma_release=YES\n",
+            phase,!!(n71_admin_reg(0x0c)&1),n71_storage_reset_level(ctx)==1);
 }
 static unsigned int n71_admin_csts(void *ctx) {return n71_admin_reg(0x1c);}
 static void n71_admin_delay(void *ctx,unsigned int ms) {usleep_range(ms*1000UL,ms*1000UL+100);}

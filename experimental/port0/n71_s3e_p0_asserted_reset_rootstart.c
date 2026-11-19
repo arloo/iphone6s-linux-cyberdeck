@@ -104,6 +104,10 @@ static bool ans_identify_once;
 /* The queue-only retirement pilot is explicitly opt-in, never automatic.
  * It always retains all DMA, HMB, DART and NVMMU backing allocations. */
 static bool ans_queue_retire_probe;
+/* Read-only interrupt mask snapshots; not queue retirement permission. */
+static bool ans_phase_trace_ro;
+module_param(ans_phase_trace_ro, bool, 0400);
+MODULE_PARM_DESC(ans_phase_trace_ro, "read-only INTMS/PERST at CC transitions, never queue writes or DMA release");
 module_param(ans_queue_retire_probe, bool, 0400);
 MODULE_PARM_DESC(ans_queue_retire_probe, "one-shot post-shutdown NVMe admin queue register zeroing, only after all ownership/shutdown guards; DMA and power remain quarantined");
 module_param(ans_identify_once, bool, 0400);
@@ -955,6 +959,10 @@ static int __init n71_port0_init(void)
         pr_info("n71-s3e-p0: UNARMED inert, no PMGR access\n");
         return 0;
     }
+    /* Keep observation and queue-write experiment mutually exclusive
+     * and refuse before any PMGR/GPIO/NVMe access. */
+    if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
+        return -EPERM;
     if (!n71_board_gate())
         return -EPERM;
     n71_p0=of_find_node_by_path(PWR_BASE "/power-controller@80320");
