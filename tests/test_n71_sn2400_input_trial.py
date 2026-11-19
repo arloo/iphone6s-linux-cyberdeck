@@ -94,6 +94,7 @@ int main(int argc, char **argv) {
     if(!strcmp(case_name,"low-voltage"))voltage=3299999;
     if(!strcmp(case_name,"wrong-board"))board=false;
     if(!strcmp(case_name,"invalid-current"))input_ua=600000;
+    if(!strcmp(case_name,"input-120"))input_ua=120000;
     if(!strcmp(case_name,"existing-input"))regs[9]=41;
     if(!strcmp(case_name,"disabled-input"))regs[16]=12;
     if(!strcmp(case_name,"adc-timeout"))adc_timeout=true;
@@ -122,6 +123,16 @@ int main(int argc, char **argv) {
         assert(rc==0 && changed && device_refs==1 && battery_refs==1);
         fail_restore=false;partial_input_fail=false;trial_exit();
         assert(regs[9]==0 && device_refs==0 && battery_refs==0);return 0;
+    }
+    if(!strcmp(case_name,"input-120")) {
+        /* The 120mA 90+10*n policy maps to register code 3, never 21.
+         * Health monitor stays enabled; unload must restore zero. */
+        assert(rc==0 && regs[9]==3 && scheduled==1 && changed);
+        jiffies=2000;monitor_work(NULL);
+        assert(changed && regs[9]==3 && scheduled==2);
+        trial_exit();
+        assert(!changed && regs[9]==0 && device_refs==0 && battery_refs==0);
+        return 0;
     }
     assert(rc==0 && regs[9]==21 && scheduled==1 && changed);
     if(!strcmp(case_name,"deadline") || !strcmp(case_name,"adc-idle-selector"))jiffies=30000;
@@ -157,7 +168,7 @@ class TrialTests(unittest.TestCase):
         cls.temp.cleanup()
     def test_compiled_module_policy_and_cleanup(self):
         for case in ['unarmed','low-battery','hot','cold','low-voltage','wrong-board',
-                     'invalid-current','existing-input','disabled-input','adc-timeout',
+                     'invalid-current','input-120','existing-input','disabled-input','adc-timeout',
                      'low-vbus','no-battery','partial-write','restore-failure','deadline',
                      'droop','detach','hot-monitor','healthy-monitor','unload','adc-idle-selector','adc-unknown','lease-invalid']:
             with self.subTest(case=case):
