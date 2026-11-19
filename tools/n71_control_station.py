@@ -48,8 +48,8 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 </style></head>
 <body><main><header>
 <div><h1>CYBERDECK <span class="good">//</span> CONTROL STATION</h1>
-<div class="subtitle">N71 • Apple A9 • Linux Development Lab — Dell XPS host / Mint monitor</div>
-<div class="subtitle"><a href="/setup" style="color:#68eac0">Configura accesso SSH a Mint · Apri comandi da copiare</a>
+<div class="subtitle">N71 • Apple A9 • Linux Development Lab — Dell XPS host / Debian 13 KDE monitor</div>
+<div class="subtitle"><a href="/setup" style="color:#68eac0">Configura accesso SSH a Debian 13 · Apri comandi da copiare</a>
 · <a href="/usb" style="color:#ffcf7d">Prepara installer Debian su USB · Un comando</a></div></div>
 <div style="text-align:right"><div class="live"><span class="dot"></span><span id="connection">CONNESSIONE INIZIALE</span></div>
 <div class="small" id="now">—</div><button id="refresh" type="button">Aggiorna ora</button></div></header>
@@ -65,11 +65,11 @@ footer{padding-top:25px;font-size:12px;color:var(--muted)}button{background:tran
 <div class="line"><span>Linux USB</span><strong id="linuxUSB">—</strong></div>
 <div class="line"><span>Ricarica / percentuale</span><strong id="battery">—</strong></div>
 <div class="note">Se sul caricatore esterno, la batteria non è leggibile dal Dell. Non indica un guasto.</div></section>
-<section><h2>MINT · MONITOR</h2><div class="stat" id="mintState">—</div>
+<section><h2>DEBIAN · MONITOR</h2><div class="stat" id="mintState">—</div>
 <div class="line"><span>IP previsto</span><strong id="mintIP">—</strong></div>
 <div class="line"><span>Controllo LAN</span><strong id="mintPing">—</strong></div>
 <div class="line"><span>Interfaccia</span><strong>Web read-only</strong></div>
-<div class="note">La postazione Mint visualizza la dashboard; il Dell raccoglie i dati.</div></section>
+<div class="note">La postazione Debian visualizza la dashboard; il Dell raccoglie i dati.</div></section>
 <section><h2>GIT · DEVELOPMENT</h2><div class="stat" id="gitBranch" style="font-size:21px">—</div>
 <div class="line"><span>Ultimo commit</span><strong id="gitCommit">—</strong></div>
 <div class="line"><span>Working tree</span><strong id="gitDirty">—</strong></div>
@@ -165,18 +165,18 @@ def setup_html():
     command=html.escape(SETUP.read_text(encoding="utf-8"),quote=True)
     page="""<!doctype html><html lang="it"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYBERDECK // Configura Mint</title><style>
+<title>CYBERDECK // Configura Debian 13</title><style>
 :root{color-scheme:dark}body{background:#09121c;color:#e0eef5;font:15px/1.5 system-ui,sans-serif;margin:auto;padding:30px;max-width:1020px}
 a{color:#9bcaff}h1{font-size:27px}p{color:#a5bfce}
 textarea{width:100%;height:63vh;box-sizing:border-box;background:#111f2e;color:#e2f9ed;border:1px solid #34526b;border-radius:12px;padding:18px;font:14px/1.5 ui-monospace,Consolas,monospace;resize:vertical}
 button{background:#60dab0;color:#0a2120;font-weight:700;border:0;border-radius:8px;padding:11px 16px;cursor:pointer}
 #result{color:#96c7ff;margin-left:12px}code{color:#9ee4cc}
 </style></head><body>
-<a href="/">← Dashboard</a><h1>CYBERDECK // Setup Linux Mint</h1>
-<p>Apri Konsole su Mint come utente <code>victor</code>, premi «Copia tutti i comandi» e incolla il blocco.
-Il browser non esegue nulla; la password sudo rimane sul computer Mint. Il collegamento SSH è limitato al Dell.</p>
+<a href="/">← Dashboard</a><h1>CYBERDECK // Setup Debian 13 KDE Plasma</h1>
+<p>Apri Konsole su Debian 13 con il tuo normale utente, premi «Copia tutti i comandi» e incolla il blocco.
+Il browser non esegue nulla; la password sudo/root rimane sul computer Debian. Il collegamento SSH è limitato al Dell.</p>
 <p><button id="copy" type="button">Copia tutti i comandi</button><span id="result" role="status"></span></p>
-<textarea id="commands" aria-label="Comandi SSH da eseguire su Mint" readonly spellcheck="false">""" + command + """</textarea>
+<textarea id="commands" aria-label="Comandi SSH da eseguire su Debian" readonly spellcheck="false">""" + command + """</textarea>
 <p>Se il pulsante non copia (restrizioni del browser su HTTP): fai clic nel riquadro, poi <strong>Ctrl+A</strong>, <strong>Ctrl+C</strong>, infine incolla in Konsole con <strong>Ctrl+Shift+V</strong>.</p>
 <script>
 document.getElementById("copy").addEventListener("click", async () => {
