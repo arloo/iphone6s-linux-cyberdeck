@@ -49,6 +49,12 @@ A production-quality fix should latch a lifecycle-owned `admin_dma_epoch_started
 3. Explicit queue retirement and translation invalidation ordering, including stale-DMA prevention after the device reset, without relying solely on BME readback.
 4. A separate, strictly read-only, recoverable storage path only after DMA ownership is qualified. Persistent NAND modification requires a verified restore-capable backup and additional acceptance gates.
 
+## Same-day offline hardening candidate (not phone-tested)
+
+A separate **private, host-only / cross-compiled kernel candidate** now adds a monotonic `n71_admin_dma_epoch_latched` flag. It is set **before the first root or endpoint BME-enabling PCI command write** and is never cleared during the module lifetime. All three retirement gates conservatively check `ans_identify_once || READ_ONCE(n71_admin_dma_epoch_latched)`; the original read-only opt-in remains a redundant denial guard.
+
+The candidate compiled for the exact AArch64 test kernel, the existing retirement-boundary host test passed, and static comparison confirmed exactly three changed gate expressions, one latch set, no latch reset, and no unrelated removed source statements. **This patch was not booted, installed, or physically tested on the phone.** It does not create a new release path or establish hardware DMA quiescence. Further fault-injection and independent retirement proof remain required.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
