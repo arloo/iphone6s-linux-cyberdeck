@@ -80,6 +80,18 @@ The upstream Linux `nvme/host/apple.c` driver separately freezes, quiesces and d
 
 **Next unblocker:** identify a hardware-supported fence or authoritative reset/transaction-drain contract for this S8000 DART/NVMMU/PCIe combination. No existing CQ, SHST, CC, BME, PERST or local FIFO sample is yet qualified as that proof. Keep all page mappings pinned until then; no persistent NAND work is authorized.
 
+## Post-stop late-RAM-change witness — offline candidate only (2026-11-20)
+
+A separately opt-in **falsification** diagnostic (`ans_late_dma_probe_ro=1`) was added to the public pilot. It refuses simultaneous SQ timestamp tracing or queue-register retirement trials and requires a single validated admin Identify, real DMA-epoch latch, owned CQ/data mappings, successful NVMe shutdown and disable, BME-off, and retained DART queues. It performs no additional NVMe command, PCIe command, GPIO/reset change, DART/NVMMU invalidation, DMA unmap, or page release.
+
+After the normal controller shutdown, it uses the existing noncoherent streaming-DMA CPU/device synchronization pattern to compute **12 local fingerprints** of the first 4 KiB each of the owned CQ and Identify data pages, spaced by nominal **50 ms**. Logs include only sample/change counters and a clear `release_allowed=NO` warning; no fingerprints, raw data, physical addresses or personal identifiers are printed. A host C harness checked unchanged buffers, changes to non-leading bytes, separate CQ/data alerts, and sticky change detection; additional static tests check the opt-in/exclusivity/guard ordering and forbid new MMIO or teardown operations. The integrated N71 ARM64 kernel module compiled successfully but **has not been installed or run on the phone**.
+
+**Interpretation:** an observed change after shutdown is a useful reason to investigate possible late device writes, but does not independently attribute the change to DMA (cache/coherency or software effects remain possible). **No observed change is not proof of quiescence**: unchanged data cannot exclude unseen requests, posted PCIe writes, future controller activity, stale translations, or accesses to other pages. The observer never grants a teardown authority.
+
+Relevant independent implementation references: [Corellium DART TLB busy/flush polling](https://github.com/corellium/linux-m1/blob/master/drivers/iommu/apple-dart-iommu.c) and [Linux Apple NVMe quiesce/shutdown/late-CQ handling](https://github.com/torvalds/linux/blob/master/drivers/nvme/host/apple.c). These sources inform our safety distinctions; their hardware generations and register maps **are not assumed interchangeable with N71/S8000**.
+
+**Next physical step:** if a new owner-supervised RAM boot is arranged, perform a new power/USB/battery/S3E-clean preflight before **one** explicitly armed Identify + late-content-observer run. Never load the candidate into the currently quarantined boot; never force `rmmod` or reclaim DMA pages.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.

@@ -110,6 +110,10 @@ static bool n71_admin_dma_epoch_latched;
 static bool ans_queue_retire_probe;
 /* Read-only interrupt mask snapshots; not queue retirement permission. */
 static bool ans_phase_trace_ro;
+/* Optional post-stop RAM-only witness: detects late changes, never proves quiet. */
+static bool ans_late_dma_probe_ro;
+module_param(ans_late_dma_probe_ro, bool, 0400);
+MODULE_PARM_DESC(ans_late_dma_probe_ro, "bounded post-stop CQ/data fingerprint observation; no DMA retirement authority");
 module_param(ans_phase_trace_ro, bool, 0400);
 MODULE_PARM_DESC(ans_phase_trace_ro, "read-only INTMS/PERST at CC transitions, never queue writes or DMA release");
 module_param(ans_queue_retire_probe, bool, 0400);
@@ -981,6 +985,9 @@ static int __init n71_port0_init(void)
     }
     /* Keep observation and queue-write experiment mutually exclusive
      * and refuse before any PMGR/GPIO/NVMe access. */
+    if (ans_late_dma_probe_ro && (!ans_identify_once ||
+            ans_queue_retire_probe || ans_phase_trace_ro))
+        return -EPERM;
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
         return -EPERM;
     if (!n71_board_gate())

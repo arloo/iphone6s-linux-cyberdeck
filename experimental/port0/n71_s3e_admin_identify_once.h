@@ -8,6 +8,7 @@
 #include "n71_s3e_post_reset_protocol.h"
 /* Included after the storage/HMB guard definitions in the owning pilot. */
 #include "n71_s3e_admin_protocol_accounting.h"
+#include "n71_s3e_late_dma_observer.h"
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
 #define N71_ADMIN_DATA_MARK 0x716964656e746966ULL
@@ -441,6 +442,50 @@ static void n71_admin_queue_register_retire_probe(void *ctx,
     pr_info("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE armed=1 queue_regs_zero=%u controller_disabled=YES BME_OFF=YES HMB_DESCRIPTOR_ZERO=YES DART_STILL_MAPPED=YES NVMMU_UNTOUCHED=YES DMA_QUARANTINE=YES\n",
             cleared);
 }
+/* Opt-in POST-STOP RAM observer. The owned DMA pages and DART roots
+ * remain pinned; no new NVMe/PCIe/DART/NVMMU MMIO commands are issued.
+ * A changed hash is a late-write *suspect*, not attribution to the device.
+ * Stable hashes are NEVER a proof of DMA retirement or absence of TLPs.
+ */
+static void n71_admin_late_dma_probe_ro(const struct n71_admin_once_result *r)
+{
+    struct n71_s3e_late_dma_observer obs={};
+    struct device *d=n71_nvmmu_memory.dev;
+    unsigned int i;
+    bool qualified;
+    if (!ans_late_dma_probe_ro) return;
+    qualified=r && d && ans_identify_once &&
+        READ_ONCE(n71_admin_dma_epoch_latched) &&
+        n71_admin_memory.prepared && n71_admin_memory.dart_mapped &&
+        n71_admin_memory.submitted && n71_admin_memory.completed &&
+        n71_admin_memory.completion_validated &&
+        n71_admin_memory.data_arrived && n71_admin_memory.namespace_validated &&
+        n71_admin_memory.mapped[1] && n71_admin_memory.mapped[2] &&
+        n71_admin_memory.page[1] && n71_admin_memory.page[2] &&
+        r->inner_rc==0 && r->shutdown_attempted &&
+        r->shutdown_rc==0 && r->shutdown_csts==9 &&
+        r->disable_rc==0 && r->disable_csts==0 && r->master_off;
+    if (!qualified) {
+        pr_err("n71-s3e-p0: ADMIN_LATE_DMA_PROBE_RO refused=1 incomplete_poststop_gate=YES quarantine_unchanged=YES\n");
+        return;
+    }
+    for (i=0;i<12;i++) {
+        unsigned long long cq_hash,data_hash;
+        /* Matches the preexisting DMA_BIDIRECTIONAL cache ownership path.
+         * The device may still have the ability to write either page. */
+        dma_sync_single_for_cpu(d,n71_admin_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
+        dma_sync_single_for_cpu(d,n71_admin_memory.dma[2],PAGE_SIZE,DMA_BIDIRECTIONAL);
+        cq_hash=n71_s3e_late_dma_fingerprint(n71_admin_memory.page[1],SZ_4K);
+        data_hash=n71_s3e_late_dma_fingerprint(n71_admin_memory.page[2],SZ_4K);
+        dma_sync_single_for_device(d,n71_admin_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
+        dma_sync_single_for_device(d,n71_admin_memory.dma[2],PAGE_SIZE,DMA_BIDIRECTIONAL);
+        n71_s3e_late_dma_observe(&obs,cq_hash,data_hash);
+        if (i+1<12) msleep(50);
+    }
+    pr_info("n71-s3e-p0: ADMIN_LATE_DMA_PROBE_RO samples=%u interval_ms=50 cq_changes=%u data_changes=%u any_change=%u suspected_late_ram_change=%u stable_is_not_proof=YES release_allowed=NO quarantine_unchanged=YES\n",
+        obs.samples,obs.cq_changed,obs.data_changed,obs.ever_changed,obs.ever_changed);
+}
+
 static int n71_storage_admin_identify_once(void *ctx)
 {
     const struct n71_admin_once_ops o={
@@ -453,6 +498,7 @@ static int n71_storage_admin_identify_once(void *ctx)
     rc=n71_admin_prepare(ctx);
     if (!rc) {
         rc=n71_admin_once_core(&o,ctx,&r);
+        n71_admin_late_dma_probe_ro(&r);
         /* Read existing software lifecycle fields; no extra MMIO reads. */
         {
             const struct n71_s3e_admin_protocol_snapshot snap={
