@@ -130,6 +130,8 @@ static int n71_admin_master(void *ctx,int enable)
     struct n71_storage_dart_context *m=ctx;
     unsigned int value=enable ? 6 : 2;
     if (enable && (!ans_identify_once || !n71_admin_qualified(ctx))) return -EPERM;
+    /* The epoch begins BEFORE any BME-capable PCI command write. */
+    if (enable) WRITE_ONCE(n71_admin_dma_epoch_latched, true);
     /* These are 16-bit command writes. Never touch W1C PCI status. */
     /* Additional READS only under the already opt-in observer.
      * Samples bracket the EXISTING root and endpoint BME writes without
@@ -299,6 +301,14 @@ static int n71_admin_unprepare(void *ctx)
     struct n71_storage_dart_context *m=ctx;
     struct device *d=n71_nvmmu_memory.dev;
     unsigned int i;
+    /* Shutdown and BME-off alone cannot retire DMA-owned memory. */
+    if (!n71_dma_retire_authorized(&(struct n71_dma_retirement_boundary){
+            .admin_epoch_started=ans_identify_once || READ_ONCE(n71_admin_dma_epoch_latched),
+            .controller_shutdown_consistent=0,
+            .independent_quiescence_proven=0})) {
+        pr_err("n71-s3e-p0: DMA_RETIREMENT_BOUNDARY stage=UNPREPARE release=DENIED\n");
+        return -3;
+    }
     if (!n71_storage_hmb_owned_ready(ctx)) return -3;
     if (n71_admin_memory.regs_saved) {
         for (i=0x24;i<=0x34;i+=4) n71_admin_write(i,0);
@@ -403,6 +413,17 @@ static void n71_admin_queue_register_retire_probe(void *ctx,
                 v.asq_lo==N71_ADMIN_SQ_IOVA && !v.asq_hi &&
                 v.acq_lo==N71_ADMIN_CQ_IOVA && !v.acq_hi);
         pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE refused=1 exact_gate=0 DMA_QUARANTINE=YES\n");
+        return;
+    }
+    /* Protocol-consistent reset is NOT independent DMA quiescence.
+     * The old queue register write pilot is held behind an explicit
+     * retirement refusal after any admin/BME epoch, even if every prior
+     * read-only queue predicate passed. */
+    if (!n71_dma_retire_authorized(&(struct n71_dma_retirement_boundary){
+            .admin_epoch_started=ans_identify_once || READ_ONCE(n71_admin_dma_epoch_latched),
+            .controller_shutdown_consistent=1,
+            .independent_quiescence_proven=0})) {
+        pr_err("n71-s3e-p0: ADMIN_QUEUE_RETIRE_PROBE refused=1 dma_epoch_no_proof=YES queue_regs_untouched=YES\n");
         return;
     }
     /* CC=0, CSTS=0, both PCI commands=2, SHST=2, HMB descriptor=0,

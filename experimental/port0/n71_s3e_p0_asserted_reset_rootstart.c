@@ -35,6 +35,7 @@
 #include "n71_s3e_ans_hmb_ro.h"
 #include "n71_s3e_sart_hmb_owned.h"
 #include "n71_s3e_nvmmu_owned_tables.h"
+#include "n71_s3e_dma_retirement_boundary.h"
 #include <linux/ioport.h>
 #include <linux/device.h>
 #include <linux/err.h>
@@ -101,6 +102,9 @@ static bool nvmmu_owned_tables;
 static bool ans_hmb_ro;
 static bool ans_hmb_owned;
 static bool ans_identify_once;
+/* Conservative latch: set before an admin BME write; never clear on error,
+ * shutdown or disable. The read-only opt-in remains a second denial signal. */
+static bool n71_admin_dma_epoch_latched;
 /* The queue-only retirement pilot is explicitly opt-in, never automatic.
  * It always retains all DMA, HMB, DART and NVMMU backing allocations. */
 static bool ans_queue_retire_probe;
@@ -813,6 +817,14 @@ static int n71_storage_nvmmu_owned_trial(void *ctx)
     rc=n71_nvmmu_owned_tables_trial(&ops,ctx,n71_nvmmu_memory.dma[0],n71_nvmmu_memory.dma[1],&result);
     free_safe=rc!=-3 && result.restored && n71_storage_nvmmu_ready(ctx) &&
         n71_storage_nvmmu_read(ctx,4)==0;
+    /* Active admin DMA is not independently quiesced; keep all backing. */
+    if (!n71_dma_retire_authorized(&(struct n71_dma_retirement_boundary){
+            .admin_epoch_started=ans_identify_once || READ_ONCE(n71_admin_dma_epoch_latched),
+            .controller_shutdown_consistent=0,
+            .independent_quiescence_proven=0})) {
+        free_safe=false;
+        pr_err("n71-s3e-p0: DMA_RETIREMENT_BOUNDARY stage=NVMMU release=DENIED\n");
+    }
     if (free_safe) {
         for (i=0;i<2;i++) {
             dma_sync_single_for_cpu(n71_nvmmu_memory.dev,n71_nvmmu_memory.dma[i],PAGE_SIZE,DMA_BIDIRECTIONAL);
@@ -924,6 +936,14 @@ static int n71_storage_dart_owned_trial(struct device *dev,
     free_safe=restore_ok && n71_storage_dart_perst(&mm) &&
         readl((u8 __iomem *)dart+0x0c)==0 &&
         !(readl((u8 __iomem *)dart)&BIT(3));
+    /* DART roots remain pinned after any admin DMA epoch. */
+    if (!n71_dma_retire_authorized(&(struct n71_dma_retirement_boundary){
+            .admin_epoch_started=ans_identify_once || READ_ONCE(n71_admin_dma_epoch_latched),
+            .controller_shutdown_consistent=0,
+            .independent_quiescence_proven=0})) {
+        free_safe=false;
+        pr_err("n71-s3e-p0: DMA_RETIREMENT_BOUNDARY stage=DART release=DENIED\n");
+    }
     if (free_safe) {
         for (j=0;j<n71_tables.count;j++) {
             dma_sync_single_for_cpu(n71_tables.dev,n71_tables.dma[j],

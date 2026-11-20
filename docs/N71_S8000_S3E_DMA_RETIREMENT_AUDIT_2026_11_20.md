@@ -29,6 +29,7 @@ The observed FIFO change is bounded by **19.833–22.208 µs**; the DART change 
 | Boundary | What is protected after an admin-DMA epoch | Audit result |
 | --- | --- | --- |
 | Admin unprepare | AQA/ASQ/ACQ restoration, queue mapping removal and NVMMU TCB clearing | Retirement guard refuses teardown |
+| Optional queue-register pilot | Active admin queue AQA/ASQ/ACQ zeroing after a protocol-consistent reset | Additional DMA-epoch guard refuses queue writes; protocol predicate remains diagnostic |
 | NVMMU cleanup | Owned admin pages, owned HMB and NVMMU table pages | `free_safe` forced false; pages quarantined |
 | DART0 cleanup | Translation roots and associated pages | `free_safe` forced false; pages quarantined |
 | PCIe / power cleanup | Contexts backing the quarantined translations | Retained on uncertainty |
@@ -54,6 +55,17 @@ A production-quality fix should latch a lifecycle-owned `admin_dma_epoch_started
 A separate **private, host-only / cross-compiled kernel candidate** now adds a monotonic `n71_admin_dma_epoch_latched` flag. It is set **before the first root or endpoint BME-enabling PCI command write** and is never cleared during the module lifetime. All three retirement gates conservatively check `ans_identify_once || READ_ONCE(n71_admin_dma_epoch_latched)`; the original read-only opt-in remains a redundant denial guard.
 
 The candidate compiled for the exact AArch64 test kernel, the existing retirement-boundary host test passed, and static comparison confirmed exactly three changed gate expressions, one latch set, no latch reset, and no unrelated removed source statements. **This patch was not booted, installed, or physically tested on the phone.** It does not create a new release path or establish hardware DMA quiescence. Further fault-injection and independent retirement proof remain required.
+
+## Public-source fail-closed alignment (same day; offline only)
+
+The public `experimental/port0` driver previously lagged behind the private physical-test candidate and lacked the three administrative DMA-retirement guards. This change brings the **guard itself** and its monotonic BME-before-write latch into public source, without importing private trace logs, firmware, device identifiers, binaries, or hardware-specific private diagnostic extensions.
+
+- A kernel-agnostic retirement-boundary header denies release for every active admin epoch, even if shutdown is consistent or a putative independent-proof flag is supplied. No positive DMA quiescence proof is implemented.
+- The public admin callback latches `n71_admin_dma_epoch_latched` before the root and endpoint BME-capable writes. Both the read-only opt-in and this latch independently force the three cleanup paths to refuse release.
+- An offline host-C fault-injection harness checks **112 simulated fault/qualification/shutdown/proof combinations**, including faults between BME writes and every subsequent stage, across admin-unprepare, NVMMU, DART and queue-register boundaries.
+- Five automated tests additionally check latch ordering, latch immutability, all four gate locations and non-authority of hardware shutdown status. The public AArch64 kernel module source compiled against the qualified N71 test kernel in an isolated build directory.
+
+**Scope:** the fault-injection harness models software transitions; it cannot inject failures into real S8000 hardware and is not a proof of safe DMA teardown. The publicly aligned driver **has not been executed on the phone**. The currently quarantined physical module must never be replaced or removed in that running boot.
 
 ## Power, recovery and publication boundaries
 
