@@ -92,6 +92,12 @@ Relevant independent implementation references: [Corellium DART TLB busy/flush p
 
 **Next physical step:** if a new owner-supervised RAM boot is arranged, perform a new power/USB/battery/S3E-clean preflight before **one** explicitly armed Identify + late-content-observer run. Never load the candidate into the currently quarantined boot; never force `rmmod` or reclaim DMA pages.
 
+## Fresh RAM boot checkpoint — 2026-11-20
+
+The owner-assisted DFU -> PongoOS -> Linux RAM handoff succeeded. The expected N71 AArch64 test kernel was observed from an authenticated USB SSH session after new-boot host-key rotation. Preflight found S3E **not loaded**, USB gadget configured, the SN2400 300 mA **input limit** active under its time-bounded lease, battery approximately **54%** and temperature about **33.9 °C**. Instantaneous battery current still oscillated; USB input limit must never be described as net charging current.
+
+The new post-stop RAM-change candidate remains **host-built only**. Remote transfer was denied by the authorized remote-access safety controls; the module was confirmed absent from the device's RAM transfer destination, and S3E remained clean. No new S3E run or RAM witness sample was collected on this boot. Do not represent the offline build or a successful Linux boot as a hardware DMA quiescence result. The existing restore and DMA-quarantine requirements remain unchanged.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
