@@ -7,6 +7,7 @@
 #include "n71_s3e_queue_retire_gate.h"
 #include "n71_s3e_post_reset_protocol.h"
 /* Included after the storage/HMB guard definitions in the owning pilot. */
+#include "n71_s3e_admin_protocol_accounting.h"
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
 #define N71_ADMIN_DATA_MARK 0x716964656e746966ULL
@@ -14,7 +15,8 @@ static struct {
     void *page[8]; /* SQ, CQ, data, SGL, then one L2 per DART stream */
     dma_addr_t dma[8];
     bool mapped[8],dart_mapped,prepared,regs_saved;
-    bool submitted,completed,data_arrived,intms_saved;
+    bool submitted,completed,completion_validated,cq_head_doorbell_written;
+    bool data_arrived,namespace_validated,intms_saved;
     unsigned int old_intms,stage;
     unsigned int cq_polls,data_polls;
 } n71_admin_memory;
@@ -210,9 +212,12 @@ static int n71_admin_identify_ns1(void *ctx)
     if (!complete) return -ETIMEDOUT;
     n71_admin_memory.completed=true;
     n71_admin_write(0x1004,1);
+    /* Software issued a doorbell; this is not a device acknowledgement. */
+    n71_admin_memory.cq_head_doorbell_written=true;
     if ((status>>1) || le16_to_cpu(cqe.command_id)!=1 ||
         le16_to_cpu(cqe.sq_id)!=0 || le16_to_cpu(cqe.sq_head)!=1)
         return -EIO;
+    n71_admin_memory.completion_validated=true;
     /* CQ and data use different DMA paths. Do not accept CQ as data proof. */
     for (i=0;i<1000;i++) {
         dma_sync_single_for_cpu(d,n71_admin_memory.dma[2],PAGE_SIZE,DMA_BIDIRECTIONAL);
@@ -230,6 +235,7 @@ static int n71_admin_identify_ns1(void *ctx)
     format=ns->flbas&15;lbads=ns->lbaf[format].ds;
     if (!nsze || ncap>nsze || nuse>nsze || format>ns->nlbaf ||
         lbads<9 || lbads>16 || nsze>(U64_MAX>>lbads)) return -EPROTO;
+    n71_admin_memory.namespace_validated=true;
     pr_info("n71-s3e-p0: IDENTIFY_NAMESPACE_REAL nsid=1 nsze=%llu ncap=%llu nuse=%llu lba_bytes=%u capacity_bytes=%llu data_tail_arrived=1 data_wait_polls=%u personal_identifiers_redacted=YES no_block_IO=YES\n",
         nsze,ncap,nuse,1U<<lbads,nsze<<lbads,n71_admin_memory.data_polls);
     return 0;
@@ -447,6 +453,28 @@ static int n71_storage_admin_identify_once(void *ctx)
     rc=n71_admin_prepare(ctx);
     if (!rc) {
         rc=n71_admin_once_core(&o,ctx,&r);
+        /* Read existing software lifecycle fields; no extra MMIO reads. */
+        {
+            const struct n71_s3e_admin_protocol_snapshot snap={
+                .submitted=n71_admin_memory.submitted,
+                .completion_observed=n71_admin_memory.completed,
+                .completion_validated=n71_admin_memory.completion_validated,
+                .cq_head_doorbell_written=n71_admin_memory.cq_head_doorbell_written,
+                .data_arrived=n71_admin_memory.data_arrived,
+                .namespace_validated=n71_admin_memory.namespace_validated,
+                .shutdown_attempted=r.shutdown_attempted,
+                .shutdown_complete=!r.shutdown_rc && r.shutdown_csts==9,
+                .controller_disabled=!r.disable_rc && !r.disable_csts,
+                .master_off=r.master_off,
+                .queues_retained=n71_admin_memory.prepared && n71_admin_memory.dart_mapped,
+                .admin_epoch_latched=READ_ONCE(n71_admin_dma_epoch_latched)
+            };
+            const enum n71_s3e_admin_protocol_result state=
+                n71_s3e_admin_protocol_classify(&snap);
+            pr_info("n71-s3e-p0: ADMIN_PROTOCOL_ACCOUNTING_RO state=%u completed_valid=%u namespace_valid=%u queue_owned=%u dma_release_authorized=NO\n",
+                state,snap.completion_validated,snap.namespace_validated,
+                snap.queues_retained);
+        }
         pr_info("n71-s3e-p0: ADMIN_IDENTIFY_ONCE rc=%d master_seen=%u controller_started=%u ready=%u submitted=%u completed=%u data_arrived=%u stopped=%u master_off=%u enable_polls=%u shutdown_polls=%u disable_polls=%u last_csts=%08x\n",
             rc,r.master_seen,r.started,r.ready,n71_admin_memory.submitted,
             n71_admin_memory.completed,n71_admin_memory.data_arrived,r.stopped,

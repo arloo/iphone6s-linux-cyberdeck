@@ -67,6 +67,19 @@ The public `experimental/port0` driver previously lagged behind the private phys
 
 **Scope:** the fault-injection harness models software transitions; it cannot inject failures into real S8000 hardware and is not a proof of safe DMA teardown. The publicly aligned driver **has not been executed on the phone**. The currently quarantined physical module must never be replaced or removed in that running boot.
 
+## Separate protocol-accounting evidence (2026-11-20; offline only)
+
+The latest public source tracks distinct software milestones for the one allowed admin Identify: SQ doorbell issued, CQ phase observed, completion status/command identity validated, CQ head doorbell issued, data-tail arrival, Identify namespace geometry validated, shutdown completion, controller disable, BME-off, queue/DART ownership still retained, and latched DMA epoch. It publishes an additional **read-only diagnostic** (`ADMIN_PROTOCOL_ACCOUNTING_RO`) only after the existing one-shot admin shutdown path.
+
+- A valid CQ phase bit alone is classified **incomplete**, not validated completion. A CQ-head doorbell is explicitly a software write, not an independent device acknowledgement.
+- Only a fully consistent 12-indicator snapshot is classified `ACCOUNTED_DMA_UNPROVEN`. This still does **not** establish DMA quiescence: unobserved vendor-initiated DMA, posted PCIe transactions, NVMMU/SART accesses and stale translations remain out of scope.
+- An exhaustive C host test classified **4,096 synthetic boolean combinations**, including all-positive and single/multiple-missing prerequisites; `dma_release_allowed` returned **false for every case**. Four Python unittest contracts additionally verify source ordering, completion identity and no hardware writes in the classifier.
+- The integrated observer compiled for the exact N71 ARM64 test kernel. The resulting binary was retained privately and **was not loaded on the phone**. This is a new candidate, not a physical acceptance result.
+
+The upstream Linux `nvme/host/apple.c` driver separately freezes, quiesces and drains request queues around disable, illustrating why a controller shutdown register alone does not account for software-owned requests. That upstream implementation targets **different Apple ANS generations** and cannot be copied to S8000 without an independently demonstrated hardware mapping. [Linux source](https://github.com/torvalds/linux/blob/master/drivers/nvme/host/apple.c); [NVMe CC field and reset semantics](https://learn.microsoft.com/en-us/windows/win32/api/nvme/ns-nvme-nvme_controller_configuration).
+
+**Next unblocker:** identify a hardware-supported fence or authoritative reset/transaction-drain contract for this S8000 DART/NVMMU/PCIe combination. No existing CQ, SHST, CC, BME, PERST or local FIFO sample is yet qualified as that proof. Keep all page mappings pinned until then; no persistent NAND work is authorized.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
