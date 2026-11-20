@@ -98,6 +98,25 @@ The owner-assisted DFU -> PongoOS -> Linux RAM handoff succeeded. The expected N
 
 The new post-stop RAM-change candidate remains **host-built only**. Remote transfer was denied by the authorized remote-access safety controls; the module was confirmed absent from the device's RAM transfer destination, and S3E remained clean. No new S3E run or RAM witness sample was collected on this boot. Do not represent the offline build or a successful Linux boot as a hardware DMA quiescence result. The existing restore and DMA-quarantine requirements remain unchanged.
 
+## Archived real-hardware post-stop comparison (2026-11-20)
+
+Eight selected archived N71/S8000 diagnostic files were **reanalyzed offline** using `tools/storage/analyze_n71_s3e_poststop.py`. The analyzer processes private dmesg input locally but prints **only aggregate status counts**, never filenames, identifying metadata, kernel addresses, raw messages or timestamps. Its deduplication uses boot-relative event signatures and **cannot establish independent hardware boots**. In this particular selection it found eight snapshots and eight distinct event signatures; the number of independently demonstrated boots is **unknown**.
+
+| Raw post-stop register snapshot | Value | Count among the 8 selected signatures |
+| --- | --- | ---: |
+| DART status/fault | `0x00000500` | 8 |
+| NVMMU Port0 FIFO/status | `0x00000201` | 4 |
+| NVMMU Port0 FIFO/status | `0x00000301` | 1 |
+| NVMMU Port0 FIFO/status | `0x00000401` | 1 |
+| NVMMU Port0 FIFO/status | `0x00000601` | 1 |
+| NVMMU Port0 FIFO/status | `0x00000701` | 1 |
+
+All eight explicitly logged `shutdown_rc=0`, `disable_rc=0`, `inner_rc=0`, BME-off, HMB descriptor zero, original admin queue values still installed, DART queue translations retained, `rc=-3` and no DMA release. **This is not a proof that the register readings are transaction counts, or that the DART state proves a DMA-free bus.** The varying NVMMU-local upper register bits despite a matching shutdown outcome defeat a simplistic single-value signature for quiescence.
+
+The corresponding synthetic unit tests require fail-closed interpretation when log sections are missing, prevent duplicated saved captures from inflating counts, reject malformed register statuses, and confirm the output excludes raw log content/identifiers. Run the analyzer with locally selected trusted dmesg files; do not add private logs to public Git. The analyzer does not access the phone or its storage.
+
+**Next decision criterion:** obtain independent architectural evidence for a requester drain/fence, PCIe outstanding-transaction completion, and DART/NVMMU translation ownership before considering safe teardown. A stable checksum, FIFO or DART register is not that evidence.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
