@@ -4,6 +4,7 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
+- [S8000 S3E: timed Identify and DMA retirement safety audit — 2026-11-20](N71_S8000_S3E_DMA_RETIREMENT_AUDIT_2026_11_20.md)
 - [Three-pillar live milestone: KALI / TODAY / AI](N71_THREE_PILLARS_KALI_TODAY_AI_2026_11_17.md)
 - [Internal Apple A9 NAND blocker and validated media/file workspace](N71_INTERNAL_STORAGE_AND_MEDIA_WORKSPACE_2026_11_17.md)
 - [S8000 storage: physical DART0/NVMMU0 comparison and verified Apple force-active callback chain](N71_S8000_STORAGE_FORCE_ACTIVE_DART0_DIAG_2026_11_17.md)
