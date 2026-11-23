@@ -125,6 +125,12 @@ An offline source audit identified a separate unwind path at `n71_storage_nvmmu_
 
 The existing retirement policy for admin queue memory, 8 MiB HMB, NVMMU roots, and DART roots remains **fail closed** until independent evidence of hardware DMA quiescence. Additional offline regression tests assert the allocation-failure branch ordering, refusal-before-free, monotonically latched guard, and original no-epoch cleanup. The isolated ARM64 module build passed; **the rebuilt module has not been transferred to or loaded on the iPhone**. All locally held build outputs remain outside the public repository.
 
+## 2026-11-23 CQE validation-before-doorbell guard (offline candidate)
+
+An S3E source-level lifetime audit found that the one-shot `Identify NS1` path advanced CQ head doorbell `0x1004` before rejecting an invalid completion status, command ID, submission queue ID, or SQ head. The corrected implementation first requires the earlier phase-status read to match the copied CQE status, then performs a strict, pure in-memory comparison of the four CPU-synchronized CQE fields: status exactly `1` (phase 1 and zero error bits), CID `1`, SQID `0`, SQ head `1`. A malformed or foreign CQE is now rejected **without a CQ-head MMIO write**. A valid CQE retains the original single doorbell and data-path behavior; the separate DMA-retirement boundary is unchanged and never releases memory merely because a CQE is valid.
+
+The new pure C helper has a host-compiled exhaustive synthetic test of 262,144 field values plus static ordering/side-effect checks. The project regression suite and matching isolated N71 ARM64 kernel-module build must pass before publication. This is an **offline driver correction**: no new NVMe/PCIe experiment, NAND modification, or hardware DMA-quiescence claim follows from it. On the current boot, the battery gauge was at 24%, so a new S3E trial remains deferred pending sufficient reserve and an authorized transfer method.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.

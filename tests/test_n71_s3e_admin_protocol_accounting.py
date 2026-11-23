@@ -89,8 +89,10 @@ class S3EProtocolAccountingTests(unittest.TestCase):
         self.assertIn("n71_admin_memory.completion_validated=true;", SOURCE)
         self.assertIn("n71_admin_memory.namespace_validated=true;", SOURCE)
         self.assertIn("n71_admin_memory.cq_head_doorbell_written=true;", SOURCE)
-        self.assertLess(SOURCE.index("if ((status>>1)"),
+        self.assertLess(SOURCE.index("if (status!=le16_to_cpu(cqe.status) ||"),
                         SOURCE.index("n71_admin_memory.completion_validated=true;"))
+        self.assertLess(SOURCE.index("n71_admin_memory.completion_validated=true;"),
+                        SOURCE.index("n71_admin_write(0x1004,1);"))
         self.assertLess(SOURCE.index("n71_admin_memory.completion_validated=true;"),
                         SOURCE.index("n71_admin_memory.namespace_validated=true;"))
         self.assertLess(SOURCE.index("nsze>(U64_MAX>>lbads)) return -EPROTO;"),

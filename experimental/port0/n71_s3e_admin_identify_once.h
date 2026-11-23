@@ -8,6 +8,7 @@
 #include "n71_s3e_post_reset_protocol.h"
 /* Included after the storage/HMB guard definitions in the owning pilot. */
 #include "n71_s3e_admin_protocol_accounting.h"
+#include "n71_s3e_admin_cqe_validate.h"
 #include "n71_s3e_late_dma_observer.h"
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
@@ -212,13 +213,25 @@ static int n71_admin_identify_ns1(void *ctx)
         complete,status,n71_admin_memory.cq_polls,n71_admin_reg(0x1c));
     if (!complete) return -ETIMEDOUT;
     n71_admin_memory.completed=true;
+    /* Reject a malformed or foreign CQE before advancing the CQ head.
+     * The controller can still DMA: no completion validation authorizes
+     * unmapping CQ, SQ, HMB, DART or NVMMU backing. */
+    /* A phase probe and the later copied CQE must agree. A changing
+     * completion slot cannot be acknowledged as our single command. */
+    if (status!=le16_to_cpu(cqe.status) ||
+        !n71_s3e_admin_identify_cqe_valid(
+            &(const struct n71_s3e_admin_cqe_fields){
+                .status=le16_to_cpu(cqe.status),
+                .command_id=le16_to_cpu(cqe.command_id),
+                .sq_id=le16_to_cpu(cqe.sq_id),
+                .sq_head=le16_to_cpu(cqe.sq_head)})) {
+        pr_err("n71-s3e-p0: IDENTIFY_CQE_REJECTED no_cq_head_doorbell=YES quarantine=YES\n");
+        return -EIO;
+    }
+    n71_admin_memory.completion_validated=true;
     n71_admin_write(0x1004,1);
     /* Software issued a doorbell; this is not a device acknowledgement. */
     n71_admin_memory.cq_head_doorbell_written=true;
-    if ((status>>1) || le16_to_cpu(cqe.command_id)!=1 ||
-        le16_to_cpu(cqe.sq_id)!=0 || le16_to_cpu(cqe.sq_head)!=1)
-        return -EIO;
-    n71_admin_memory.completion_validated=true;
     /* CQ and data use different DMA paths. Do not accept CQ as data proof. */
     for (i=0;i<1000;i++) {
         dma_sync_single_for_cpu(d,n71_admin_memory.dma[2],PAGE_SIZE,DMA_BIDIRECTIONAL);
