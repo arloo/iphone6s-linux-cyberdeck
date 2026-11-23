@@ -125,8 +125,10 @@ static void n71_admin_write(unsigned int off,unsigned int value)
     writel(value,(u8 __iomem *)n71_nvme_mmio+off);
     readl((u8 __iomem *)n71_nvme_mmio+off);
 }
-/* Pre-epoch DMA allocations for future I/O SQ/CQ/data; no call site. */
+/* Pre-epoch DMA allocations for future I/O SQ/CQ/data/SGL; no call site. */
 #include "n71_s3e_ro_io_dma_alloc.h"
+/* Original S8000 8 MiB tag stride: isolated TCB1/SGL CPU staging only. */
+#include "n71_s3e_ro_flatdma_tag1_stage.h"
 static int n71_admin_qualified(void *ctx)
 {
     return n71_admin_memory.prepared && n71_admin_memory.dart_mapped &&
@@ -285,6 +287,10 @@ static int n71_admin_prepare(void *ctx)
     BUILD_BUG_ON(((N71_ADMIN_CQ_IOVA >> 12)&511U)!=N71_RO_DART_ADMIN_CQ_INDEX);
     BUILD_BUG_ON(((0x80012000U >> 12)&511U)!=N71_RO_DART_IO_SQ_INDEX);
     BUILD_BUG_ON(((0x80013000U >> 12)&511U)!=N71_RO_DART_IO_CQ_INDEX);
+    BUILD_BUG_ON(N71_RO_TCB_COUNT * N71_RO_TCB_BYTES != SZ_16K);
+    BUILD_BUG_ON(N71_RO_TCB_TAG1_OFFSET != 128U);
+    BUILD_BUG_ON(N71_RO_READ_FLATDMA_TAG_CANDIDATE != 0x40800000ULL);
+    BUILD_BUG_ON(N71_RO_IO_DMA_PAGES != 4U);
     n71_admin_memory.stage=1;
     rc=n71_admin_alloc(ctx);
     if (rc) return rc;

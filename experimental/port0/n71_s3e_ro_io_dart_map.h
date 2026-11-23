@@ -16,6 +16,8 @@
  * Never call on an active/device-owned L2 or interpret staged bytes as
  * a live translation. All five physical pages are Linux-owned 16-KiB
  * backing pages with separate physical identities and 36-bit reachability.
+ * A sixth, independently owned 16-KiB backing page holds the prospective
+ * FlatDMA SGL (not a DART queue or data leaf).
  */
 #include "n71_s3e_read_only_io_plan.h"
 
@@ -34,6 +36,7 @@ struct n71_s3e_ro_owned_frames {
     unsigned long long io_sq_pa;
     unsigned long long io_cq_pa;
     unsigned long long read_data_pa;
+    unsigned long long read_sgl_pa;
 };
 
 struct n71_s3e_ro_foreign_range {
@@ -61,7 +64,7 @@ static inline int n71_s3e_ro_verify_ownership(
     const struct n71_s3e_ro_foreign_range *foreign,
     unsigned int foreign_count)
 {
-    unsigned long long pages[5], limit = N71_RO_DMA_ADDRESS_LIMIT;
+    unsigned long long pages[6], limit = N71_RO_DMA_ADDRESS_LIMIT;
     unsigned int i, j;
     if (!frames || (foreign_count && !foreign) || foreign_count > 128U)
         return -1;
@@ -70,7 +73,8 @@ static inline int n71_s3e_ro_verify_ownership(
     pages[2] = frames->io_sq_pa;
     pages[3] = frames->io_cq_pa;
     pages[4] = frames->read_data_pa;
-    for (i = 0; i < 5; i++) {
+    pages[5] = frames->read_sgl_pa;
+    for (i = 0; i < 6; i++) {
         if (!n71_ro_valid_host_frame(pages[i])) return -1;
         for (j = 0; j < i; j++)
             if (pages[i] == pages[j]) return -1;
@@ -96,8 +100,8 @@ static inline int n71_s3e_ro_verify_queue_iova(
            layout->admin_cq_iova == 0x80011000ULL &&
            layout->io_sq_iova == 0x80012000ULL &&
            layout->io_cq_iova == 0x80013000ULL &&
-           /* Never alias the live admin Identify FlatDMA data tag. */
-           layout->data_iova != 0x40000000ULL ? 0 : -1;
+           /* S8000 tag stride is 8 MiB, not 4 KiB. */
+           n71_s3e_ro_valid_read_flatdma_tag(layout->data_iova) ? 0 : -1;
 }
 
 /* The caller owns FOUR isolated CPU 4-KiB table views, each backed by

@@ -28,14 +28,15 @@ static const struct n71_s3e_ro_io_layout layout = {
     .admin_cq_iova=0x80011000ULL,
     .io_sq_iova=0x80012000ULL,
     .io_cq_iova=0x80013000ULL,
-    .data_iova=0x40001000ULL
+    .data_iova=0x40800000ULL
 };
 static const struct n71_s3e_ro_owned_frames frames = {
     .admin_sq_pa=0x10000000ULL,
     .admin_cq_pa=0x10004000ULL,
     .io_sq_pa=0x10008000ULL,
     .io_cq_pa=0x1000c000ULL,
-    .read_data_pa=0x10010000ULL
+    .read_data_pa=0x10010000ULL,
+    .read_sgl_pa=0x10014000ULL
 };
 
 static void baseline(void)
@@ -78,9 +79,11 @@ static void successful_four_stream_mapping(void)
             if(i>=18*8 && i<20*8)continue;
             assert(pages[sid][i]==original[sid][i]);
         }
-        /* Read data is not a DART queue leaf; it needs FlatDMA/NVMMU. */
-        for(i=0;i<4096;i+=8)
+        /* Read data and SGL are neither DART queue leaves. */
+        for(i=0;i<4096;i+=8) {
             assert(n71_ro_get_le64(pages[sid]+i)!=(frames.read_data_pa|3ULL));
+            assert(n71_ro_get_le64(pages[sid]+i)!=(frames.read_sgl_pa|3ULL));
+        }
     }
     /* Another stage on already owned leaves must fail, unchanged. */
     assert_atomic_reject(&layout,&frames,NULL,0);
@@ -120,7 +123,7 @@ static void physical_ownership_rejections(void)
     struct n71_s3e_ro_io_layout l;
     unsigned long long *v;
     unsigned int i,j;
-    for (i=0;i<5;i++) {
+    for (i=0;i<6;i++) {
         baseline(); f=frames; v=&f.admin_sq_pa;v[i]=0;
         assert_atomic_reject(&layout,&f,NULL,0);
         f=frames;v=&f.admin_sq_pa;v[i]=0x10000001ULL;
@@ -148,6 +151,12 @@ static void physical_ownership_rejections(void)
     l=layout;l.io_sq_iova=0x80014000ULL;
     assert_atomic_reject(&l,&frames,NULL,0);
     l=layout;l.data_iova=0x40000000ULL; /* Identify FlatDMA alias */
+    assert_atomic_reject(&l,&frames,NULL,0);
+    l=layout;l.data_iova=0x40001000ULL; /* same TCB tag0! */
+    assert_atomic_reject(&l,&frames,NULL,0);
+    l=layout;l.data_iova=0x40801000ULL; /* unqualified tag1 offset */
+    assert_atomic_reject(&l,&frames,NULL,0);
+    l=layout;l.data_iova=0x41000000ULL; /* unowned tag2 */
     assert_atomic_reject(&l,&frames,NULL,0);
     assert(n71_s3e_ro_verify_queue_iova(NULL)==-1);
     assert(n71_s3e_ro_verify_ownership(NULL,NULL,0)==-1);

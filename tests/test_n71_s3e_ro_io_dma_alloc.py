@@ -19,8 +19,9 @@ DART = (PORT0 / "n71_s3e_ro_io_dart_map.h").read_text()
 
 
 class PhysicalIOMemoryOwnershipTests(unittest.TestCase):
-    def test_actual_kernel_dma_apis_present_and_three_16k_pages(self):
-        self.assertIn("N71_RO_IO_DMA_PAGES 3U", SOURCE)
+    def test_actual_kernel_dma_apis_present_and_four_16k_pages(self):
+        self.assertIn("N71_RO_IO_DMA_PAGES 4U", SOURCE)
+        self.assertIn("frames.read_sgl_pa = n71_ro_io_dma_memory.dma[3]", SOURCE)
         self.assertIn("PAGE_SIZE != SZ_16K", SOURCE)
         self.assertIn("__get_free_page(GFP_KERNEL)", SOURCE)
         self.assertIn("pa = virt_to_phys(n71_ro_io_dma_memory.page[i])", SOURCE)
@@ -83,7 +84,7 @@ class PhysicalIOMemoryOwnershipTests(unittest.TestCase):
 
     def test_nvmmu_flatdma_read_tag_is_candidate_not_live_map(self):
         self.assertIn("N71_RO_READ_FLATDMA_TAG_CANDIDATE", SOURCE)
-        self.assertIn("NOT an active DART L2", SOURCE)
+        self.assertIn("NOT an active DART", SOURCE)
         self.assertIn("WITHOUT A CALL SITE", SOURCE)
         self.assertNotIn("n71_s3e_ro_stage_io_queue_l2(", SOURCE)
         self.assertNotIn("n71_s3e_ro_encode_one_sector(", SOURCE)

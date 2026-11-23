@@ -3,7 +3,8 @@
 #define N71_S3E_RO_IO_DMA_ALLOC_H
 /*
  * Real Linux DMA API resource ownership for future N71/S8000 read-only
- * I/O SQ, CQ and one 4-KiB data sector, each in a 16-KiB Linux page.
+ * I/O SQ, CQ, one 4-KiB data sector, and an isolated FlatDMA SGL,
+ * each in a separate 16-KiB Linux page.
  *
  * This module-local allocator is intentionally WITHOUT A CALL SITE.
  * It cannot establish NVMMU FlatDMA semantics, DART ownership, I/O queue
@@ -15,7 +16,7 @@
  * started. Any ambiguous post-epoch path retains pages and pins the
  * original storage owner. All addresses stay out of kernel logs.
  */
-#define N71_RO_IO_DMA_PAGES 3U
+#define N71_RO_IO_DMA_PAGES 4U
 #define N71_RO_IO_FOREIGN_MAX 48U
 
 static struct {
@@ -52,7 +53,7 @@ static int __maybe_unused n71_ro_io_dma_release_pre_epoch(void)
     return 0;
 }
 
-/* Caller must retain all 3 arrays/owned DART0 stream roots after BME.
+/* Caller must retain all four new physical frames after BME.
  * A mismatch, even a non-overlapping but unknown inherited-owner range,
  * aborts BEFORE touching a new CPU page. */
 static int n71_ro_io_dma_foreign_ranges(void *ctx,
@@ -95,8 +96,8 @@ static int n71_ro_io_dma_foreign_ranges(void *ctx,
     for (i = 0; i < 8; i++) {
         if (!n71_admin_memory.page[i] || !n71_admin_memory.mapped[i])
             return -EPERM;
-        /* Admin SQ/CQ are the required first two OWNED frames in the
-         * final five-frame plan, not foreign exclusion ranges. Their
+        /* Admin SQ/CQ are the first two OWNED frames in the
+         * final six-frame plan, not foreign exclusion ranges. Their
          * collision with a prospective new page is checked separately
          * before zeroing, while admin data/SGL/4 L2 pages are foreign. */
         if (i >= 2)
@@ -196,13 +197,14 @@ static int __maybe_unused n71_ro_io_dma_alloc_pre_epoch(void *ctx)
     frames.io_sq_pa = n71_ro_io_dma_memory.dma[0];
     frames.io_cq_pa = n71_ro_io_dma_memory.dma[1];
     frames.read_data_pa = n71_ro_io_dma_memory.dma[2];
+    frames.read_sgl_pa = n71_ro_io_dma_memory.dma[3];
     if (n71_s3e_ro_verify_queue_iova(&layout) ||
         n71_s3e_ro_verify_ownership(&frames, foreign, foreign_count)) {
         rc = -EPERM;
         goto fail;
     }
-    /* This prepares only DMA-mapped host frames, NOT an active DART L2,
-     * NVMMU FlatDMA TCB, read command or IO SQ/CQ. */
+    /* This prepares only four DMA-mapped host frames, NOT an active DART
+     * L2, NVMMU FlatDMA TCB, read command or I/O SQ/CQ. */
     n71_ro_io_dma_memory.ready = true;
     return 0;
 fail:

@@ -28,9 +28,18 @@
 #define N71_RO_ADMIN_CREATE_CQ 0x05U
 #define N71_RO_ADMIN_CREATE_SQ 0x01U
 #define N71_RO_IO_FLAG_UNQUALIFIED 0U
-/* This is a candidate second FlatDMA tag, NOT an authenticated mapping.
- * The existing Identify owns tag 0x40000000: never alias its TCB. */
-#define N71_RO_READ_FLATDMA_TAG_CANDIDATE 0x40001000ULL
+/* Authenticated against the owner's original S8000 NVMMU code:
+ * read tag index << 23, then bitwise-OR with the ADT virtual-base.
+ * Thus 0x40001000 is still inside tag 0 (Identify), NOT a new tag.
+ * Tag 1 starts at 0x40800000. This selects a distinct TCB index;
+ * command flags and physical READ semantics remain unqualified. */
+#define N71_RO_FLATDMA_VBASE 0x40000000ULL
+#define N71_RO_FLATDMA_TAG_SHIFT 23U
+#define N71_RO_FLATDMA_TAG_BYTES (1ULL << N71_RO_FLATDMA_TAG_SHIFT)
+#define N71_RO_FLATDMA_TAG_COUNT 128U
+#define N71_RO_READ_FLATDMA_TAG_INDEX 1U
+#define N71_RO_READ_FLATDMA_TAG_CANDIDATE \
+    (N71_RO_FLATDMA_VBASE | (N71_RO_READ_FLATDMA_TAG_INDEX << N71_RO_FLATDMA_TAG_SHIFT))
 
 struct n71_s3e_ro_io_layout {
     unsigned long long admin_sq_iova;
@@ -58,6 +67,20 @@ static inline void n71_ro_le64(unsigned char *p, unsigned long long n)
 {
     n71_ro_le32(p, (unsigned int)n);
     n71_ro_le32(p + 4, (unsigned int)(n >> 32));
+}
+
+/* Require an exact tag base, not any arbitrary offset inside tag 0.
+ * Only tag 1 is reserved by this single-read staging prototype. */
+static inline int n71_s3e_ro_valid_read_flatdma_tag(unsigned long long iova)
+{
+    unsigned long long index;
+    if (iova < N71_RO_FLATDMA_VBASE ||
+        iova >= N71_RO_FLATDMA_VBASE +
+                N71_RO_FLATDMA_TAG_COUNT * N71_RO_FLATDMA_TAG_BYTES ||
+        (iova - N71_RO_FLATDMA_VBASE) % N71_RO_FLATDMA_TAG_BYTES)
+        return 0;
+    index = (iova - N71_RO_FLATDMA_VBASE) >> N71_RO_FLATDMA_TAG_SHIFT;
+    return index == N71_RO_READ_FLATDMA_TAG_INDEX;
 }
 
 static inline int n71_ro_valid_page(unsigned long long iova)
@@ -139,7 +162,7 @@ static inline int n71_s3e_ro_encode_one_sector(
         current_nsze != N71_RO_PHYSICAL_NSZE ||
         current_lba_bytes != N71_RO_BLOCK_BYTES ||
         slba >= current_nsze ||
-        layout->data_iova == 0x40000000ULL) return -1;
+        !n71_s3e_ro_valid_read_flatdma_tag(layout->data_iova)) return -1;
     tmp[0] = N71_RO_NVM_READ; /* exclusively I/O QID 1 */
     tmp[1] = N71_RO_IO_FLAG_UNQUALIFIED;
     n71_ro_le16(tmp + 2, 1U); /* first I/O CID on QID 1 */
