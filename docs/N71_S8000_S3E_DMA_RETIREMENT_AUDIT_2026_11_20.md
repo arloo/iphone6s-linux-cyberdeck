@@ -175,6 +175,14 @@ The corrected opt-in observer now requires **`dart_fault & BIT(31)`**, in additi
 
 The live phone was below the hardware-experiment battery gate: at the beginning of this offline work, 23% state of charge, 294 mAh remaining and approximately -211 mA net cell current were observed via USB SSH, with the previous 300 mA charge lease already expired. The next physical DMA experiment remains blocked pending safe charging / power reserve, regardless of the successful code checks.
 
+## 2026-11-23 original S8000 DART0 bit-31 replay of eight physical archives
+
+The owner-held original `AppleS5L8960XDART` kernelcache demonstrated a **bit-31-gated error-context path** for DART0 status register `+0x10`. The host-only archive replay tool now makes this predicate explicit without treating it as a hardware DMA drain. It counts, from strictly parsed 8-hex-digit status fields, the number of snapshots with that branch predicate set or clear, and the number of invalid/missing status fields. Neither an unset bit 31 nor any other register value authorizes unmapping, DMA resource retirement, or an inference of a fault-free system. The tool continues to redact private log paths, identifiers and raw device details.
+
+Replay of the **same eight previously selected real N71 S3E log files** found eight post-stop snapshots/eight distinct event signatures, **eight bit-31-clear DART0 statuses, zero bit-31-set statuses**, zero unparsable status fields, eight register-consistent shutdown snapshots and eight explicit DMA quarantines. These event signatures are not proof of eight independent boots. This narrows the reading of their recurring `0x00000500` to *not asserting the source-verified S5L bit-31 error-context branch*, while leaving bits 8/10, outstanding posted requests, and any independent DMA transaction drain **unresolved**.
+
+Automated adversarial tests cover 0x100, 0x400, 0x500, 0x80000500, malformed fields and all-ones status; every case still denies DMA release. This is analysis of existing captures, **not a new physical storage experiment**, and does not justify NAND writes or mounting internal storage.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.

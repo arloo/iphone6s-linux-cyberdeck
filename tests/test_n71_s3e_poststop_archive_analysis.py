@@ -55,6 +55,11 @@ class N71S3EPoststopArchiveTests(unittest.TestCase):
         self.assertEqual(x["explicitly_quarantined_snapshots"], 1)
         self.assertEqual(x["raw_nvmmu_fifo_histogram"], {"00000201": 1})
         self.assertEqual(x["raw_dart_fault_histogram"], {"00000500": 1})
+        self.assertEqual(x["original_s5l_bit31_irq_branch_asserted_snapshots"], 0)
+        self.assertEqual(x["original_s5l_bit31_irq_branch_clear_snapshots"], 1)
+        self.assertEqual(x["dart_status_unparseable_snapshots"], 0)
+        self.assertFalse(x["bit31_clear_proves_no_pending_dma"])
+        self.assertFalse(x["bit31_clear_proves_no_other_dart_fault"])
         for key in ("independent_boot_count_proven", "fifo_bitfield_semantics_proven",
                     "hardware_dma_quiescence_proven", "dma_release_allowed"):
             self.assertIs(x[key], False, key)
@@ -96,6 +101,25 @@ class N71S3EPoststopArchiveTests(unittest.TestCase):
         x = MOD.aggregate([record(fifo="NO_DATA", dart="abcdef0g")])
         self.assertEqual(x["raw_nvmmu_fifo_histogram"], {})
         self.assertEqual(x["raw_dart_fault_histogram"], {})
+        self.assertEqual(x["dart_status_unparseable_snapshots"], 1)
+        self.assertEqual(x["original_s5l_bit31_irq_branch_asserted_snapshots"], 0)
+        self.assertEqual(x["original_s5l_bit31_irq_branch_clear_snapshots"], 0)
+        self.assertFalse(x["dma_release_allowed"])
+
+    def test_original_s5l_bit31_branch_and_no_dma_authority(self):
+        x = MOD.aggregate([
+            record(dart="80000500", t1="11.003", t2="11.004", t3="11.005"),
+            record(dart="00000500", t1="22.003", t2="22.004", t3="22.005"),
+            record(dart="00000100", t1="33.003", t2="33.004", t3="33.005"),
+            record(dart="00000400", t1="44.003", t2="44.004", t3="44.005"),
+            record(dart="ffffffff", t1="55.003", t2="55.004", t3="55.005"),
+            record(dart="malformed", t1="66.003", t2="66.004", t3="66.005"),
+        ])
+        self.assertEqual(x["original_s5l_bit31_irq_branch_asserted_snapshots"], 2)
+        self.assertEqual(x["original_s5l_bit31_irq_branch_clear_snapshots"], 3)
+        self.assertEqual(x["dart_status_unparseable_snapshots"], 1)
+        self.assertFalse(x["bit31_clear_proves_no_pending_dma"])
+        self.assertFalse(x["bit31_clear_proves_no_other_dart_fault"])
         self.assertFalse(x["dma_release_allowed"])
 
     def test_cli_omits_identifiers_raw_data_and_paths(self):

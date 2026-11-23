@@ -65,6 +65,12 @@ def aggregate(logs: list[str]) -> dict:
         unique.append(sample)
     fifo = Counter()
     dart = Counter()
+    # This is strictly the AppleS5L8960XDART *bit31 branch predicate*,
+    # verified against the owner's original N71 kernelcache. It is not a
+    # generalized fault diagnosis, DMA transaction count, or fence.
+    dart_irq_bit31_asserted = 0
+    dart_irq_bit31_clear = 0
+    dart_status_unparseable = 0
     successful_shutdown = 0
     quarantined = 0
     owned_queues = 0
@@ -77,6 +83,12 @@ def aggregate(logs: list[str]) -> dict:
             fifo[f.lower()] += 1
         if re.fullmatch(r"[0-9a-fA-F]{8}", d):
             dart[d.lower()] += 1
+            if int(d, 16) & (1 << 31):
+                dart_irq_bit31_asserted += 1
+            else:
+                dart_irq_bit31_clear += 1
+        else:
+            dart_status_unparseable += 1
         if (
             sh.get("rc") == "0"
             and sh.get("disable_rc") == "0"
@@ -111,6 +123,11 @@ def aggregate(logs: list[str]) -> dict:
         "queue_mapping_retained_snapshots": owned_queues,
         "raw_nvmmu_fifo_histogram": dict(sorted(fifo.items())),
         "raw_dart_fault_histogram": dict(sorted(dart.items())),
+        "original_s5l_bit31_irq_branch_asserted_snapshots": dart_irq_bit31_asserted,
+        "original_s5l_bit31_irq_branch_clear_snapshots": dart_irq_bit31_clear,
+        "dart_status_unparseable_snapshots": dart_status_unparseable,
+        "bit31_clear_proves_no_other_dart_fault": False,
+        "bit31_clear_proves_no_pending_dma": False,
         "independent_boot_count_proven": False,
         "fifo_bitfield_semantics_proven": False,
         "hardware_dma_quiescence_proven": False,
