@@ -637,6 +637,23 @@ static int n71_storage_admin_identify_once(void *ctx)
                     ready && !hmb_lo && !hmb_hi && !hmb_size,
                     queues_zero,queues_owned,n71_admin_memory.dart_mapped,
                     dart_fault,nvmmu_fifo);
+                /* Opt-in, read-only fault-context hypothesis for the
+                 * first-generation DART register map. Offsets 0x14/18/1c
+                 * are documented for DART v0, but S8000 semantics still
+                 * require stock-source verification. Read only after
+                 * observed controller disable and BME-off. Never publish
+                 * the AXI request words or the potential fault address.
+                 * Nothing here asserts requester drain or frees DMA. */
+                if (ans_phase_trace_ro && r.controller_stop_observed &&
+                    n71_admin_memory.dart_mapped && dart_fault) {
+                    u32 axi0=readl((u8 __iomem *)m->dart+0x14);
+                    u32 axi1=readl((u8 __iomem *)m->dart+0x18);
+                    u32 fault_address=readl((u8 __iomem *)m->dart+0x1c);
+                    pr_info("n71-s3e-p0: ADMIN_DART0_FAULT_CONTEXT_RO status_nonzero=%u status_bit8=%u status_bit10=%u axi0_nonzero=%u axi1_nonzero=%u addr_nonzero=%u s8000_v0_layout_unverified=YES fault_not_dma_fence=YES raw_context_redacted=YES quarantine_unchanged=YES\n",
+                        !!dart_fault,!!(dart_fault & BIT(8)),
+                        !!(dart_fault & BIT(10)),!!axi0,!!axi1,
+                        !!fault_address);
+                }
             }
         }
     }
