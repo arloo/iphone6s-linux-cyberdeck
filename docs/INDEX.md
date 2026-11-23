@@ -1,4 +1,5 @@
 # Documentation index
+- [N71 S8000 internal NAND: canonical acceptance status and next hardware gates — 2026-11-23](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md)
 
 Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the exact scope of their own tests. An old blocker in a dated report does not override the current hardware matrix. No prior report was deleted in this refresh.
 

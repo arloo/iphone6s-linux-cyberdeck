@@ -1,5 +1,7 @@
 # Hardware-first roadmap — reviewed 2026-11-16
 
+**Storage status update (2026-11-23):** The 64 GB ANS namespace is physically identified; separate I/O SQ/CQ candidate mappings, a four-page pre-BME DMA allocator and a distinct FlatDMA tag1 TCB/SGL are host-compiled only. The original Apple `IONVMeFamily` source now verifies NVM Read opcode and command field placement; vendor transfer flags, hardware read and independent DMA drain remain blockers. Consult the [canonical storage acceptance ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md) before hardware work.
+
 Active target: **N71 / Samsung S8000**. N71m / S8003 remains deferred until compatible hardware is available.
 
 ## Achieved on physical N71

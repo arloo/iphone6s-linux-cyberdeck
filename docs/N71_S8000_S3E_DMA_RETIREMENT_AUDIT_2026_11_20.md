@@ -235,6 +235,14 @@ Both helpers are included in the actual N71 ARM64 pilot module and its exact ker
 
 **Next hardware prerequisite:** verify the NVM Read's vendor-specific command flags and FlatDMA TCB direction/data-layout against the N71 `IONVMeFamily` code, then qualify a dedicated owner-attended pre-BME activation path and independent DMA retirement. The NAND stays read/write untouched.
 
+## 2026-11-23 original Apple IONVMeFamily Read command provenance — new proof
+
+The owner-private N71 kernelcache has exactly one prelinked, versioned `com.apple.iokit.IONVMeFamily` 2.1.0 executable. Its correct ARM64 `__TEXT_EXEC.__text` is **272,392 bytes**, reached via the main kernelcache `__PLK_TEXT_EXEC` virtual-to-file translation. A previously named local `IONVMeFamily-exec-text-PRIVATE.bin` was actually produced from an **incorrect, absolute section offset** and contains cstrings from unrelated code; it must never be treated as ARM64 evidence. Correct original extraction plus an exact full-code SHA-256 and 15 selected method-instruction fingerprints now pass on the genuine private kernelcache. Synthetic modifications to any pinned instruction are rejected. Only audit code and summarized findings are published; the firmware executable stays private.
+
+The authenticated Apple `AppleNVMeRequest::BuildCommandReadStruct` routine calls the original command builder that constructs **NVM Read (`0x02`)**, writes CDW0 at request+280, NSID at +284, 64-bit SLBA at +320, CDW12 at +328 and CDW13 at +332. It also has request-dependent optional CDW0 bits **10/11**; this is a *conditional request field*, not evidence that NVMMU `BIT(5)` is required or unnecessary in the transport path. The inert Linux Read encoder already uses corresponding standard offsets. The **Apple FlatDMA transport tag and flag handling for an actual I/O Read**, I/O queue hardware acceptance and independent DMA draining **remain unverified**. This source audit made no new physical NAND read or write.
+
+Verification tool: `tools/n71_s8000_original_ionvme_read_source_gate.py`; host tests: `tests/test_n71_s8000_original_ionvme_read_source_gate.py`. The canonical [storage acceptance ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md) records the remaining source and physical gates.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
