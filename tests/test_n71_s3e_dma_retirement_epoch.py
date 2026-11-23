@@ -181,6 +181,37 @@ class S3EDMARetirementTests(unittest.TestCase):
                                 block.index(release))
                 self.assertIn("independent_quiescence_proven=0", block)
 
+    def test_nvmmu_allocation_failure_never_releases_latched_dma(self):
+        trial = MAIN[MAIN.index("static int n71_storage_nvmmu_owned_trial("):
+                     MAIN.index("static int n71_storage_p0_config_observe(")]
+        self.assertEqual(trial.count("alloc_fail:"), 1)
+        cleanup = trial.split("alloc_fail:", 1)[1]
+        gate = "if (READ_ONCE(n71_admin_dma_epoch_latched)) {"
+        self.assertIn(gate, cleanup)
+        self.assertIn("n71_unreleased=true;", cleanup)
+        self.assertIn("return -3;", cleanup)
+        self.assertIn("NVMMU_ALLOC_FAIL_AFTER_DMA_EPOCH_KEEP_ALL_BACKING", cleanup)
+        self.assertLess(cleanup.index(gate), cleanup.index("n71_storage_admin_free();"))
+        self.assertLess(cleanup.index("return -3;"), cleanup.index("n71_storage_admin_free();"))
+        for name in ("n71_storage_admin_free();", "n71_storage_hmb_free();",
+                     "n71_storage_nvmmu_free();"):
+            self.assertEqual(cleanup.count(name), 1)
+        self.assertIn("return rc;", cleanup)  # no-epoch allocation failure can unwind
+
+    def test_nvmmu_allocation_failure_precedes_device_activation(self):
+        trial = MAIN[MAIN.index("static int n71_storage_nvmmu_owned_trial("):
+                     MAIN.index("static int n71_storage_p0_config_observe(")]
+        # All branches into alloc_fail occur before the NVMMU callback that
+        # can release PERST, enable PCIe/BME and latch an admin DMA epoch.
+        main = trial.split("alloc_fail:", 1)[0]
+        self.assertGreater(main.count("goto alloc_fail;"), 0)
+        self.assertLess(main.rindex("goto alloc_fail;"),
+                        main.index("rc=n71_nvmmu_owned_tables_trial("))
+        self.assertIn("READ_ONCE(n71_admin_dma_epoch_latched)", trial)
+        self.assertIn("n71_unreleased=true;", trial)
+        self.assertIn("if (n71_unreleased) {", MAIN)
+        self.assertIn("__module_get(THIS_MODULE);", MAIN)
+
     def test_hardware_status_is_not_dma_release_proof(self):
         self.assertIn("if (s->admin_epoch_started) return 0", BOUNDARY)
         self.assertIn("if (s->independent_quiescence_proven) return 0", BOUNDARY)

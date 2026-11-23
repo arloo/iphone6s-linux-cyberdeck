@@ -117,6 +117,14 @@ The corresponding synthetic unit tests require fail-closed interpretation when l
 
 **Next decision criterion:** obtain independent architectural evidence for a requester drain/fence, PCIe outstanding-transaction completion, and DART/NVMMU translation ownership before considering safe teardown. A stable checksum, FIFO or DART register is not that evidence.
 
+## 2026-11-23 clean-boot and NVMMU allocation-error guard
+
+After an owner-attended PongoOS reboot, USB gadget and authenticated direct-USB SSH confirmed the expected N71/S8000 RAM kernel. The S3E module was **not loaded**. The SN2400 input-limit pilot was active at 300 mA, but the fuel gauge indicated **24%** at first preflight (temperature approximately 33.5 °C). A positive instantaneous battery current and a 300 mA USB input limit do **not** imply sufficient energy reserve or stable net charging. Accordingly, no new S3E/NVMe/DMA experiment was attempted on this boot.
+
+An offline source audit identified a separate unwind path at `n71_storage_nvmmu_owned_trial()::alloc_fail`, which originally called all three `*_free()` helpers unconditionally. These allocation-failure branches precede the current invocation's NVMMU and endpoint activation, so ordinary pre-epoch unwind remains valid. However, the monotonic `n71_admin_dma_epoch_latched` flag can never be ignored, including at this label. The corrected path now **refuses every free after a latched DMA epoch**, holds `n71_unreleased=true` to retain the module/hardware associations, logs a sanitized quarantine event and returns `-3`. Before any latched epoch, the original early allocation cleanup remains unchanged.
+
+The existing retirement policy for admin queue memory, 8 MiB HMB, NVMMU roots, and DART roots remains **fail closed** until independent evidence of hardware DMA quiescence. Additional offline regression tests assert the allocation-failure branch ordering, refusal-before-free, monotonically latched guard, and original no-epoch cleanup. The isolated ARM64 module build passed; **the rebuilt module has not been transferred to or loaded on the iPhone**. All locally held build outputs remain outside the public repository.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.

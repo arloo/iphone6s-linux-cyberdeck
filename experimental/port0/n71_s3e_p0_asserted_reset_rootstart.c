@@ -851,6 +851,15 @@ static int n71_storage_nvmmu_owned_trial(void *ctx)
         rc,result.owned_polls,result.restore_polls,result.last,result.restored,zero,free_safe,2UL*PAGE_SIZE);
     return !zero && !rc ? -EIO : rc;
 alloc_fail:
+    /* These allocations have not reached the NVMMU/endpoint trial in this
+     * invocation. A previous BME/admin epoch is nevertheless monotonic:
+     * never unmap any DMA backing after that epoch, even on an error path.
+     * A pre-epoch allocation failure is safe to unwind normally. */
+    if (READ_ONCE(n71_admin_dma_epoch_latched)) {
+        n71_unreleased=true;
+        pr_err("n71-s3e-p0: NVMMU_ALLOC_FAIL_AFTER_DMA_EPOCH_KEEP_ALL_BACKING quarantine=YES\n");
+        return -3;
+    }
     n71_storage_admin_free();
     n71_storage_hmb_free();
     n71_storage_nvmmu_free();
