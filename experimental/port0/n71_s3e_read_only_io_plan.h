@@ -28,6 +28,9 @@
 #define N71_RO_ADMIN_CREATE_CQ 0x05U
 #define N71_RO_ADMIN_CREATE_SQ 0x01U
 #define N71_RO_IO_FLAG_UNQUALIFIED 0U
+/* This is a candidate second FlatDMA tag, NOT an authenticated mapping.
+ * The existing Identify owns tag 0x40000000: never alias its TCB. */
+#define N71_RO_READ_FLATDMA_TAG_CANDIDATE 0x40001000ULL
 
 struct n71_s3e_ro_io_layout {
     unsigned long long admin_sq_iova;
@@ -135,7 +138,8 @@ static inline int n71_s3e_ro_encode_one_sector(
     if (!out || n71_s3e_ro_validate_layout(layout) ||
         current_nsze != N71_RO_PHYSICAL_NSZE ||
         current_lba_bytes != N71_RO_BLOCK_BYTES ||
-        slba >= current_nsze) return -1;
+        slba >= current_nsze ||
+        layout->data_iova == 0x40000000ULL) return -1;
     tmp[0] = N71_RO_NVM_READ; /* exclusively I/O QID 1 */
     tmp[1] = N71_RO_IO_FLAG_UNQUALIFIED;
     n71_ro_le16(tmp + 2, 1U); /* first I/O CID on QID 1 */

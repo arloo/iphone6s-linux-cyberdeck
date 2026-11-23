@@ -12,6 +12,8 @@
 #include "n71_s3e_late_dma_observer.h"
 /* Dormant I/O-queue and 4-KiB READ wire encoders only; no submission. */
 #include "n71_s3e_read_only_io_plan.h"
+/* Inert DART0 four-stream L2[18/19] transaction preflight; no call site. */
+#include "n71_s3e_ro_io_dart_map.h"
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
 #define N71_ADMIN_DATA_MARK 0x716964656e746966ULL
@@ -275,6 +277,12 @@ static int n71_admin_prepare(void *ctx)
     BUILD_BUG_ON(offsetof(struct nvme_create_cq, cqid)!=40);
     BUILD_BUG_ON(offsetof(struct nvme_create_sq, sqid)!=40);
     BUILD_BUG_ON(offsetof(struct nvme_create_sq, cqid)!=46);
+    BUILD_BUG_ON(N71_RO_HOST_FRAME_BYTES!=SZ_16K);
+    BUILD_BUG_ON(N71_RO_DART_STREAMS!=4);
+    BUILD_BUG_ON(((N71_ADMIN_SQ_IOVA >> 12)&511U)!=N71_RO_DART_ADMIN_SQ_INDEX);
+    BUILD_BUG_ON(((N71_ADMIN_CQ_IOVA >> 12)&511U)!=N71_RO_DART_ADMIN_CQ_INDEX);
+    BUILD_BUG_ON(((0x80012000U >> 12)&511U)!=N71_RO_DART_IO_SQ_INDEX);
+    BUILD_BUG_ON(((0x80013000U >> 12)&511U)!=N71_RO_DART_IO_CQ_INDEX);
     n71_admin_memory.stage=1;
     rc=n71_admin_alloc(ctx);
     if (rc) return rc;

@@ -28,7 +28,7 @@ HARNESS = r"""
 static const struct n71_s3e_ro_io_layout good = {
     .admin_sq_iova=0x80010000ULL, .admin_cq_iova=0x80011000ULL,
     .io_sq_iova=0x80012000ULL, .io_cq_iova=0x80013000ULL,
-    .data_iova=0x40000000ULL
+    .data_iova=0x40001000ULL
 };
 
 static unsigned long long get64(const unsigned char *p)
@@ -52,7 +52,7 @@ static void all_other_bytes_zero(const unsigned char *b, int cmdtype)
         nonzero_allowed[44]=1;nonzero_allowed[46]=1;
     } else { /* READ (I/O Q1): cmd 0x02 */
         nonzero_allowed[0]=1;nonzero_allowed[2]=1;nonzero_allowed[4]=1;
-        nonzero_allowed[27]=1;
+        nonzero_allowed[25]=1;nonzero_allowed[27]=1;
         for(i=40;i<48;i++)nonzero_allowed[i]=1;
     }
     for (i=0;i<64;i++) if (!nonzero_allowed[i]) assert(!b[i]);
@@ -102,6 +102,10 @@ static void test_exact_wire_formats(void)
     assert(!memcmp(b,prior,64));
     memcpy(b,prior,64);
     assert(n71_s3e_ro_encode_one_sector(b,&good,0,4096U,0)==-1);
+    assert(!memcmp(b,prior,64));
+    layout=good;layout.data_iova=0x40000000ULL;
+    memcpy(b,prior,64);
+    assert(n71_s3e_ro_encode_one_sector(b,&layout,15625000ULL,4096U,0)==-1);
     assert(!memcmp(b,prior,64));
     assert(n71_s3e_ro_encode_one_sector(NULL,&good,15625000ULL,4096U,0)==-1);
 }
