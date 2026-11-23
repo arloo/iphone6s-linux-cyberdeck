@@ -21,6 +21,27 @@
 - Both PongoOS and Linux were RAM-only. No persistent jailbreak, flash, NAND write or iOS restore was requested.
 - The root Telnet shell is unencrypted: use only the direct, isolated USB gadget connection, not an untrusted network.
 
+## Repeat regression diagnosed — 2026-11-23 (Dell Kubuntu host)
+
+A fresh host reboot left the iPhone running stock iOS. Two attended palera1n beta 3.0.0 attempts entered **real N71/S8000 DFU (`05ac:1227`)**, and the USB descriptor subsequently showed the pwned-DFU checkm8 marker on both attempts. Nevertheless, **no PongoOS `05ac:4141` gadget was observed**, and the device ultimately returned to stock iOS (`05ac:12a8`). No Linux image or storage experiment was started.
+
+Direct comparison against the successful **2026-11-20 14:10–14:11** host-kernel record is decisive:
+
+| Stage | Successful 2026-11-20 boot | Failed 2026-11-23 attempts |
+| --- | --- | --- |
+| N71 DFU `05ac:1227` | Yes | Yes |
+| USB control-transfer timeouts `-110` / protocol errors `-71` | Yes | Yes |
+| `usbfs` interface-claim warnings | Yes | Yes |
+| Apple MFi kernel driver unloaded before attempt | Yes | Yes |
+| PongoOS `05ac:4141` | **Yes** | **No** |
+| HoolockLinux `05ac:4142` | **Yes** | **No** |
+
+The `-110/-71` messages are **not independently diagnostic of failure**: the same messages occurred in the successful checkm8 run. The active host kernel and xHCI path matched the prior run, and the scheduled `fwupd-refresh` failure also occurred during the successful boot. The observed regression is bounded to the **pwned-DFU → PongoOS USB re-enumeration/handoff** stage. Neither bad firmware nor a defective physical cable is proven.
+
+**Attended next attempt:** use the exact SHA-verified, previously successful RAM-only boot command. After an explicit *checkm8/Checkmate* indication, if progress stops **before** Pongo image upload, perform the already physically validated **one-time Lightning disconnect/reconnect at the phone** and look for a real `05ac:4141` enumeration. If the Pongo prompt is visible but its USB gadget is missing, a second re-enumeration was needed in the 2026-11-10 physical record. The upstream A9(X) palera1n guidance also allows stopping and re-running the tool if stuck midway in PongoOS. **Do not** unplug during an active Pongo/Linux image transfer, do not flash NAND, do not reset arbitrary USB ports, and do not equate the checkm8 marker with boot completion. If no Pongo gadget appears, stop and preserve diagnostic evidence instead of blind automatic retries.
+
+This diagnosis is based on sanitized host-kernel USB transition states. Original USB serials, ECID, private logs and firmware remain excluded from public Git.
+
 ## Next validation
 
 Capture a second independent boot attempt before calling the replug sequence reproducible. Do not reset a running Linux session solely to prove it.
