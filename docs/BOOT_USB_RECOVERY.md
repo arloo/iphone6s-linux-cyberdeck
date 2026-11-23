@@ -42,6 +42,14 @@ The `-110/-71` messages are **not independently diagnostic of failure**: the sam
 
 This diagnosis is based on sanitized host-kernel USB transition states. Original USB serials, ECID, private logs and firmware remain excluded from public Git.
 
+## Narrow Dell USB root-port recovery (2026-11-23)
+
+The owner repeated the physical DFU/checkm8 operation, but the iPhone still did not transition to PongoOS. The Dell's real USB topology showed the iPhone on **USB2 root hub, bus 001 port 1** (`1-1`), separate from the Bluetooth, fingerprint reader, and webcam on other ports. While no Pongo/DFU transfer was running, Linux exposed a writable **per-port** sysfs control at `usb1/1-0:1.0/usb1-port1/disable`, initially `0` (enabled). The target briefly reported `not attached`, then re-enumerated as normal iOS without intervention. A host inspection verified no current `palera1n` or `pongoterm` process.
+
+The owner-facing helper `scripts/n71-host-usb-port1-recover.sh` provides a **dry-run `--check`** and a **root-only `--reset`** that toggles *only that port* for a bounded two-second interval and always attempts reenable on interruption. It refuses unknown USB devices, active Pongo/Linux, concurrent DFU/boot applications, unexpected port/peer topology or a port already disabled. This **logical port disable/re-enable is not guaranteed to remove physical VBUS power**; it is a narrower USB enumeration reset, not an xHCI controller reset or a Lightning reconnection. It never flashes, changes firmware, touches storage or operates on NAND.
+
+**Status:** shell syntax and read-only physical-port preflight passed on the Dell; root-privileged `--reset` has **not** been executed by the assistant. Run it in an attended local owner terminal only when no USB transfer is active, then inspect the reported USB identity before attempting DFU and palera1n once. Do not run it after a Pongo or Linux session has started. If Pongo still fails, preserve the next diagnostic transition and consider a different direct physical USB port/cable before changing kernel or exploit binaries.
+
 ## Next validation
 
 Capture a second independent boot attempt before calling the replug sequence reproducible. Do not reset a running Linux session solely to prove it.
