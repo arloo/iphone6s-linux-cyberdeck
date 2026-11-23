@@ -133,3 +133,17 @@ battery preflight and a verified 500 mA source:
 **At the time of writing the phone is still in iOS, charging at
 a single-digit percentage. No new charge controls have been
 written and no DFU/Linux/NVMe boot requested.**
+
+## 2026-11-23 actual N71 Linux SN2400 3600-second deadman expiry
+
+A **read-only, directly observed physical test** on the currently running N71/S8000 Linux kernel (`7.3.0-rc1-n71-batt2`), with the USB gadget configured and S3E absent, qualified the already-live original 300 mA / 3600-second input-current lease. At 27% state of charge, the original module still reported 300 mA, 4.875–4.900 V VBUS, and normal periodic monitor events through uptime 3601 seconds. No charger register writes, module reloads, brightness adjustments or source changes were performed for this observation.
+
+At **kernel uptime 3603.36 s**, the native module logged:
+
+```text
+n71-sn2400-trial: RESTORE reason=lease-expired input=00 rc=0
+```
+
+This validates successful return of the input-current **register code** to its original zero-coded baseline (90 mA nominal), not an independent electrical-current measurement. Subsequent real BQ27540 samples at 3605–3636 seconds reported **net negative cell currents ranging from -140 mA to -245 mA**, and remaining charge fell from **347 to 345 mAh**. This is strong evidence that the stock 90 mA input limit is insufficient to sustain the present Linux workload on this host; it does not establish how much current is actually drawn over USB.
+
+**Operational restriction:** At 27% battery the existing owner-only supervisor's **minimum 35%** renewal threshold is not satisfied. No 300/500 mA lease was force-renewed. Do not bypass the supervisor or replace a finite lease with an infinite timer; recharge by a separately qualified iOS/charging path before high-power S3E work. The phone remained in Linux and S3E stayed unloaded at the end of the observation. The owner retains exclusive brightness control. Historical iOS status statements above refer only to November 19 and are not the current live state.
