@@ -547,6 +547,14 @@ static int n71_storage_admin_identify_once(void *ctx)
         pr_info("n71-s3e-p0: ADMIN_SHUTDOWN_TRACE attempted=%u rc=%d csts=%08x polls=%u disable_rc=%d disable_csts=%08x inner_rc=%d master_off=%u retained_on_uncertainty=YES\n",
             r.shutdown_attempted,r.shutdown_rc,r.shutdown_csts,r.shutdown_polls,
             r.disable_rc,r.disable_csts,r.inner_rc,r.master_off);
+        /* Telemetry only: independently report observed controller stop
+         * even when the pre-start HMB descriptor check must fail after
+         * shutdown. Neither state proves DMA retirement. */
+        pr_info("n71-s3e-p0: ADMIN_CONTROLLER_STOP_RO controller_stop_observed=%u post_disable_qualified=%u legacy_stopped=%u identify_inner_ok=%u dma_quiescence_proven=NO dma_release_authorized=NO\n",
+            r.controller_stop_observed,r.post_disable_qualified,r.stopped,
+            r.inner_rc==0 && n71_admin_memory.completed &&
+            n71_admin_memory.completion_validated &&
+            n71_admin_memory.namespace_validated);
         /* Read-only predicate breakdown: never changes the original
          * quarantine outcome or programs the NVMe/HMB/SART/NVMMU registers.
          * No physical DMA addresses or identifiers are printed. */

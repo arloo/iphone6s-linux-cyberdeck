@@ -25,20 +25,20 @@ int main(void) {
  const struct n71_admin_once_ops o={qualified,master,cc,csts,delay,identify};
  assert(!n71_admin_once_core(&o,&m,&r)&&r.stopped&&r.master_off&&m.identify_calls==1 &&
         r.shutdown_attempted==1&&r.shutdown_rc==0&&r.shutdown_csts==9&&
-        r.disable_rc==0&&r.disable_csts==0&&r.inner_rc==0&&r.post_disable_qualified==1);
+        r.disable_rc==0&&r.disable_csts==0&&r.inner_rc==0&&r.post_disable_qualified==1&&r.controller_stop_observed==1);
  memset(&m,0,sizeof(m));m.deny_after_disable=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&
        !r.stopped&&r.shutdown_rc==0&&r.shutdown_csts==9&&
        r.disable_rc==0&&r.disable_csts==0&&r.master_off==1&&
-       r.inner_rc==0&&r.post_disable_qualified==0);
- memset(&m,0,sizeof(m));m.deny=1;assert(n71_admin_once_core(&o,&m,&r)==-1&&!m.master_calls&&!m.cc_calls);
- memset(&m,0,sizeof(m));m.enable_timeout=1;assert(n71_admin_once_core(&o,&m,&r)==-1&&r.stopped&&!m.identify_calls&&m.ms<=5100);
- memset(&m,0,sizeof(m));m.identify_fail=1;assert(n71_admin_once_core(&o,&m,&r)==-2&&r.stopped&&m.identify_calls==1);
- memset(&m,0,sizeof(m));m.shutdown_timeout=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&!r.stopped&&r.master_off);
+       r.inner_rc==0&&r.post_disable_qualified==0&&r.controller_stop_observed==1);
+ memset(&m,0,sizeof(m));m.deny=1;assert(n71_admin_once_core(&o,&m,&r)==-1&&!m.master_calls&&!m.cc_calls&&!r.controller_stop_observed);
+ memset(&m,0,sizeof(m));m.enable_timeout=1;assert(n71_admin_once_core(&o,&m,&r)==-1&&r.stopped&&!r.controller_stop_observed&&!m.identify_calls&&m.ms<=5100);
+ memset(&m,0,sizeof(m));m.identify_fail=1;assert(n71_admin_once_core(&o,&m,&r)==-2&&r.stopped&&r.controller_stop_observed&&m.identify_calls==1);
+ memset(&m,0,sizeof(m));m.shutdown_timeout=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&!r.stopped&&r.master_off&&!r.controller_stop_observed);
  memset(&m,0,sizeof(m));m.shutdown_fatal=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&
       !r.stopped&&r.master_off&&r.inner_rc==0&&r.shutdown_attempted==1&&
-      r.shutdown_rc==-2&&r.shutdown_csts==3&&r.disable_rc==0&&r.disable_csts==0);
- memset(&m,0,sizeof(m));m.disable_timeout=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&!r.stopped&&r.master_off);
- memset(&m,0,sizeof(m));m.fail_master_off=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&!r.stopped&&!r.master_off);
+      r.shutdown_rc==-2&&r.shutdown_csts==3&&r.disable_rc==0&&r.disable_csts==0&&!r.controller_stop_observed);
+ memset(&m,0,sizeof(m));m.disable_timeout=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&!r.stopped&&r.master_off&&!r.controller_stop_observed);
+ memset(&m,0,sizeof(m));m.fail_master_off=1;assert(n71_admin_once_core(&o,&m,&r)==-3&&!r.stopped&&!r.master_off&&!r.controller_stop_observed);
  puts("ADMIN_BME_ORDER_AND_UNSAFE_RETENTION_PASS");return 0;
 }
 """

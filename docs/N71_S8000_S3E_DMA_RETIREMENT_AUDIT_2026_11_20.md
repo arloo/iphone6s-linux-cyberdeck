@@ -139,6 +139,16 @@ The diagnostic still samples the same two pages 12 times with a nominal 50 ms in
 
 Host-only C tests mutate bytes near the end of the 16 KiB CQ/data pages (outside the former 4 KiB observation window) and check stable samples, persistent changes, independent buffer transitions, first-deviation positions, return-to-baseline and sticky alerts. The owner-driver candidate is compiled for the exact N71 ARM64 kernel. **No physical late-write attribution, DMA quiescence or safe resource retirement is claimed.** The candidate has not been loaded on the currently running iPhone.
 
+## 2026-11-23 controller-stop observation separated from legacy HMB qualification
+
+Archived real-hardware logs already show a valid one-shot Identify Namespace 1 (15,625,000 × 4,096-byte blocks = **64,000,000,000 bytes**) and a register-consistent shutdown/disable with root and endpoint BME off. The subsequent legacy `stopped=0` and `rc=-3` result is **not** evidence that Identify failed: the original post-disable `qualified()` reuses pre-start ANS HMB descriptor values that the actual controller **clears to zero during shutdown**. That behavior was verified on physical N71 hardware in November. A cleared HMB register is also **not** proof that DMA is quiescent.
+
+To avoid confusing these distinct facts in future owner-attended tests, `n71_admin_once_core()` now *only records* a new `controller_stop_observed` boolean. It becomes true when shutdown was attempted and acknowledged at `CSTS=0x9`, disable completed at `CSTS=0`, and the bus-master-off readback succeeded. The former `post_disable_qualified`, `stopped`, `rc`, and **all hardware operations and DMA quarantine gates remain unchanged**. The admin driver prints one sanitized `ADMIN_CONTROLLER_STOP_RO` line with the separate stop, old HMB qualifier and Identify-internal success predicates, explicitly `dma_quiescence_proven=NO` and `dma_release_authorized=NO`. No new MMIO access, no queue modification, and no DMA release is introduced.
+
+The offline host harness distinguishes a valid controller-stop observation from a **legacy HMB post-stop qualification failure** and from missing/failed shutdown, controller disable, failed BME-off, and a timeout before controller startup. The N71 ARM64 module compiles against the running kernel's exact `vermagic`. The binary is host-side only and has **not** been staged or executed on the phone.
+
+**Next physical target remains evidence of true DMA transaction drain and DART/NVMMU lifetime safety**, not further repetitions of the already-proven 64 GB Identify response. A proof of storage-controller shutdown may be necessary but is never sufficient for teardown, exposing a block device, or NAND modification.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.

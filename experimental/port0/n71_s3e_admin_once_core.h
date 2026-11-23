@@ -13,6 +13,7 @@ struct n71_admin_once_result {
     unsigned int master_seen,started,ready,stopped,master_off;
     unsigned int enable_polls,shutdown_polls,disable_polls,last_csts;
     unsigned int shutdown_attempted,shutdown_csts,disable_csts,post_disable_qualified;
+    unsigned int controller_stop_observed; /* diagnostic only: never DMA authority */
     int inner_rc,shutdown_rc,disable_rc;
 };
 static int n71_admin_wait(const struct n71_admin_once_ops *o,void *ctx,
@@ -40,6 +41,7 @@ static int n71_admin_once_core(const struct n71_admin_once_ops *o,void *ctx,
     r->master_seen=r->started=r->ready=r->stopped=r->master_off=0;
     r->enable_polls=r->shutdown_polls=r->disable_polls=r->last_csts=0;
     r->shutdown_attempted=r->shutdown_csts=r->disable_csts=r->post_disable_qualified=0;
+    r->controller_stop_observed=0;
     r->inner_rc=-1;r->shutdown_rc=r->disable_rc=0;
     if (!o->qualified(ctx)) return -1;
     rc=o->master(ctx,1);
@@ -71,6 +73,13 @@ static int n71_admin_once_core(const struct n71_admin_once_ops *o,void *ctx,
     r->disable_csts=r->last_csts;
     disable_ok=!r->disable_rc;
     r->master_off=!o->master(ctx,0);
+    /* Separate successful controller shutdown/disable/BME-off from the
+     * historical pre-start HMB predicate reused after shutdown. The
+     * controller clears its HMB descriptor on N71, and register status
+     * alone cannot establish DMA drain or permit mapping teardown. */
+    r->controller_stop_observed=r->shutdown_attempted==1 &&
+        r->shutdown_rc==0 && r->shutdown_csts==9 &&
+        r->disable_rc==0 && r->disable_csts==0 && r->master_off==1;
     /* Preserve original short-circuit: qualified() is only sampled after
      * completed shutdown, disable, and readback-verified BME-off.
      * This is DIAGNOSTIC ONLY, not permission to release quarantined DMA. */

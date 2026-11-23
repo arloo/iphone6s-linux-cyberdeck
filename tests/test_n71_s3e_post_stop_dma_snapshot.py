@@ -30,6 +30,14 @@ class PostStopSnapshotTests(unittest.TestCase):
                 self.assertNotIn(forbidden, block)
         self.assertIn("if (rc==-3) return -3;", SOURCE)
         self.assertIn("r->stopped=shutdown_ok && disable_ok && r->master_off && r->post_disable_qualified;", CORE)
+        self.assertIn("r->controller_stop_observed=r->shutdown_attempted==1", CORE)
+        self.assertIn("r->shutdown_csts==9", CORE)
+        self.assertIn("r->disable_csts==0 && r->master_off==1", CORE)
+        self.assertIn("ADMIN_CONTROLLER_STOP_RO controller_stop_observed=%u", SOURCE)
+        self.assertIn("dma_quiescence_proven=NO dma_release_authorized=NO", SOURCE)
+        stop_obs=SOURCE.index("ADMIN_CONTROLLER_STOP_RO")
+        self.assertGreater(stop_obs, SOURCE.index("ADMIN_SHUTDOWN_TRACE"))
+        self.assertLess(stop_obs, SOURCE.index("ADMIN_POST_DISABLE_PREDICATES"))
 
 if __name__ == "__main__":
     unittest.main()
