@@ -263,6 +263,12 @@ A provenance-gated original `IONVMeFamily` source and constant-data audit now re
 
 **Do not claim the N71 uses the derived return value:** dynamic controller-class binding remains unknown and prelinked alternative classes can coexist. The prior original request-pool dataflow stays established but cannot justify setting command `BIT(5)` or issuing a first physical Read. No device MMIO, DMA or NAND was touched during this host-only audit.
 
+## 2026-11-23 original IONVMeFamily N71 PCI class match and embedded-controller vtable
+
+The authentic original prelinked `IONVMeFamily` PCI personality for `AppleEmbeddedNVMeController` matches **`IOPCIMatch=0x2002106b`**, which is the same PCI endpoint vendor/device ID **physically observed** on S8000 Port0. The personality also filters `IOPCIClassMatch=0x01800200&0xffffff00` (class-mask comparison verified against a **host-modeled** class/revision, not a new physical class-code reading). Constructor proof: the `AppleEmbeddedNVMeController` constructor calls `AppleNVMeController` at code offset `0x31158`, then installs its separate original constant-data vtable whose virtual method offset 1440 points to the same inherited **return `1`** implementation. The test verifies nine immutable original ARM64 words, exact parent call and class-owned vtable bounds, plus the full binary SHA-256.
+
+This significantly constrains the likely original Apple driver match for the physical storage endpoint, but **does not prove the iOS runtime bound the class**, or establish the request pool's conditional mask, or authorize command `BIT(5)` on the device. No live S3E/NAND read/write/DMA was performed. Tool: `tools/n71_s8000_original_embedded_nvme_pci_match_gate.py`.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
