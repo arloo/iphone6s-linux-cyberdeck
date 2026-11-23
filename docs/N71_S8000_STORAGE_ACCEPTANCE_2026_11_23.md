@@ -18,6 +18,12 @@ At the user's explicit request for a physical test with the phone left in native
 
 No S3E module was loaded, no NVMe block device existed, and no controller/PCIe power transition, new DMA epoch, new I/O queues or NAND command was attempted. The SN2400 finite 300 mA charge lease had expired with observed rollback, and the battery was still discharging. The owner-visible checkpoint maintains a strict distinction between this successful low-impact live device-presence test and the still-pending physical NVM Read. Previous owner-assisted physical *admin Identify* results remain separate. **Further live DMA experiments are deferred until stable sufficient battery/power and the Read transport qualification.** There was no reboot and the backlight was not modified.
 
+## 2026-11-23 charging hard-stop at 19% (physical intervention needed)
+
+After the latest original Apple vtable analysis was committed, native Linux remained reachable by authenticated USB SSH. The earlier SN2400 **one-shot 300 mA lease** expired with successful `RESTORE reason=module-exit`. Subsequent readings went from 20% / 3.548 V / -250 mA to **19% / 3.569 V / -242 mA**, ~35.7°C, `Discharging`; no S3E module was loaded. A verified, previously used `n71_charge_low_soc_bridge_38c_once.sh --check` **rejected** a new 300 mA lease with `N71_LOW_SOC_RECOVERY_STOP: outside 20..36% bridge window` when the fuel-gauge reached 19%; consequently, `--run` was never executed. The protection must not be overridden solely to preserve the RAM boot. Do not infer charging capability from VBUS alone.
+
+**Immediate owner-attended power priority:** restore reliable charging and battery reserve via a qualified physical supply and recovery procedure; iOS charging/reboot is an available fallback if required, but no reboot was remotely initiated. With the fuel-gauge below the permitted guarded Linux lease floor, **no further S3E, DMA or NAND hardware trials are authorized**, even if the original Apple Read source analysis continues safely on the Dell. This is a measured physical blocker, not a statement that internal NAND storage was accessed.
+
 ## Implemented/verified offline on Dell; never submitted to device
 
 - [x] Kernel-compiled, inert 64-byte `Create I/O CQ`, `Create I/O SQ`, and one-4096-byte `Read (0x02)` candidate encoders; read range validated.
