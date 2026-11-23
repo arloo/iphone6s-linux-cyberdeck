@@ -10,6 +10,8 @@
 #include "n71_s3e_admin_protocol_accounting.h"
 #include "n71_s3e_admin_cqe_validate.h"
 #include "n71_s3e_late_dma_observer.h"
+/* Dormant I/O-queue and 4-KiB READ wire encoders only; no submission. */
+#include "n71_s3e_read_only_io_plan.h"
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
 #define N71_ADMIN_DATA_MARK 0x716964656e746966ULL
@@ -264,6 +266,15 @@ static int n71_admin_prepare(void *ctx)
     unsigned int i;
     BUILD_BUG_ON(sizeof(command)!=64);
     BUILD_BUG_ON(sizeof(struct nvme_completion)!=16);
+    /* Compile-time ABI guards for the future read-only I/O path.
+     * No controller command or queue mapping is activated here. */
+    BUILD_BUG_ON(offsetof(struct nvme_rw_command, dptr)!=24);
+    BUILD_BUG_ON(offsetof(struct nvme_rw_command, slba)!=40);
+    BUILD_BUG_ON(offsetof(struct nvme_rw_command, length)!=48);
+    BUILD_BUG_ON(offsetof(struct nvme_create_cq, prp1)!=24);
+    BUILD_BUG_ON(offsetof(struct nvme_create_cq, cqid)!=40);
+    BUILD_BUG_ON(offsetof(struct nvme_create_sq, sqid)!=40);
+    BUILD_BUG_ON(offsetof(struct nvme_create_sq, cqid)!=46);
     n71_admin_memory.stage=1;
     rc=n71_admin_alloc(ctx);
     if (rc) return rc;

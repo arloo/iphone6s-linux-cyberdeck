@@ -183,6 +183,26 @@ Replay of the **same eight previously selected real N71 S3E log files** found ei
 
 Automated adversarial tests cover 0x100, 0x400, 0x500, 0x80000500, malformed fields and all-ones status; every case still denies DMA release. This is analysis of existing captures, **not a new physical storage experiment**, and does not justify NAND writes or mounting internal storage.
 
+## 2026-11-23 read-only NS1 I/O command preparation: actual kernel-compiled code, no NAND access
+
+The N71 device has already returned `Identify NSID=1` geometry: **15,625,000 × 4,096-byte LBAs = 64,000,000,000 bytes**. The current prototype's **only executed NVMe command remains the admin Identify**; there is still **no I/O SQ/CQ, no Linux block device and no NAND read/write**.
+
+The next implementation artifact is the inert, portable real-driver header `experimental/port0/n71_s3e_read_only_io_plan.h`. It encodes **three standard NVMe 64-byte command candidates**: admin `Create I/O CQ` (`0x05`, CID 2), admin `Create I/O SQ` (`0x01`, CID 3), and one-sector NVM `Read` (`0x02`, CID 1 on QID 1). Admin Create SQ opcode `0x01` **is not an NVM WRITE**: the opcode namespace is determined by the submission queue. The candidates use a 16-entry queue, one 4096-byte sector, no interrupt, and only NSID 1, with strict 64-bit SLBA limits and 4 KiB-aligned, distinct, below-36-bit candidate IOVAs. On any invalid argument the encoder returns an error **without touching the output buffer**. The exact 64-byte wire format is tested with a host-compiled C harness; malformed LBA, aliased/unaligned/out-of-range IOVAs, wrong LBA geometry and bad namespace bounds are refused.
+
+**Important S8000-specific qualification:** S8000 uses an Apple-custom ANS/NVMMU FlatDMA pointer convention: the actual successful admin Identify command used the `0x40000000` data tag and command flag `BIT(5)`. The semantics of **these flags, queue allocations, page-count TCB/SGL and I/O command PRP1** have **not** yet been proven for an NVM Read. The currently staged I/O Read encoder intentionally leaves the vendor-specific command flags at **zero/unqualified**. Therefore, its output is only a **standard-protocol candidate**, *not* an approved sequence for the physical iPhone. Do not send it to hardware until that path is source-verified, queue memory is independently allocated/pinned, and DART/NVMMU translations are authenticated.
+
+The pilot source includes the new header and seven actual kernel NVMe struct-offset compile-time assertions (`rw.dptr`, `rw.slba`, `rw.length`, `create_cq.prp1/cqid`, `create_sq.sqid/cqid`). There is **no call site** in the live admin path: no new doorbells, DMA map/unmap, HMB writes, physical reads, resets or teardown. An isolated ARM64 build with the running kernel's exact `vermagic` passed. The module is retained **only on the Dell**; it has not been staged to the phone.
+
+**Concrete hardware path to the first 4096-byte NAND read (still pending):**
+
+1. Verify with the original N71 `IONVMeFamily` driver that the I/O SQ/CQ creation commands, Apple command flags, I/O PRP1/FlatDMA descriptor and queue-doorbell layout match this controller. A generic NVMe driver for ANS2 is not authoritative for S8000.
+2. Allocate dedicated Linux-owned **I/O SQ, I/O CQ and data backing**, distinct from the existing eight admin/DART pages and 8 MiB HMB; verify DART0 mappings across all SIDs and the exact NVMMU TCB/SGL data path. Never overwrite inherited or unowned mappings.
+3. Admit a **single read-only** LBA0 command only after a real completed admin queue creation/acknowledgment and ownership verification, with a pinned DMA epoch and no automatic release. Never issue I/O `WRITE`, Format, Sanitize, DSM or namespace management.
+4. Validate the I/O CQ's phase, SQID, CID, success status and separate data-plane completion. Treat a read's bytes as private and do not publish raw LBA0/iOS metadata. Independent DMA drain still requires evidence before releasing pages or unloading the module.
+5. Only after physical single-sector reads and a safe DMA lifetime are established, implement a read-only `gendisk` with `set_disk_ro`/`BLKROSET`, integrity checks and an explicit no-automount policy. Persistent filesystem writes require a separate recovery-capable backup and owner approval.
+
+**State:** This work closes the *command layout / software bounds* portion of the future read path. It does **not** close the ANS-specific command ABI, I/O queue hardware, NVMMU mappings or DMA quiescence. Storage remains unavailable to Linux, and the battery on this RAM boot has not yet met the 50% physical test target.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
