@@ -22,7 +22,7 @@ C = r"""
 #include "n71_s3e_late_dma_observer.h"
 int main(void)
 {
-    unsigned char cq[4096], data[4096];
+    unsigned char cq[16384], data[16384];
     struct n71_s3e_late_dma_observer s = {0};
     unsigned long long first_cq, first_data;
     int i;
@@ -41,34 +41,58 @@ int main(void)
         assert(!n71_s3e_late_dma_release_allowed(&s));
     }
     assert(s.samples == 12 && !s.ever_changed &&
-           !s.cq_changed && !s.data_changed);
+           !s.cq_changed && !s.data_changed &&
+           !s.cq_transitions && !s.data_transitions &&
+           !s.first_cq_deviation_sample && !s.first_data_deviation_sample);
 
-    /* Mutate only an unexamined byte: whole-page hash must detect it. */
-    cq[3781] ^= 0x40;
+    /* Mutate beyond the old 4-KiB witness, but inside our 16-KiB DMA page. */
+    cq[14001] ^= 0x40;
     n71_s3e_late_dma_observe(&s,
         n71_s3e_late_dma_fingerprint(cq,sizeof(cq)), first_data);
-    assert(s.ever_changed && s.cq_changed == 1 && s.data_changed == 0);
+    assert(s.ever_changed && s.cq_changed == 1 && s.data_changed == 0 &&
+           s.cq_transitions == 1 && !s.data_transitions &&
+           s.first_cq_deviation_sample == 13);
     assert(!n71_s3e_late_dma_release_allowed(&s));
 
     /* Data buffer changes must be independently counted. */
-    data[293] = 0x11;
+    data[14789] = 0x11;
     n71_s3e_late_dma_observe(&s, first_cq,
         n71_s3e_late_dma_fingerprint(data,sizeof(data)));
     assert(s.samples == 14 && s.cq_changed == 1 &&
-           s.data_changed == 1 && s.ever_changed);
+           s.data_changed == 1 && s.ever_changed &&
+           s.cq_transitions == 2 && s.data_transitions == 1 &&
+           s.first_data_deviation_sample == 14);
     assert(!n71_s3e_late_dma_release_allowed(&s));
 
     /* Returning to initial bytes cannot erase a prior alert. */
-    cq[3781] ^= 0x40;
-    data[293] = 0;
+    cq[14001] ^= 0x40;
+    data[14789] = 0;
     n71_s3e_late_dma_observe(&s, first_cq, first_data);
     assert(s.samples == 15 && s.ever_changed &&
-           s.cq_changed == 1 && s.data_changed == 1);
+           s.cq_changed == 1 && s.data_changed == 1 &&
+           s.cq_transitions == 2 && s.data_transitions == 2);
+    assert(!n71_s3e_late_dma_release_allowed(&s));
+
+    /* Two consecutive CQ samples different from baseline count as two
+     * deviations but just one transition away; a return adds another. */
+    cq[14611] ^= 0x20;
+    n71_s3e_late_dma_observe(&s,
+        n71_s3e_late_dma_fingerprint(cq,sizeof(cq)), first_data);
+    n71_s3e_late_dma_observe(&s,
+        n71_s3e_late_dma_fingerprint(cq,sizeof(cq)), first_data);
+    assert(s.samples == 17 && s.cq_changed == 3 &&
+           s.cq_transitions == 3 && s.data_transitions == 2);
+    cq[14611] ^= 0x20;
+    n71_s3e_late_dma_observe(&s, first_cq, first_data);
+    assert(s.samples == 18 && s.cq_changed == 3 &&
+           s.cq_transitions == 4 && s.data_transitions == 2 &&
+           s.ever_changed && s.first_cq_deviation_sample == 13 &&
+           s.first_data_deviation_sample == 14);
     assert(!n71_s3e_late_dma_release_allowed(&s));
 
     /* Null observer is a harmless no-op, never authority. */
     n71_s3e_late_dma_observe(NULL, first_cq, first_data);
-    puts("S3E_LATE_RAM_WITNESS_PASS samples=15 no_dma_release=YES");
+    puts("S3E_LATE_RAM_WITNESS_PASS samples=18 host_bytes=16384 no_dma_release=YES");
     return 0;
 }
 """
@@ -115,6 +139,12 @@ class S3ELateRamWitnessTests(unittest.TestCase):
             self.assertNotIn(forbidden, probe)
         self.assertIn("for (i=0;i<12;i++)", probe)
         self.assertIn("msleep(50)", probe)
+        self.assertIn("n71_admin_memory.page[1],PAGE_SIZE)", probe)
+        self.assertIn("n71_admin_memory.page[2],PAGE_SIZE)", probe)
+        self.assertNotIn("n71_admin_memory.page[1],SZ_4K)", probe)
+        self.assertNotIn("n71_admin_memory.page[2],SZ_4K)", probe)
+        self.assertIn("cq_transitions=", probe)
+        self.assertIn("first_cq_deviation_sample=", probe)
         self.assertIn("dma_sync_single_for_cpu", probe)
         self.assertIn("dma_sync_single_for_device", probe)
 

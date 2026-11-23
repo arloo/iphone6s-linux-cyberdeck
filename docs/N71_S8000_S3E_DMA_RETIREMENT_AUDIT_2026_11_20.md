@@ -131,6 +131,14 @@ An S3E source-level lifetime audit found that the one-shot `Identify NS1` path a
 
 The new pure C helper has a host-compiled exhaustive synthetic test of 262,144 field values plus static ordering/side-effect checks. The project regression suite and matching isolated N71 ARM64 kernel-module build must pass before publication. This is an **offline driver correction**: no new NVMe/PCIe experiment, NAND modification, or hardware DMA-quiescence claim follows from it. On the current boot, the battery gauge was at 24%, so a new S3E trial remains deferred pending sufficient reserve and an authorized transfer method.
 
+## 2026-11-23 expanded post-stop RAM witness — complete 16 KiB backing pages
+
+The offline review found an observational blind spot: the original late DMA witness hashed only the first **4 KiB** of each 16 KiB Linux-owned CQ and Identify data backing page, despite synchronizing the **entire `PAGE_SIZE`** for noncoherent CPU/device access. A DMA write outside the expected 4 KiB command window could therefore remain undetected. The corrected observer now fingerprints both entire **16 KiB pages**, within the already allocated and mapped backing. It issues **no additional NVMe commands, hardware register writes, DMA map/unmap, page releases, or reset operations**.
+
+The diagnostic still samples the same two pages 12 times with a nominal 50 ms interval, but now separates (1) samples differing from the initial fingerprint, (2) **transitions** between consecutive samples, and (3) the first **1-based sample index** departing from baseline. This makes a single persistent change distinct from multiple changes or a transient return-to-baseline. The log prints only counts and sample indices—never hashes, raw CQ/data bytes, addresses, identifiers, or protected firmware. Existing `cq_changes`/`data_changes` fields retain their legacy *non-baseline sample count* meaning; new `cq_transitions`/`data_transitions` are true adjacent-sample change counts.
+
+Host-only C tests mutate bytes near the end of the 16 KiB CQ/data pages (outside the former 4 KiB observation window) and check stable samples, persistent changes, independent buffer transitions, first-deviation positions, return-to-baseline and sticky alerts. The owner-driver candidate is compiled for the exact N71 ARM64 kernel. **No physical late-write attribution, DMA quiescence or safe resource retirement is claimed.** The candidate has not been loaded on the currently running iPhone.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.

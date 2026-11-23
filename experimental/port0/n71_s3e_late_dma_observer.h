@@ -10,8 +10,15 @@ struct n71_s3e_late_dma_observer {
     unsigned int cq_changed;
     unsigned int data_changed;
     unsigned int ever_changed;
+    /* Distinguish repeated non-baseline samples from actual transitions. */
+    unsigned int cq_transitions;
+    unsigned int data_transitions;
+    unsigned int first_cq_deviation_sample;   /* 1-based; 0 means none */
+    unsigned int first_data_deviation_sample; /* 1-based; 0 means none */
     unsigned long long first_cq;
     unsigned long long first_data;
+    unsigned long long previous_cq;
+    unsigned long long previous_data;
 };
 
 static inline unsigned long long n71_s3e_late_dma_fingerprint(
@@ -39,14 +46,26 @@ static inline void n71_s3e_late_dma_observe(
         s->first_cq = cq_fingerprint;
         s->first_data = data_fingerprint;
     } else {
-        if (cq_fingerprint != s->first_cq)
-            s->cq_changed++;
-        if (data_fingerprint != s->first_data)
+        if (cq_fingerprint != s->first_cq) {
+            s->cq_changed++; /* non-baseline sample; not a transition */
+            if (!s->first_cq_deviation_sample)
+                s->first_cq_deviation_sample = s->samples+1;
+        }
+        if (data_fingerprint != s->first_data) {
             s->data_changed++;
+            if (!s->first_data_deviation_sample)
+                s->first_data_deviation_sample = s->samples+1;
+        }
+        if (cq_fingerprint != s->previous_cq)
+            s->cq_transitions++;
+        if (data_fingerprint != s->previous_data)
+            s->data_transitions++;
         if (cq_fingerprint != s->first_cq ||
             data_fingerprint != s->first_data)
             s->ever_changed = 1;
     }
+    s->previous_cq = cq_fingerprint;
+    s->previous_data = data_fingerprint;
     s->samples++;
 }
 

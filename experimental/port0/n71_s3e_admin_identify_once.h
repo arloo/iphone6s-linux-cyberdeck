@@ -488,15 +488,21 @@ static void n71_admin_late_dma_probe_ro(const struct n71_admin_once_result *r)
          * The device may still have the ability to write either page. */
         dma_sync_single_for_cpu(d,n71_admin_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
         dma_sync_single_for_cpu(d,n71_admin_memory.dma[2],PAGE_SIZE,DMA_BIDIRECTIONAL);
-        cq_hash=n71_s3e_late_dma_fingerprint(n71_admin_memory.page[1],SZ_4K);
-        data_hash=n71_s3e_late_dma_fingerprint(n71_admin_memory.page[2],SZ_4K);
+        /* A host page is 16 KiB while the controller queue is 4 KiB.
+         * Include the full allocated backing page to detect suspicious
+         * writes beyond the expected queue/payload window as well. */
+        cq_hash=n71_s3e_late_dma_fingerprint(n71_admin_memory.page[1],PAGE_SIZE);
+        data_hash=n71_s3e_late_dma_fingerprint(n71_admin_memory.page[2],PAGE_SIZE);
         dma_sync_single_for_device(d,n71_admin_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
         dma_sync_single_for_device(d,n71_admin_memory.dma[2],PAGE_SIZE,DMA_BIDIRECTIONAL);
         n71_s3e_late_dma_observe(&obs,cq_hash,data_hash);
         if (i+1<12) msleep(50);
     }
-    pr_info("n71-s3e-p0: ADMIN_LATE_DMA_PROBE_RO samples=%u interval_ms=50 cq_changes=%u data_changes=%u any_change=%u suspected_late_ram_change=%u stable_is_not_proof=YES release_allowed=NO quarantine_unchanged=YES\n",
-        obs.samples,obs.cq_changed,obs.data_changed,obs.ever_changed,obs.ever_changed);
+    pr_info("n71-s3e-p0: ADMIN_LATE_DMA_PROBE_RO samples=%u interval_ms=50 observed_page_bytes=%lu cq_changes=%u data_changes=%u cq_transitions=%u data_transitions=%u first_cq_deviation_sample=%u first_data_deviation_sample=%u any_change=%u suspected_late_ram_change=%u stable_is_not_proof=YES release_allowed=NO quarantine_unchanged=YES\n",
+        obs.samples,PAGE_SIZE,obs.cq_changed,obs.data_changed,
+        obs.cq_transitions,obs.data_transitions,
+        obs.first_cq_deviation_sample,obs.first_data_deviation_sample,
+        obs.ever_changed,obs.ever_changed);
 }
 
 static int n71_storage_admin_identify_once(void *ctx)
