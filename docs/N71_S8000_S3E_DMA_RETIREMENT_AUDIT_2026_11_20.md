@@ -257,6 +257,12 @@ The further original-source trace (same authenticated `IONVMeFamily` 2.1.0 binar
 
 This provides the **parameter transport mechanism**, not the runtime input value on N71. The original controller pool-setup routine contains three branches selecting three wrappers; all three read the same controller virtual method at vtable offset **1440** and forward its return value as wrapper `x4`. Thus the origin of `x4` is source-verified, but we have not established which class/method implementation the live N71 uses, its actual return value, the helper mask's runtime result, or the Read command flag. Hence `BIT(5)` remains physically unqualified, the initial read-only encoder remains inert, and DART/NVMMU epoch quarantine remains mandatory.
 
+## 2026-11-23 original constructor-linked virtual method 1440: distinct base/derived results
+
+A provenance-gated original `IONVMeFamily` source and constant-data audit now resolves **two original constructor-derived vtables**: the base controller candidate implements virtual slot **1440** with `MOV W0,#0; RET`, whereas its constructor-linked derived class implements the same slot with `MOV W0,#1; RET`. Corresponding adjacent slot 1448 implementations are similarly distinct. The original derived constructor's parent call, class-owned `__DATA_CONST.__const` pointer boundaries, direct vtable targets and full original executable SHA-256 are required. Fifteen original instruction words and synthetic mutation fixtures add regression protection (`tools/n71_s8000_original_ionvme_vtable1440_gate.py`).
+
+**Do not claim the N71 uses the derived return value:** dynamic controller-class binding remains unknown and prelinked alternative classes can coexist. The prior original request-pool dataflow stays established but cannot justify setting command `BIT(5)` or issuing a first physical Read. No device MMIO, DMA or NAND was touched during this host-only audit.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
