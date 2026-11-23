@@ -125,6 +125,8 @@ static void n71_admin_write(unsigned int off,unsigned int value)
     writel(value,(u8 __iomem *)n71_nvme_mmio+off);
     readl((u8 __iomem *)n71_nvme_mmio+off);
 }
+/* Pre-epoch DMA allocations for future I/O SQ/CQ/data; no call site. */
+#include "n71_s3e_ro_io_dma_alloc.h"
 static int n71_admin_qualified(void *ctx)
 {
     return n71_admin_memory.prepared && n71_admin_memory.dart_mapped &&
