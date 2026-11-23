@@ -269,6 +269,10 @@ The authentic original prelinked `IONVMeFamily` PCI personality for `AppleEmbedd
 
 This significantly constrains the likely original Apple driver match for the physical storage endpoint, but **does not prove the iOS runtime bound the class**, or establish the request pool's conditional mask, or authorize command `BIT(5)` on the device. No live S3E/NAND read/write/DMA was performed. Tool: `tools/n71_s8000_original_embedded_nvme_pci_match_gate.py`.
 
+## 2026-11-23 exact original request-pool flag mask before NVM Read
+
+The original `IONVMeFamily` request-pool helper receives controller flag `w25` and auxiliary `x5`/`x20`; the predicate routine at `0x3031c` returns a boolean lookup result. The helper forms `w24 = predicate_result | (x20 != 0)` and `w25 &= w24`, so the propagated **bit0** has the boolean form `controller_bit AND (lookup_predicate OR auxiliary_nonzero)`. The downstream original request constructor maps the surviving bit to internal bit3, and the Read builder conditionally maps that to CDW0 bit13. A provenance gate pins the actual instructions and call edges against the owner's original Apple kernelcache; synthetic tests cover all 8 possible boolean input tuples and instruction mutations. The predicate and auxiliary values are **not** observed on live N71. Hence the static `AppleEmbeddedNVMeController` return value `1` is insufficient to authorize an I/O tag or first NAND Read.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
