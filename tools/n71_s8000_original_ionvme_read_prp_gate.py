@@ -65,6 +65,70 @@ REQUEST_FLAG_INITIALIZER_WORDS = {
     0x35050: 0xB900BA68,  # write internal request flags
 }
 
+# Original Apple N71 IONVMeFamily request-pool FACTORY propagation:
+# top-level wrappers forward their incoming fifth argument x4 as x5;
+# the pool ctor stores it as x19; a downstream gate masks w25 with
+# w24 before forwarding it as a factory parameter. The value actually
+# selected by the active N71 S8000 provider remains UNVERIFIED.
+# Direct source proof only; a vtable/class symbol may refer to ANS2 too.
+FACTORY_FLAG_PROPAGATION_WORDS = {
+    0x00278: 0x94008992,  # wrapper 1 calls pool ctor +0x228C0
+    0x00680: 0x94008890,  # wrapper 2 calls same pool ctor
+    0x22B6C: 0x97FFFF55,  # wrapper 3 calls same pool ctor
+    0x22940: 0x9400002C,  # pool ctor calls helper +0x229F0
+    0x0021C: 0xAA0403F7,  # wrapper x23 = original x4
+    0x0026C: 0xAA1703E5,  # wrapper outgoing x5 = x23
+    0x00624: 0xAA0403F7,  # another wrapper x23 = x4
+    0x00674: 0xAA1703E5,  # another outgoing x5 = x23
+    0x22B10: 0xAA0403F7,  # third wrapper x23 = original x4
+    0x22B60: 0xAA1703E5,  # third outgoing x5 = x23
+    0x228E0: 0xAA0503F3,  # pool constructor preserves input x5 in x19
+    0x2293C: 0xAA1303E3,  # x3 = x19 to first pool helper
+    0x22A10: 0xAA0303F9,  # x25 = helper incoming x3
+    0x22A2C: 0x2A080018,  # w24 = prior condition OR nonnull-owner condition
+    0x22A30: 0x0A180339,  # w25 &= w24 before constructing queue
+    0x22A34: 0x36000079,  # conditionally skip path on masked bit0
+    0x22A68: 0xAA1903E3,  # x3 = filtered x25 for pool routine
+    0x22A78: 0x940000DB,  # call pool routine +0x22DE4
+    0x22E0C: 0xB90017E3,  # pool routine saves incoming w3 as local flag
+    0x22E9C: 0xB94017E5,  # reloads that flag into outgoing w5
+    0x22EA4: 0x940047F6,  # creates one request via factory +0x34E7C
+    0x34EA8: 0xAA0503F5,  # factory retains incoming x5 in x21
+    0x34F08: 0xAA1503E6,  # factory passes x21 as initializer x6
+    0x34F10: 0x94000037,  # call initializer +0x34FEC
+}
+
+# In the original controller request-pool initializer, a common
+# virtual controller method at vtable offset 1440 returns x0. The return
+# is saved as x22 and forwarded as the x4 argument by ALL three wrapper
+# branches. The actual runtime method return and controller class are
+# NOT established for the physical N71 by these source identities.
+CONTROLLER_POOL_ARGUMENT_WORDS = {
+    0x27180: 0xF942D508,  # controller virtual method at offset 1448 for branch choice
+    0x27184: 0xD63F0100,  # invoke choice method
+    0x271A0: 0xF9400268,  # controller vtable pointer
+    0x271A4: 0xF942D108,  # vtable method at offset 1440
+    0x271A8: 0xAA1303E0,  # pass controller this in x0
+    0x271AC: 0xD63F0100,  # invoke common method
+    0x271B0: 0xAA0003F6,  # save return value in x22
+    0x271D4: 0x37600499,  # feature-dependent wrapper selection
+    0x271E8: 0x52800023,  # wrapper parameter x3=1, NOT the conditional x4
+    0x271EC: 0xAA1603E4,  # route1 x4 = common method result x22
+    0x271F8: 0x97FF6500,  # route1 wrapper +0x5F8
+    0x27208: 0xF9400268,  # route2 controller vtable pointer
+    0x2720C: 0xF942D108,  # same method at offset 1440
+    0x27210: 0xAA1303E0,  # same controller this
+    0x27214: 0xD63F0100,  # same virtual method
+    0x27218: 0xAA0003F6,  # route2 x22 = returned x0
+    0x2724C: 0x52800023,  # route2 unrelated x3=1
+    0x27250: 0xAA1603E4,  # route2 x4 = returned x22
+    0x2725C: 0x97FFEE22,  # route2 wrapper +0x22AE4
+    0x27270: 0xAA1403E2,  # route3 other argument x2
+    0x27274: 0x52800023,  # route3 unrelated x3=1
+    0x27278: 0xAA1603E4,  # route3 x4 = returned x22
+    0x27284: 0x97FF63DB,  # route3 wrapper +0x1F0
+}
+
 CALL_TARGETS = {
     0x13248: 0x365B4,
     0x13250: 0x36390,
@@ -73,6 +137,16 @@ CALL_TARGETS = {
     0x355F0: 0x429D0,
     0x35668: 0x35A48,
     0x356D4: 0x3579C,
+    0x00278: 0x228C0,  # wrapper 1 -> original request-pool ctor
+    0x00680: 0x228C0,  # wrapper 2 -> same request-pool ctor
+    0x22B6C: 0x228C0,  # wrapper 3 -> same request-pool ctor
+    0x22940: 0x229F0,  # pool ctor -> pool allocation helper
+    0x22A78: 0x22DE4,  # pool helper -> per-request allocation loop
+    0x22EA4: 0x34E7C,  # per-request allocation -> request factory
+    0x34F10: 0x34FEC,  # request factory -> original flag initializer
+    0x271F8: 0x005F8,  # controller first route to wrapper
+    0x2725C: 0x22AE4,  # controller second route to wrapper
+    0x27284: 0x001F0,  # controller third route to wrapper
 }
 
 
@@ -89,7 +163,9 @@ def verify_transport_instruction_flow(code: bytes) -> None:
     if len(code) != READ.EXPECTED_TEXT_SIZE:
         raise ValueError("Original IONVMeFamily Read transport text size changed")
     for at, expected in {**PROVENANCE_WORDS, **READ_FLAG_WORDS,
-                         **REQUEST_FLAG_INITIALIZER_WORDS}.items():
+                         **REQUEST_FLAG_INITIALIZER_WORDS,
+                         **FACTORY_FLAG_PROPAGATION_WORDS,
+                         **CONTROLLER_POOL_ARGUMENT_WORDS}.items():
         if at + 4 > len(code) or struct.unpack_from("<I", code, at)[0] != expected:
             raise ValueError("Original NVMe Read-to-PRP source differs")
     for at, target in CALL_TARGETS.items():
@@ -121,6 +197,11 @@ def main() -> int:
     print("ORIGINAL_READ_OPTION_AND_PRP_POINTERS_DISTINCT=YES")
     print("ORIGINAL_REQUEST_FLAG_BIT3_TO_CDW0_BIT13=PROVEN_CONDITIONAL")
     print("ORIGINAL_REQUEST_INITIALIZER_X6_NONZERO_SETS_BIT3=PROVEN")
+    print("ORIGINAL_REQUEST_POOL_X4_TO_FACTORY_X6=PROVEN_WITH_CONDITIONAL_MASK")
+    print("ORIGINAL_POOL_CONSTRUCTOR_FILTER_22A30=PROVEN")
+    print("ORIGINAL_THREE_POOL_WRAPPERS_SHARE_CONTROLLER_VMETHOD_OFFSET_1440=PROVEN")
+    print("N71_ACTIVE_CONTROLLER_VMETHOD_RETURN=UNVERIFIED")
+    print("ACTIVE_N71_REQUEST_POOL_WRAPPER_AND_X4_VALUE=UNVERIFIED")
     print("ACTIVE_N71_IO_POOL_INITIALIZER_X6_VALUE=UNVERIFIED")
     print("READ_VENDOR_FLAG_BIT13_UNCONDITIONALLY_REQUIRED=UNVERIFIED")
     print("APPLE_S8000_TAG1_IO_PHYSICAL_ACCEPTANCE=UNVERIFIED")
