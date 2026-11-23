@@ -12,6 +12,12 @@ This page is the repository-side storage milestone ledger. **Git source, tests, 
 - [ ] Real I/O CQ/SQ creation and physical NVMe NVM Read of LBA0; **not yet done**.
 - [ ] Read-only Linux block device or persistent NAND-backed Linux; **not yet done**.
 
+## 2026-11-23 live low-reserve physical read-only preflight
+
+At the user's explicit request for a physical test with the phone left in native Linux, an authenticated direct-USB SSH session **read only** existing kernel sysfs and battery attributes. Actual fuel gauge: **21%**, voltage **3.541–3.614 V**, net current oscillating **−336 to −171 mA**, temperature **35.8–35.9°C**. USB Hoolock/Linux remained reachable. Platform devices `602000000.pcie-port1-preflight` and `n71-native-dart-provider` exist, and the latter is bound to its kernel driver; the Port1 node is unbound to a driver and its runtime PM status is `unsupported`. **The presence of these sysfs devices does not prove a trained PCIe link, active NVMe BAR, valid translations or physical NAND access.**
+
+No S3E module was loaded, no NVMe block device existed, and no controller/PCIe power transition, new DMA epoch, new I/O queues or NAND command was attempted. The SN2400 finite 300 mA charge lease had expired with observed rollback, and the battery was still discharging. The owner-visible checkpoint maintains a strict distinction between this successful low-impact live device-presence test and the still-pending physical NVM Read. Previous owner-assisted physical *admin Identify* results remain separate. **Further live DMA experiments are deferred until stable sufficient battery/power and the Read transport qualification.** There was no reboot and the backlight was not modified.
+
 ## Implemented/verified offline on Dell; never submitted to device
 
 - [x] Kernel-compiled, inert 64-byte `Create I/O CQ`, `Create I/O SQ`, and one-4096-byte `Read (0x02)` candidate encoders; read range validated.
