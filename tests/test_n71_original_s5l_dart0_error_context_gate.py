@@ -37,9 +37,11 @@ class OriginalDART0ContextTests(unittest.TestCase):
 
     def test_register_offsets_are_dart0_not_dart1(self):
         self.assertEqual(0x500 & (1 << 31), 0)
+        self.assertEqual(0x80000500 & (1 << 31), 1 << 31)
+        self.assertIn("(dart_fault & BIT(31)))", (ROOT / "experimental/port0/n71_s3e_admin_identify_once.h").read_text())
         self.assertEqual(0x500 & ((1 << 8) | (1 << 10)), 0x500)
         body = (ROOT / "experimental/port0/n71_s3e_admin_identify_once.h").read_text()
-        self.assertIn("s8000_v0_layout_unverified=YES", body)
+        self.assertIn("original_s8000_offsets_verified=YES", body)
         self.assertIn("raw_context_redacted=YES", body)
         self.assertIn("fault_not_dma_fence=YES", body)
 

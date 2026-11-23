@@ -167,6 +167,14 @@ The new source gate `tools/n71_original_s5l_dart0_error_context_gate.py` matches
 
 The optional context witness added earlier remains conservative and opt-in after observed shutdown/BME-off; it has **not been transferred to the iPhone**. The source evidence upgrades confidence in which registers it reads, not in any DMA cleanup authorization.
 
+## 2026-11-23 guard DART0 post-stop context by original Apple bit-31 predicate
+
+The owner-private original N71 kernelcache source gate proved that AppleS5L8960XDART reads status at offset `0x10` and tests its **bit 31** before branching to context at `0x14`, `0x18`, `0x1c`. The previous diagnostic candidate used merely `dart_fault != 0`, which would cause unnecessary context reads when the recorded status is `0x00000500`. That recurring value has **bit 31 clear**; neither the meaning of bits 8/10 nor absence of independent DMA transactions has been proven.
+
+The corrected opt-in observer now requires **`dart_fault & BIT(31)`**, in addition to already verified controller stop, bus-master-off, and owned DART mappings. It therefore refuses additional context-register reads for all prior `0x500` status snapshots. If the original bit-31 predicate is present, the observer prints only boolean presence markers, with raw AXI request words / possible addresses redacted. These reads remain diagnostic-only; the existing conservative DMA quarantine is unchanged. Host synthetic tests cover status values `0`, `0x100`, `0x400`, `0x500`, `0x80000000`, and `0x80000500`. The isolated driver builds against the existing N71 ARM64 kernel. **No physical S3E trial or new NAND operations were performed.**
+
+The live phone was below the hardware-experiment battery gate: at the beginning of this offline work, 23% state of charge, 294 mAh remaining and approximately -211 mA net cell current were observed via USB SSH, with the previous 300 mA charge lease already expired. The next physical DMA experiment remains blocked pending safe charging / power reserve, regardless of the successful code checks.
+
 ## Power, recovery and publication boundaries
 
 The SN2400 pilot configured a **300 mA USB input limit** with a bounded one-hour rollback lease. That setting is **not measured battery charge current**: real battery samples alternated between positive and negative, while USB VBUS remained around 4.9 V. Preflight checks reduce but do not eliminate hardware or data-loss risk. Never force-unload the quarantined storage module; subsequent experiments require a separate fresh supervised RAM boot.
