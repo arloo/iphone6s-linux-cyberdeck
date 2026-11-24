@@ -43,7 +43,7 @@ union power_supply_propval {int intval;};
 enum {POWER_SUPPLY_PROP_CAPACITY, POWER_SUPPLY_PROP_TEMP, POWER_SUPPLY_PROP_VOLTAGE_NOW};
 static unsigned int regs[256] = {[7]=0xb9, [9]=0, [16]=4};
 static int cap=30, temperature=300, voltage=3700000, vbus=5000000;
-static int device_refs, battery_refs, bus_gets, writes, input_writes, scheduled;
+static int device_refs, battery_refs, bus_gets, writes, input_writes, scheduled, adc_reads;
 static bool board=true, adc_timeout, partial_input_fail, fail_restore, no_battery;
 static struct device_node node;
 static struct device dev = {&node};
@@ -61,6 +61,7 @@ int power_supply_get_property(struct power_supply *p, int prop, union power_supp
     return 0;
 }
 int regmap_read(struct regmap *m, unsigned int r, unsigned int *v) {
+    if(r==0x12)adc_reads++;
     *v = r==0x12 ? vbus/25000 : regs[r];return 0;
 }
 int regmap_write(struct regmap *m, unsigned int r, unsigned int v) {
@@ -135,6 +136,16 @@ int main(int argc, char **argv) {
         return 0;
     }
     assert(rc==0 && regs[9]==21 && scheduled==1 && changed);
+    if(!strcmp(case_name,"high-voltage-monitor") || !strcmp(case_name,"zero-vbus-monitor")) {
+        int before=adc_reads;
+        jiffies=2000;
+        if(!strcmp(case_name,"high-voltage-monitor"))voltage=4201000;
+        else vbus=0;
+        monitor_work(NULL);
+        assert(!changed && regs[9]==0 && scheduled==1);
+        assert(adc_reads==before+(!strcmp(case_name,"zero-vbus-monitor")));
+        trial_exit();assert(device_refs==0 && battery_refs==0);return 0;
+    }
     if(!strcmp(case_name,"deadline") || !strcmp(case_name,"adc-idle-selector"))jiffies=30000;
     else if(!strcmp(case_name,"droop")){jiffies=2000;vbus=4500000;}
     else if(!strcmp(case_name,"detach")){jiffies=2000;regs[7]&=~BIT(5);}
@@ -170,7 +181,8 @@ class TrialTests(unittest.TestCase):
         for case in ['unarmed','low-battery','hot','cold','low-voltage','wrong-board',
                      'invalid-current','input-120','existing-input','disabled-input','adc-timeout',
                      'low-vbus','no-battery','partial-write','restore-failure','deadline',
-                     'droop','detach','hot-monitor','healthy-monitor','unload','adc-idle-selector','adc-unknown','lease-invalid']:
+                     'droop','detach','hot-monitor','healthy-monitor','unload','adc-idle-selector','adc-unknown','lease-invalid',
+                     'high-voltage-monitor','zero-vbus-monitor']:
             with self.subTest(case=case):
                 subprocess.run([str(self.exe),case],check=True,capture_output=True,text=True)
 
