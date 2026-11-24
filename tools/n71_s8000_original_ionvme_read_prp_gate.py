@@ -19,10 +19,21 @@ import n71_s8000_original_ionvme_read_source_gate as READ
 # SHA-256. Only instruction fingerprints and control-flow *metadata*
 # enter Git, never the owner-private executable.
 PROVENANCE_WORDS = {
-    0x13240: 0x71000B5F,  # compare selected command kind to READ selector 2
-    0x13244: 0x54000061,  # non-READ alternative branch
-    0x13248: 0x94008CDB,  # call READ command request builder
-    0x13250: 0x94008C50,  # separate alternate builder; not a read proof
+    0x12DF8: 0xF9405508,  # memory descriptor virtual slot 168
+    0x12DFC: 0xAA1503E0,
+    0x12E00: 0xD63F0100,
+    0x12E04: 0x12001C1A,  # retain direction selector
+    0x12E08: 0x51000748,
+    0x12E0C: 0x7100091F,
+    0x12E10: 0x540038E2,  # reject direction outside 1..2
+    0x13240: 0x71000B5F,  # compare direction to WRITE selector 2
+    0x13244: 0x54000061,  # READ path when direction is 1
+    0x13248: 0x94008CDB,  # WRITE wrapper
+    0x13250: 0x94008C50,  # READ wrapper
+    0x365EC: 0x97FFFF1C,  # WRITE wrapper -> opcode builder
+    0x36298: 0x32000148,  # WRITE opcode 1
+    0x3629C: 0xB9011808,
+    0x363C4: 0x97FFFF5E,  # READ wrapper -> opcode builder
     0x132AC: 0x94008A4C,  # call GenerateIOVMSegments wrapper
     0x132C8: 0x940069B6,  # controller-level request bookkeeping
     0x35BF0: 0xA90C8801,  # hand segment offset and transfer length to request
@@ -132,6 +143,8 @@ CONTROLLER_POOL_ARGUMENT_WORDS = {
 CALL_TARGETS = {
     0x13248: 0x365B4,
     0x13250: 0x36390,
+    0x365EC: 0x3625C,
+    0x363C4: 0x3613C,
     0x132AC: 0x35BDC,
     0x35BF4: 0x355B4,
     0x355F0: 0x429D0,
@@ -191,6 +204,7 @@ def main() -> int:
         return 1
     print("N71_ORIGINAL_IONVME_READ_TO_PRP_GATE=PASS")
     print("ORIGINAL_REQUEST_READ_OPCODE=0x02")
+    print("ORIGINAL_DIRECTION_1_READ_2_WRITE=VERIFIED")
     print("ORIGINAL_REQUEST_BUILDER_THEN_IOVM_MAPPING=PROVEN")
     print("ORIGINAL_PRP_PAGE_GRANULARITY_BYTES=4096")
     print("ORIGINAL_PRP1_AND_MULTIPAGE_HELPERS=PROVEN")

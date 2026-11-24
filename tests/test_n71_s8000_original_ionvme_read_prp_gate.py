@@ -36,7 +36,7 @@ class OriginalReadToPRPTests(unittest.TestCase):
         self.assertEqual(len({**FLOW.PROVENANCE_WORDS, **FLOW.READ_FLAG_WORDS,
                               **FLOW.REQUEST_FLAG_INITIALIZER_WORDS,
                               **FLOW.FACTORY_FLAG_PROPAGATION_WORDS,
-                              **FLOW.CONTROLLER_POOL_ARGUMENT_WORDS}), 79)
+                              **FLOW.CONTROLLER_POOL_ARGUMENT_WORDS}), 90)
         FLOW.verify_transport_instruction_flow(bytes(self.fake))
         for at in {**FLOW.PROVENANCE_WORDS, **FLOW.READ_FLAG_WORDS,
                    **FLOW.REQUEST_FLAG_INITIALIZER_WORDS,
@@ -78,7 +78,7 @@ class OriginalReadToPRPTests(unittest.TestCase):
 
     def test_pool_factory_argument_source_does_not_prove_active_n71_value(self):
         self.assertEqual(len(FLOW.FACTORY_FLAG_PROPAGATION_WORDS), 24)
-        self.assertEqual(len(FLOW.CALL_TARGETS), 17)
+        self.assertEqual(len(FLOW.CALL_TARGETS), 19)
         self.assertEqual(FLOW.FACTORY_FLAG_PROPAGATION_WORDS[0x228E0], 0xAA0503F3)
         self.assertEqual(FLOW.FACTORY_FLAG_PROPAGATION_WORDS[0x22A30], 0x0A180339)
         self.assertEqual(FLOW.FACTORY_FLAG_PROPAGATION_WORDS[0x22E9C], 0xB94017E5)
