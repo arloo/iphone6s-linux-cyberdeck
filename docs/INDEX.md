@@ -5,7 +5,8 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
-- [Prepared four-Read repeatability trial, not physically tested — 2026-11-24](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md)
+- [Physical four-Read repeatability: same-LBA equality, guarded buffers and bounded observation — 2026-11-24](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md)
+- [Sanitized four-Read acceptance](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json)
 
 - [First physical 4 KiB NVM Read of NS1/LBA0 — 2026-11-24](N71_S8000_LBA0_READ_SUCCESS_2026_11_24.md)
 - [Sanitized one-block Read acceptance](N71_S8000_LBA0_READ_ACCEPTANCE_2026_11_24.json)

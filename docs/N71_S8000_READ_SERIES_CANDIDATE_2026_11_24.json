@@ -110,9 +110,11 @@
     "gzip_CPIO_roundtrip_verified": true,
     "storage_autoload": false
   },
-  "physically_booted": false,
-  "module_inserted": false,
-  "series_attempted": false,
-  "series_accepted": false,
-  "fresh_attended_boot_required": true
+  "physically_booted": true,
+  "module_inserted": true,
+  "series_attempted": true,
+  "series_accepted": true,
+  "fresh_attended_boot_required": true,
+  "physical_acceptance_evidence": "N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json",
+  "current_boot_backing_retained": true
 }

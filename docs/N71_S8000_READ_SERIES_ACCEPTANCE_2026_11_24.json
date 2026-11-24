@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-24",
+  "milestone": "Four bounded physical 4KiB NVM Reads, LBA0/LBA1/LBA0/LBA1, private same-LBA equality and observed buffer stability",
+  "source_commit": "9cc22c4f7b7cbfee0a788b2a3e5c358640460fc5",
+  "module_sha256": "cb3b398f4ebd1f3a9227ccf411358be67a6a63fb29582f98a5a68498386189c1",
+  "RAM_image_sha256": "1efec7542fabc129b2aaa8c8d52be68dd332eb18c2846aac8a6c10763085c18b",
+  "physical_insertion_count_this_boot": 1,
+  "physical_repeatability_trial_count": 1,
+  "NVM_Read_submission_count": 4,
+  "NVM_Read_success_count": 4,
+  "namespace_id": 1,
+  "NVM_opcode": 2,
+  "NLB": 0,
+  "bytes_per_Read": 4096,
+  "total_bytes_transferred": 16384,
+  "IO_queue_id": 1,
+  "IO_queue_depth": 16,
+  "Read_command_flags": 32,
+  "queue_command_flags": 0,
+  "single_LBA0_mode_enabled": false,
+  "series_mode_enabled": true,
+  "reads": [
+    {
+      "index": 0,
+      "LBA": 0,
+      "FlatDMA_tag": 1,
+      "CID": 1,
+      "SQ_head": 1,
+      "status": "0x0001",
+      "CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_data_arrived": true,
+      "changed_64bit_words": 512,
+      "expected_64bit_words": 512,
+      "guard_12KiB_intact": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    },
+    {
+      "index": 1,
+      "LBA": 1,
+      "FlatDMA_tag": 2,
+      "CID": 2,
+      "SQ_head": 2,
+      "status": "0x0001",
+      "CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_data_arrived": true,
+      "changed_64bit_words": 512,
+      "expected_64bit_words": 512,
+      "guard_12KiB_intact": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    },
+    {
+      "index": 2,
+      "LBA": 0,
+      "FlatDMA_tag": 3,
+      "CID": 3,
+      "SQ_head": 3,
+      "status": "0x0001",
+      "CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_data_arrived": true,
+      "changed_64bit_words": 512,
+      "expected_64bit_words": 512,
+      "guard_12KiB_intact": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    },
+    {
+      "index": 3,
+      "LBA": 1,
+      "FlatDMA_tag": 4,
+      "CID": 4,
+      "SQ_head": 4,
+      "status": "0x0001",
+      "CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_data_arrived": true,
+      "changed_64bit_words": 512,
+      "expected_64bit_words": 512,
+      "guard_12KiB_intact": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    }
+  ],
+  "private_bytewise_comparisons": {
+    "LBA0_first_equals_second": true,
+    "LBA1_first_equals_second": true,
+    "different_LBA_contents_compared": false,
+    "snapshots": 4,
+    "prior_buffers_unchanged": true,
+    "core_stability_checks": 5
+  },
+  "retained_RAM_observer": {
+    "samples": 5,
+    "checked_reads": 4,
+    "interval_us": 50000,
+    "bounded_window_us": 200000,
+    "all_unchanged": true,
+    "hardware_commands_issued": false,
+    "DMA_drain_proven": false
+  },
+  "allocation": {
+    "distinct_DMA_data_frames": 4,
+    "distinct_DMA_SGL_frames": 4,
+    "CPU_only_unmapped_snapshots": 4,
+    "distinct_FlatDMA_tags": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "ring_wrap": false,
+    "tag_descriptor_buffer_or_queue_slot_reuse": false,
+    "all_DMA_and_original_owner_backing_retained": true
+  },
+  "setup": {
+    "Identify": "Required setup only; historical 64GB capacity reused",
+    "Create_CQ_exact_completion": true,
+    "Create_SQ_exact_completion": true
+  },
+  "teardown": {
+    "Delete_SQ_exact_completion": true,
+    "Delete_CQ_exact_completion": true,
+    "normal_shutdown_rc": 0,
+    "shutdown_CSTS": "0x00000009",
+    "shutdown_polls": 958,
+    "disable_rc": 0,
+    "disable_CSTS": "0x00000000",
+    "BME_off": true,
+    "controller_stop_observed": true,
+    "legacy_post_disable_qualified": false,
+    "whole_pilot_rc": -3,
+    "all_backing_retained": true,
+    "forced_unload_or_same_boot_retry": false,
+    "DMA_drain_proven": false
+  },
+  "power_preflight": {
+    "samples": 8,
+    "capacity": 56,
+    "temperature_range_deciC": [
+      330,
+      330
+    ],
+    "cell_range_uV": [
+      3947000,
+      3967000
+    ],
+    "vbus_range_uV": [
+      4875000,
+      4875000
+    ],
+    "current_range_uA": [
+      0,
+      87000
+    ],
+    "current_mean_uA": 45500,
+    "input_limit_uA": 300000,
+    "net_charging_continuously_required": false,
+    "kernel_power_guards_unchanged": true,
+    "immediate_capacity": 56,
+    "immediate_temp_deciC": 329,
+    "immediate_current_uA": 39000,
+    "lease_remaining_at_load_s": 3387.811
+  },
+  "post_trial_power": {
+    "capacity_percent": 56,
+    "health": "Good",
+    "temperature_deciC": 328,
+    "cell_uV": 3925000,
+    "VBUS_uV": 4875000,
+    "input_limit_uA": 300000,
+    "continuously_positive_net_charge_proven": false
+  },
+  "NVM_Write_submitted": false,
+  "arbitrary_LBA_or_length_exposed": false,
+  "Linux_block_device_registered": false,
+  "filesystem_mounted": false,
+  "persistent_Linux_installed": false,
+  "ring_wrap_buffer_reuse_long_duration_or_arbitrary_LBA_qualified": false,
+  "original_live_iOS_factory_policy_proven": false,
+  "privacy": {
+    "sector_payload_exported": false,
+    "sector_hash_exported": false,
+    "original_firmware_or_keys_or_device_identifiers_published": false
+  },
+  "accepted_scope": "One owner-attended fresh-boot bounded sequence of four independent single-sector Reads; two same-LBA bytewise equalities and bounded RAM observation only",
+  "continuation_rule": "Retain this boot and every DMA owner. No forced unload, retry, descriptor/buffer reuse or new DMA epoch in this held boot. Prepare subsequent transport qualification on the host."
+}

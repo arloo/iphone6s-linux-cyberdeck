@@ -18,7 +18,7 @@ Physical target: **iPhone 6s N71, Samsung A9 / S8000**. Kernel: `7.3.0-rc1-n71-b
 | Bluetooth HID | No keyboard/mouse available | NOT TESTED; deferred until a peripheral is available |
 | Bluetooth audio | No playback/profile test | NOT TESTED |
 | Battery | Gauge telemetry; guarded 300 mA USB input lease; charging observed | PASS for monitored charging; lease is finite (3600 s) |
-| Internal storage | One physical 4096-byte NS1/LBA0 Read with exact I/O CQE and independent guarded data; accepted queue teardown and controller stop | Single-block Read PASS; all DMA retained; repeated reads, block-device interface and persistence open |
+| Internal storage | Four physical 4096-byte Reads 0,1,0,1; exact CQEs, guarded independent data, both private same-LBA equalities, unchanged bounded RAM window; teardown/stop passed | Bounded repeatability PASS; all DMA retained; ring/buffer reuse, block interface and persistence open |
 | Baseband | No qualification | Telephony unqualified |
 | Suspend/resume | No qualification | NOT TESTED |
 | New-boot connectivity | Owner-attended RAM boots reached configured USB/authenticated SSH with exact kernel/module/runtime hashes, 24 November | PASS for attended USB/SSH; automatic recovery and new-boot radio endurance remain open |
@@ -32,4 +32,4 @@ Evidence: [Wi-Fi](N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json), [Bluetooth](N7
 
 The native shell dashboard/PTY/keyboard is running with reviewed framebuffer readback and a passed native synthetic-key/real-PTY selftest. Human typing acceptance remains open. Current-session service recovery passed, including private Bluetooth bond reload and a verified 4 MiB WLAN transfer. Display brightness is 1023/2047; schedutil and WLAN power save remain active. See [detailed evidence and limits](N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md).
 
-Latest storage evidence: [first physical 4 KiB Read](N71_S8000_LBA0_READ_SUCCESS_2026_11_24.md), [sanitized acceptance](N71_S8000_LBA0_READ_ACCEPTANCE_2026_11_24.json), and [canonical ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md). No raw sector content is published.
+Latest storage evidence: [four-Read physical repeatability](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md#physical-acceptance-four-reads-with-private-pair-equality), [sanitized four-Read acceptance](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json), [earlier first Read](N71_S8000_LBA0_READ_SUCCESS_2026_11_24.md), and [canonical ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md). No raw sector content or sector hash is published.
