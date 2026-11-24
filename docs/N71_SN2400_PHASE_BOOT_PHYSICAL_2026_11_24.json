@@ -83,5 +83,38 @@
     "NAND_accessed": false,
     "idle_charge_balance_positive": true,
     "storage_load_charge_margin_qualified": false
+  },
+  "healthy_expiry_restart": {
+    "pre_restart_early_supervisor_check": "Refused because initial APPLIED proof was no longer available in the kernel ring; no early rearm performed",
+    "old_lease_restore_uptime_s": 3659.74398,
+    "old_lease_restore_reason": "lease-expired",
+    "old_input_register_restored": 0,
+    "old_restore_rc": 0,
+    "restart_after_verified_baseline_only": true,
+    "phase_module_sha256": "b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7",
+    "new_applied_uptime_s": 3662.435411,
+    "input_limit_uA": 300000,
+    "new_baseline_vbus_uV": 5000000,
+    "new_lease_seconds": 3600,
+    "first_new_monitor_uptime_s": 3664.524401,
+    "first_new_monitor_vbus_uV": 4850000,
+    "latest_snapshot": {
+      "capacity": 56,
+      "status": "Charging",
+      "health": "Good",
+      "temp": 328,
+      "voltage_now": 3956000,
+      "current_now": 84000,
+      "uptime_s": 4074.61
+    },
+    "one_restart_only": true,
+    "continuous_supervisor_enabled": false,
+    "battery_safety_thresholds_changed": false,
+    "renewal_preflight_temperature_ceiling_deciC": 375,
+    "kernel_guards_and_deadman_retained": true,
+    "profile_500mA_activated": false,
+    "storage_module_loaded": false,
+    "NAND_accessed": false,
+    "storage_load_margin_qualified": false
   }
 }
