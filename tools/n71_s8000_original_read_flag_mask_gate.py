@@ -14,6 +14,30 @@ import n71_s8000_original_ionvme_read_prp_gate as FLOW
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # Explicit lifecycle stores of the auxiliary object and its input.
+    0x257F8: 0xAA0103F4, # preserve incoming object
+    0x257FC: 0xAA0003F3, # preserve controller
+    0x2582C: 0xB4000DF4, # branch on null incoming object
+    0x25830: 0xF9008674, # controller +264 = incoming object
+    0x26B00: 0xAA0003F3,
+    0x26B04: 0xF9408400, # load controller +264
+    0x26B08: 0x52800001, # second call parameter = 0
+    0x26B0C: 0x9400705C, # external stub, semantics not established here
+    0x26B10: 0xF9015660, # store return at controller +680
+    0x26B14: 0x52800020, # returns success independently of object value
+    0x26B20: 0xD65F03C0,
+    0x2DDB0: 0xF9415660, # cleanup loads auxiliary object
+    0x2DDB4: 0xB4000080, # skip virtual cleanup when null
+    0x2DDB8: 0xF9400008,
+    0x2DDBC: 0xF9401508, # virtual cleanup slot +40
+    0x2DDC0: 0xD63F0100,
+    0x2DDC4: 0xF901567F, # clear +680
+    0x2DDC8: 0xF9408660, # cleanup input object
+    0x2DDCC: 0xB40000A0,
+    0x2DDD0: 0xF9400008,
+    0x2DDD4: 0xF9401508,
+    0x2DDD8: 0xD63F0100,
+    0x2DDDC: 0xF900867F, # clear +264
     # All three wrappers preserve the incoming stack argument and forward
     # it through the constructor's second outgoing stack slot to helper x5.
     0x20C: 0x9101C3FD, # wrapper 1 frame base
@@ -82,7 +106,7 @@ def verify_instructions(code: bytes) -> None:
                          (0x278, 0x228C0), (0x680, 0x228C0),
                          (0x22B6C, 0x228C0), (0x22940, 0x229F0),
                          (0x271F8, 0x5F8), (0x2725C, 0x22AE4),
-                         (0x27284, 0x1F0)):
+                         (0x27284, 0x1F0), (0x26B0C, 0x42C7C)):
         if FLOW.arm64_bl_target(call, struct.unpack_from('<I', code, call)[0]) != target:
             raise ValueError('Original Apple request pool branch differs')
 
@@ -118,6 +142,8 @@ def main() -> int:
     print(f'PINNED_SOURCE_INSTRUCTION_WORDS={len(MASK_SOURCE_WORDS)}')
     print('PROVEN_BOOLEAN_BIT0=controller_bit AND (lookup_predicate OR auxiliary_nonzero)')
     print('AUXILIARY_SOURCE=CONTROLLER_FIELD_680_VIA_ALL_THREE_STACK_ROUTES')
+    print('AUXILIARY_INITIALIZATION=EXTERNAL_CALL_RESULT_FROM_CONTROLLER_FIELD_264')
+    print('AUXILIARY_CLEANUP=NULL_CHECK_VIRTUAL_CALL_AND_ZERO')
     print('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED')
     print('ACTIVE_N71_CONTROLLER_BINDING=UNVERIFIED')
     print('COMMAND_BIT13_AFTER_FILTER=CONDITIONAL')
