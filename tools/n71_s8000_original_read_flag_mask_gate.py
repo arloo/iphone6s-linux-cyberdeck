@@ -169,6 +169,26 @@ def verify_mapper_import(blob: bytes, code: bytes) -> None:
     off = kernel['offset']+target-kernel['vm']
     if hashlib.sha256(blob[off:off+320]).hexdigest() != 'e7b2e0ff45cb4b5e2b3ed1e82ec197cad0548a00449d67755ddc683b149ff3e2':
         raise ValueError('Mapper target fingerprint differs')
+    # Pin the entire original function, not just its initial 320 bytes.
+    if off+820 > len(blob) or target+820 > kernel['vm']+kernel['filesize']:
+        raise ValueError('Truncated mapper selection function')
+    if hashlib.sha256(blob[off:off+820]).hexdigest() != '3043a7035e5f045762649c27fbf71556b2c116661c8eea456c256463eb2f0962':
+        raise ValueError('Mapper selection function fingerprint differs')
+    # Resolve the original ADRP/ADD property-name reference.
+    pc = target+0x3c
+    adrp, add = struct.unpack_from('<2I', blob, off+0x3c)
+    if (adrp, add) != (0xf0ffcae1, 0x9132bc21):
+        raise ValueError('Mapper property address instructions differ')
+    imm = ((adrp >> 29) & 3) | (((adrp >> 5) & 0x7ffff) << 2)
+    if imm & (1 << 20):
+        imm -= 1 << 21
+    addr = (pc & ~0xfff) + (imm << 12) + ((add >> 10) & 0xfff)
+    text = main['__TEXT']
+    if not text['vm'] <= addr <= text['vm']+text['filesize']-13:
+        raise ValueError('Mapper property literal outside kernel text')
+    literal = text['offset']+addr-text['vm']
+    if blob[literal:literal+13] != b'iommu-parent\0':
+        raise ValueError('Mapper property name differs')
     count, size = struct.unpack_from('<II', blob, 16)
     pos, end = 32, 32+size
     tables = []
@@ -209,6 +229,8 @@ def main() -> int:
     print('AUXILIARY_INITIALIZATION=EXTERNAL_CALL_RESULT_FROM_CONTROLLER_FIELD_264')
     print('AUXILIARY_IMPORT=IOMapper_copyMapperForDeviceWithIndex_INDEX_0')
     print('AUXILIARY_CLEANUP=NULL_CHECK_VIRTUAL_CALL_AND_ZERO')
+    print('MAPPER_SELECTION_PROPERTY=iommu-parent')
+    print('MAPPER_INDEXED_DATA_CELL_WIDTH=4')
     print('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED')
     print('ACTIVE_N71_CONTROLLER_BINDING=UNVERIFIED')
     print('COMMAND_BIT13_AFTER_FILTER=CONDITIONAL')
