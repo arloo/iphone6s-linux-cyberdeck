@@ -4,7 +4,7 @@
 
 This change connects the previously host-only DMA allocator and queue encoders to an explicitly armed kernel path. Its new physical question is whether the S8000 controller accepts **Admin Create I/O CQ followed by Admin Create I/O SQ**, QID 1, depth 16, polling only. Identify Namespace1 is required setup within this new experiment; the already accepted 64 GB geometry is not a new milestone.
 
-At this checkpoint the candidate has been ARM64-compiled and host-tested; **physical queue acceptance has not yet been established**. Neither NVM Read nor NVM Write is reachable through this mode. No block device, filesystem, NAND persistence or DMA-drain claim follows from this implementation.
+One physical module insertion reached the new owned mappings, then the initial live gate refused before either Create command. **Physical queue acceptance has not yet been established**. The source-proven phase-contract defect and its host-tested correction are documented below. Neither NVM Read nor NVM Write is reachable through this mode. No block device, filesystem, NAND persistence or DMA-drain claim follows from this implementation.
 
 ## Explicit selection and ownership
 
@@ -21,7 +21,7 @@ After allocation, all I/O pages and existing admin/HMB/DART/NVMMU ownership rema
 ## Validation
 
 - ARM64 module builds against the running N71 batt2 kernel without compiler warnings.
-- All 1,916 host tests pass, followed by the synthetic HBPP audit and project/evidence validator.
+- The original integration passed 1,916 host tests; the live-phase correction passes all 1,917 tests, followed by the synthetic HBPP audit and project/evidence validator.
 - The new native-C harness checks capability/mode gates, exact command domain/order/bytes, denied and failure branches, 131,072 completion-status cases and 2,048 command mutations.
 - Source-order checks cover ownership before publication, validation before CQ-head acknowledgement, bounded polling, one-attempt latching and retained resources.
 - The module SHA-256, exact vermagic and complete port0/port1 C/header source snapshot are recorded privately. No original firmware, binary module, DMA address or device/backup identifier is published.
@@ -33,3 +33,31 @@ Use the already completed encrypted iOS backup and a fresh S3E-clean RAM boot. R
 Load exactly once with the existing port0/DART/NVMMU/HMB Identify guards plus `ans_io_queue_once=1 ans_io_queue_flags=0`. Do not retry within this boot. Save raw kernel output privately.
 
 Queue acceptance requires `IO_QUEUE_ONCE rc=0 cq_posted=1 cq_valid=1 sq_posted=1 sq_valid=1`, supported by both matching Admin completion records. A syscall-loader success, accepted Identify, prepared mapping or controller Ready alone is insufficient. Failure stops this hypothesis; it does not authorize alternate flags or any NVM Read. The later LBA0 step still needs separate transport/FlatDMA qualification and its own concrete review.
+
+## Physical outcome: stopped before Create CQ; phase-contract correction
+
+Exactly one physical insertion of source commit `0c28195713a96472e6de6a3b62a26fb8d14e285a`, module SHA-256 `25f95c2c77c4af188023fa00b80e26d798ef566458eeefe3813b551e552b0cba`, was performed. Earlier telemetry-only preflights did not insert any storage module. The completed encrypted backup metadata and exact kernel/module/source snapshot were checked before insertion.
+
+The qualified eight-sample power window remained at 58% and 32.9 C with VBUS 4.875 V throughout; mean net current was +23.5 mA, median +30.5 mA and the minimum was -37 mA. Instantaneous fuel-gauge labels varied. Two immediate nonnegative-current observations preceded insertion; the final one was +85 mA. This is bounded trial power evidence, not proof of permanently sustainable charging. No kernel charger or thermal/voltage limit was weakened.
+
+| New observation | Physical result |
+|---|---|
+| Four new owned I/O pages and four-stream DART queue mappings | Prepared with controller and BME off, flags hypothesis 0 |
+| Current Identify setup | Valid CQE and 64 GB/4096-byte geometry, reused as setup |
+| Initial live queue gate | Refused, inner rc=-1 |
+| Create CQ / Create SQ | Neither attempted nor posted; no hardware flag acceptance result |
+| Shutdown and disable | Shutdown rc 0/CSTS 9; disable rc 0/CSTS 0; master off |
+| Resource lifetime | All DMA mappings/backing and original owner retained; whole-pilot rc=-3 |
+| NVM Read / Write and internal block device | No command submitted; no block device |
+
+The integration error is deterministic from source: `n71_io_queue_qualified` called `n71_admin_qualified`, which calls the disabled-phase HMB owner predicate. That original predicate explicitly requires both PCI command words 2 and CC/CSTS 0. Queue submission instead correctly requires both commands 6, CC 0x460001 and CSTS 1. Consequently, both phase contracts could never pass together. The physical rc=-1 before cq_attempted corroborates the stopped path; it does **not** demonstrate that byte1=0, Create CQ, Create SQ or their addresses were rejected by hardware.
+
+The correction leaves the existing disabled preparation/default Identify checks unchanged. A separate live owner check validates retained kernel mappings, active endpoint/DART ownership, the exact owned NVMMU roots and SART/HMB backing. Only after that owner check may the live snapshot read the active controller registers. A portable live-phase gate retains the required CC/RDY/PCI command state, original HMB descriptor, exact geometry and all protocol/ownership checks. Named rejection bits report any failed group before a queue post. This avoids the incompatible disabled-only reader without granting DMA release.
+
+The regression harness now exercises the valid active snapshot, all 81 root/endpoint/CC/CSTS phase combinations, and individual mode/capability/epoch/backing/Identify/owner/interrupt/HMB failures. A source regression check forbids calling the disabled HMB predicate or reader from the live path. The corrected ARM64 module has SHA-256 `50d863dc62abbd7a721524fe2703289c6f395b9262ef37966dc138d48209999b` and has **not** been inserted. All live HMB assumptions still need observation; a later refusal must be investigated from its explicit gate bits.
+
+The current boot keeps the original storage pilot pinned. Do not unload or replace it, retry the experiment or infer DMA drain from shutdown. A fresh owner-attended RAM Linux boot is required before testing the corrected candidate. No reboot was triggered by this experiment.
+
+Sanitized machine-readable evidence: [physical queue-only result](N71_S8000_IO_QUEUE_PHYSICAL_2026_11_24.json).
+
+The corrected candidate passes all **1,917** host tests, the synthetic HBPP audit, manifest/evidence validation and the exact-kernel ARM64 build. These are host-side validations, not physical queue acceptance.

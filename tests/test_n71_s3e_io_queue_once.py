@@ -45,6 +45,45 @@ int main(void) {
   int expected=enabled?(identify&&!retire&&!late&&(f==0||f==32)):(f==~0U);
   assert(!!n71_io_queue_mode_valid(enabled,identify,f,retire,late)==expected);
  }
+ /* Reproduce the physical integration failure: a valid running owner
+  * must pass WITHOUT the incompatible disabled-phase predicate. */
+ {
+  struct n71_io_queue_live_snapshot live={
+   .enabled=1,.identify=1,.flags=0,.epoch=1,.mapped=1,.prepared=1,
+   .backing_ready=1,.submitted=1,.completion_valid=1,.cq_head_written=1,
+   .data_arrived=1,.namespace_valid=1,.lba_bytes=4096,.nsze=15625000ULL,
+   .translation_owned=1,.cap_lo=0xf00103ff,.cap_hi=0x20,.version=0x10001,
+   .root_command=6,.endpoint_command=6,.cc=0x460001,.csts=1,.intms=1,
+   .hmb_low=0xbc000000,.hmb_bytes=0x800000
+  }, bad;
+  const unsigned commands[]={0,2,6}, ccs[]={0,0x460001,0x464001},
+                 statuses[]={0,1,9};
+  unsigned root,ep,cc,st;
+  assert(!n71_io_queue_live_reject(&live));
+  for(root=0;root<3;root++) for(ep=0;ep<3;ep++)
+  for(cc=0;cc<3;cc++) for(st=0;st<3;st++) {
+   bad=live;bad.root_command=commands[root];bad.endpoint_command=commands[ep];
+   bad.cc=ccs[cc];bad.csts=statuses[st];
+   assert(n71_io_queue_live_reject(&bad)==
+    ((root==2&&ep==2&&cc==1&&st==1)?0:N71_IO_LIVE_ACTIVE));
+  }
+#define REJECT(field,value,reason) do { bad=live;bad.field=value; \
+ assert(n71_io_queue_live_reject(&bad)==reason); } while(0)
+  REJECT(enabled,0,N71_IO_LIVE_MODE);REJECT(identify,0,N71_IO_LIVE_MODE);
+  REJECT(flags,1,N71_IO_LIVE_MODE);REJECT(cap_hi,0,N71_IO_LIVE_CAPABILITY);
+  REJECT(epoch,0,N71_IO_LIVE_EPOCH);REJECT(mapped,0,N71_IO_LIVE_BACKING);
+  REJECT(prepared,0,N71_IO_LIVE_BACKING);REJECT(backing_ready,0,N71_IO_LIVE_BACKING);
+  REJECT(quarantined,1,N71_IO_LIVE_BACKING);
+  REJECT(submitted,0,N71_IO_LIVE_IDENTIFY);REJECT(completion_valid,0,N71_IO_LIVE_IDENTIFY);
+  REJECT(cq_head_written,0,N71_IO_LIVE_IDENTIFY);REJECT(data_arrived,0,N71_IO_LIVE_IDENTIFY);
+  REJECT(namespace_valid,0,N71_IO_LIVE_IDENTIFY);REJECT(nsze,0,N71_IO_LIVE_IDENTIFY);
+  REJECT(lba_bytes,512,N71_IO_LIVE_IDENTIFY);
+  REJECT(translation_owned,0,N71_IO_LIVE_OWNER);REJECT(intms,0,N71_IO_LIVE_ACTIVE);
+  REJECT(hmb_low,0,N71_IO_LIVE_HMB);REJECT(hmb_high,1,N71_IO_LIVE_HMB);
+  REJECT(hmb_bytes,0,N71_IO_LIVE_HMB);
+#undef REJECT
+  assert(n71_io_queue_live_reject(NULL)==0xffU);
+ }
  for(flags_i=1;flags_i<=2;flags_i++) {
   memset(&m,0,sizeof(m));m.flags=flags[flags_i];
   assert(!n71_io_queue_once_core(&ops,&m,&good,m.flags,&r));
@@ -138,6 +177,19 @@ class IOQueueOnceTests(unittest.TestCase):
         self.assertNotIn('dma_unmap_single(',s)
         self.assertIn('free_page((unsigned long)shadow[sid])',s)
         self.assertNotIn('free_page((unsigned long)n71_ro_io_dma_memory',s)
+
+    def test_live_phase_never_calls_disabled_hmb_predicate(self):
+        s=(PORT/'n71_s3e_io_queue_runtime.h').read_text()
+        active=s[s.index('static int n71_io_queue_running_ownership'):
+                 s.index('static int n71_io_queue_submit_admin')]
+        self.assertNotIn('n71_admin_qualified(',active)
+        self.assertNotIn('n71_storage_hmb_owned_ready(',active)
+        self.assertNotIn('n71_storage_ans_hmb_read(',active)
+        self.assertIn('n71_io_queue_live_reject(&s)',active)
+        self.assertIn('IO_QUEUE_LIVE_GATE',active)
+        self.assertLess(active.index('if (s.translation_owned)'),
+                        active.index('s.hmb_low=n71_admin_reg(0x1810)'))
+        self.assertIn('readl((u8 __iomem *)m->nvmmu+0x2c)==(n71_hmb_memory.dma>>20)',active)
 
     def test_ack_is_after_cqe_validation_and_all_dma_is_retained(self):
         s=(PORT/'n71_s3e_io_queue_runtime.h').read_text()

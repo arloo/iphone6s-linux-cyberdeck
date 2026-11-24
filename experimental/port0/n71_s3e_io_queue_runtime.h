@@ -112,22 +112,68 @@ out:
     }
     return rc;
 }
+/* Ownership checks shared in meaning with pre-start HMB preparation,
+ * but NOT its CC=0 / CSTS=0 / PCI-command=2 phase requirements.
+ * Compare owned roots/SART directly; never use the disabled-only reader. */
+static int n71_io_queue_running_ownership(void *ctx)
+{
+    struct n71_storage_dart_context *m = ctx;
+    if (!m || !ans_hmb_ro || !nvmmu_owned_tables || !m->nvmmu ||
+        !n71_nvme_mmio || !n71_nvmmu_memory.dev ||
+        !n71_nvmmu_memory.mapped[0] || !n71_nvmmu_memory.mapped[1] ||
+        !n71_hmb_memory.page || !n71_hmb_memory.mapped ||
+        !n71_storage_endpoint_ready(ctx)) return 0;
+    return readl(m->nvmmu)==1 && !readl((u8 __iomem *)m->nvmmu+4) &&
+        readl((u8 __iomem *)m->nvmmu+8)==lower_32_bits(n71_nvmmu_memory.dma[0]) &&
+        readl((u8 __iomem *)m->nvmmu+0x0c)==upper_32_bits(n71_nvmmu_memory.dma[0]) &&
+        readl((u8 __iomem *)m->nvmmu+0x10)==lower_32_bits(n71_nvmmu_memory.dma[1]) &&
+        readl((u8 __iomem *)m->nvmmu+0x14)==upper_32_bits(n71_nvmmu_memory.dma[1]) &&
+        readl((u8 __iomem *)m->nvmmu+0x20)==1 &&
+        readl((u8 __iomem *)m->nvmmu+0x24)==0xbc000000U &&
+        readl((u8 __iomem *)m->nvmmu+0x28)==0xbc700000U &&
+        readl((u8 __iomem *)m->nvmmu+0x2c)==(n71_hmb_memory.dma>>20);
+}
 static int n71_io_queue_qualified(void *ctx)
 {
-    return ans_io_queue_once && ans_identify_once &&
-        n71_io_queue_flags_valid(ans_io_queue_flags) && n71_io_queue_capable() &&
-        READ_ONCE(n71_admin_dma_epoch_latched) &&
-        n71_io_queue_memory.mapped && n71_io_queue_memory.prepared &&
-        n71_ro_io_dma_memory.ready && !n71_ro_io_dma_memory.quarantined &&
-        n71_admin_memory.submitted && n71_admin_memory.completion_validated &&
-        n71_admin_memory.cq_head_doorbell_written &&
-        n71_admin_memory.data_arrived && n71_admin_memory.namespace_validated &&
-        n71_admin_memory.nsze == N71_RO_PHYSICAL_NSZE &&
-        n71_admin_memory.lba_bytes == N71_RO_BLOCK_BYTES &&
-        n71_admin_qualified(ctx) && n71_admin_reg(0x14) == 0x460001U &&
-        n71_admin_reg(0x1c) == 1 && (n71_admin_reg(0x0c) & 1) &&
-        (n71_storage_root_read(ctx, 4) & 0xffffU) == 6 &&
-        (n71_storage_endpoint_read(ctx, 4) & 0xffffU) == 6;
+    struct n71_io_queue_live_snapshot s = {
+        .enabled=ans_io_queue_once, .identify=ans_identify_once,
+        .flags=ans_io_queue_flags, .epoch=READ_ONCE(n71_admin_dma_epoch_latched),
+        .mapped=n71_io_queue_memory.mapped,
+        .prepared=n71_io_queue_memory.prepared && n71_admin_memory.prepared &&
+                  n71_admin_memory.dart_mapped,
+        .backing_ready=n71_ro_io_dma_memory.ready,
+        .quarantined=n71_ro_io_dma_memory.quarantined,
+        .submitted=n71_admin_memory.submitted,
+        .completion_valid=n71_admin_memory.completion_validated,
+        .cq_head_written=n71_admin_memory.cq_head_doorbell_written,
+        .data_arrived=n71_admin_memory.data_arrived,
+        .namespace_valid=n71_admin_memory.namespace_validated,
+        .lba_bytes=n71_admin_memory.lba_bytes, .nsze=n71_admin_memory.nsze,
+        .translation_owned=n71_io_queue_running_ownership(ctx),
+    };
+    unsigned int rejected;
+    /* Only read live MMIO after proving its owned translation/window.
+     * Values are compared or reduced to booleans; no physical addresses. */
+    if (s.translation_owned) {
+        s.cap_lo=n71_admin_reg(0); s.cap_hi=n71_admin_reg(4);
+        s.version=n71_admin_reg(8);
+        s.root_command=n71_storage_root_read(ctx,4)&0xffffU;
+        s.endpoint_command=n71_storage_endpoint_read(ctx,4)&0xffffU;
+        s.cc=n71_admin_reg(0x14); s.csts=n71_admin_reg(0x1c);
+        s.intms=n71_admin_reg(0x0c);
+        s.hmb_low=n71_admin_reg(0x1810);
+        s.hmb_high=n71_admin_reg(0x1814);
+        s.hmb_bytes=n71_admin_reg(0x1818);
+    }
+    rejected=n71_io_queue_live_reject(&s);
+    if (rejected)
+        pr_err("n71-s3e-p0: IO_QUEUE_LIVE_GATE rejected=%02x mode_ok=%u capability_ok=%u epoch_ok=%u backing_ok=%u identify_ok=%u owner_ok=%u active_ok=%u hmb_ok=%u no_queue_post_on_failure=YES addresses_redacted=YES\n",
+            rejected, !(rejected&N71_IO_LIVE_MODE),
+            !(rejected&N71_IO_LIVE_CAPABILITY), !(rejected&N71_IO_LIVE_EPOCH),
+            !(rejected&N71_IO_LIVE_BACKING), !(rejected&N71_IO_LIVE_IDENTIFY),
+            !(rejected&N71_IO_LIVE_OWNER), !(rejected&N71_IO_LIVE_ACTIVE),
+            !(rejected&N71_IO_LIVE_HMB));
+    return !rejected;
 }
 static int n71_io_queue_submit_admin(void *ctx,
         const unsigned char *command, unsigned int cid)

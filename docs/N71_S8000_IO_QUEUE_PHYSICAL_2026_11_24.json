@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "scope": "N71/S8000 explicit admin queue-only runtime",
+  "date": "2026-11-24",
+  "hardware_attempt_count": 1,
+  "source_commit": "0c28195713a96472e6de6a3b62a26fb8d14e285a",
+  "tested_module_sha256": "25f95c2c77c4af188023fa00b80e26d798ef566458eeefe3813b551e552b0cba",
+  "flags_hypothesis": 0,
+  "encrypted_finished_backup_metadata_verified": true,
+  "power_preflight": {
+    "capacity_percent": 58,
+    "temp_deciC": 329,
+    "VBUS_uV": 4875000,
+    "net_current_window_min_uA": -37000,
+    "net_current_window_mean_uA": 23500,
+    "net_current_window_median_uA": 30500,
+    "immediate_current_uA": 85000,
+    "input_limit_uA": 300000,
+    "lease_remaining_s": 849,
+    "thermal_or_voltage_guards_changed": false,
+    "instantaneous_current_fluctuated": true,
+    "permanent_charge_sustainability_proven": false
+  },
+  "pre_bme": {
+    "four_owned_IO_pages_allocated": true,
+    "all_four_DART_streams_staged": true,
+    "queue_depth": 16,
+    "controller_off": true,
+    "bus_master_off": true
+  },
+  "identify_setup": {
+    "completion_valid": true,
+    "namespace": 1,
+    "nsze": 15625000,
+    "lba_bytes": 4096,
+    "capacity_bytes": 64000000000,
+    "new_capacity_milestone": false
+  },
+  "queue_path": {
+    "inner_rc": -1,
+    "cq_attempted": false,
+    "cq_posted": false,
+    "cq_validated": false,
+    "sq_attempted": false,
+    "sq_posted": false,
+    "sq_validated": false,
+    "flags_accepted_by_hardware": null
+  },
+  "stop": {
+    "shutdown_rc": 0,
+    "shutdown_CSTS": 9,
+    "disable_rc": 0,
+    "disabled_CSTS": 0,
+    "bus_master_off": true,
+    "whole_pilot_rc": -3,
+    "all_IO_admin_HMB_DART_NVMMU_backing_retained": true,
+    "forced_module_unload": false,
+    "DMA_drain_proven": false
+  },
+  "NVM_read_submitted": false,
+  "NVM_write_submitted": false,
+  "internal_block_device_present": false,
+  "source_proven_bug": "Live queue qualifier called disabled-only HMB preparation predicate: CC/CSTS=0 and both PCI commands=2 contradict live CC.EN/CSTS.RDY and both commands=6.",
+  "fixed_candidate": {
+    "module_sha256": "50d863dc62abbd7a721524fe2703289c6f395b9262ef37966dc138d48209999b",
+    "phase_correct_live_owner_gate": true,
+    "diagnostic_rejection_bits": true,
+    "disabled_preparation_gate_unchanged": true,
+    "hardware_loaded": false,
+    "requires_fresh_boot": true,
+    "validation": {
+      "ARM64_build": "PASS",
+      "host_tests_passed": 1917,
+      "HBPP_audit": "PASS",
+      "manifest_and_evidence": "PASS",
+      "hardware_queue_acceptance": "NOT_TESTED"
+    }
+  },
+  "privacy": "No raw NAND payload, firmware, physical DMA addresses, device or backup identifiers published."
+}

@@ -25,6 +25,50 @@ static inline int n71_io_queue_capability_valid(unsigned int lo,
     return (lo & 0xFFFFU) >= 15U && (hi & 15U) == 0U &&
            (hi & 0x20U) && !(hi & 0xF0000U) && version == 0x00010001U;
 }
+/* Live queue submission has a DIFFERENT phase contract from the
+ * disabled-controller HMB preparation predicate. Never reuse the latter. */
+#define N71_IO_LIVE_MODE 1U
+#define N71_IO_LIVE_CAPABILITY 2U
+#define N71_IO_LIVE_EPOCH 4U
+#define N71_IO_LIVE_BACKING 8U
+#define N71_IO_LIVE_IDENTIFY 16U
+#define N71_IO_LIVE_OWNER 32U
+#define N71_IO_LIVE_ACTIVE 64U
+#define N71_IO_LIVE_HMB 128U
+struct n71_io_queue_live_snapshot {
+    unsigned int enabled, identify, flags, epoch;
+    unsigned int mapped, prepared, backing_ready, quarantined;
+    unsigned int submitted, completion_valid, cq_head_written;
+    unsigned int data_arrived, namespace_valid, lba_bytes;
+    unsigned long long nsze;
+    unsigned int translation_owned, cap_lo, cap_hi, version;
+    unsigned int root_command, endpoint_command, cc, csts, intms;
+    unsigned int hmb_low, hmb_high, hmb_bytes;
+};
+static inline unsigned int n71_io_queue_live_reject(
+        const struct n71_io_queue_live_snapshot *s)
+{
+    unsigned int rejected = 0;
+    if (!s) return 0xffU;
+    if (!s->enabled || !s->identify || !n71_io_queue_flags_valid(s->flags))
+        rejected |= N71_IO_LIVE_MODE;
+    if (!n71_io_queue_capability_valid(s->cap_lo,s->cap_hi,s->version))
+        rejected |= N71_IO_LIVE_CAPABILITY;
+    if (!s->epoch) rejected |= N71_IO_LIVE_EPOCH;
+    if (!s->mapped || !s->prepared || !s->backing_ready || s->quarantined)
+        rejected |= N71_IO_LIVE_BACKING;
+    if (!s->submitted || !s->completion_valid || !s->cq_head_written ||
+        !s->data_arrived || !s->namespace_valid ||
+        s->nsze != N71_RO_PHYSICAL_NSZE || s->lba_bytes != N71_RO_BLOCK_BYTES)
+        rejected |= N71_IO_LIVE_IDENTIFY;
+    if (!s->translation_owned) rejected |= N71_IO_LIVE_OWNER;
+    if (s->root_command != 6U || s->endpoint_command != 6U ||
+        s->cc != 0x460001U || s->csts != 1U || !(s->intms & 1U))
+        rejected |= N71_IO_LIVE_ACTIVE;
+    if (s->hmb_low != 0xbc000000U || s->hmb_high || s->hmb_bytes != 0x800000U)
+        rejected |= N71_IO_LIVE_HMB;
+    return rejected;
+}
 struct n71_io_queue_once_ops {
     int (*qualified)(void *);
     int (*submit_admin)(void *, const unsigned char *, unsigned int);
