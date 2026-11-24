@@ -59,6 +59,39 @@ class OriginalRequestFlagMaskTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             MASK.verify_mapper_symbol(blob, 0x1000, 0, 2, 16, len(name)+1)
 
+    def test_original_kernel_dma_field_and_self_fingerprints(self):
+        fake = bytearray(MASK.EXPECTED_KERNEL_TEXT_SIZE)
+        for pos, word in MASK.KERNEL_DMA_SOURCE_WORDS.items():
+            struct.pack_into('<I', fake, pos, word)
+        MASK.verify_kernel_dma_words(fake)
+        for at in MASK.KERNEL_DMA_SOURCE_WORDS:
+            with self.subTest(kernel_instruction=hex(at)):
+                fake[at] ^= 1
+                with self.assertRaises(ValueError):
+                    MASK.verify_kernel_dma_words(fake)
+                fake[at] ^= 1
+        # Passing selected words must never substitute for original identity.
+        with self.assertRaises(ValueError):
+            MASK.verify_true_original_kernel_text(fake)
+        with self.assertRaises(ValueError):
+            MASK.verify_kernel_dma_words(fake[:-1])
+        with self.assertRaises(ValueError):
+            MASK.verify_kernel_dma_words(fake + b'\0')
+
+    def test_import_name_and_address_both_bind_each_dma_method(self):
+        for method, (_, expected) in MASK.DMA_KERNEL_SYMBOLS.items():
+            with self.subTest(method=method):
+                names = b'\0' + expected + b'\0'
+                entry = struct.pack('<IBBHQ', 1, 0x0f, 1, 0, 0x1000)
+                blob = entry + names
+                MASK.verify_mapper_symbol(blob, 0x1000, 0, 1, 16,
+                                          len(names), expected=expected)
+                for bad_name, bad_target in ((expected + b'X', 0x1000),
+                                              (expected, 0x1008)):
+                    with self.assertRaises(ValueError):
+                        MASK.verify_mapper_symbol(blob, bad_target, 0, 1, 16,
+                                                  len(names), expected=bad_name)
+
     def test_no_runtime_hardware_claims_or_nand_execution(self):
         source = (ROOT/'tools/n71_s8000_original_read_flag_mask_gate.py').read_text()
         self.assertIn('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED',source)

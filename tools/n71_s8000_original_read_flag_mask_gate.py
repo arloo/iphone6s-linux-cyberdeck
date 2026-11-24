@@ -13,9 +13,78 @@ import xml.etree.ElementTree as ET
 import n71_s8000_original_ionvme_read_source_gate as READ
 import n71_s8000_original_ionvme_read_prp_gate as FLOW
 
+# Entire original kernel executable, independently inspected alongside the KEXT.
+EXPECTED_KERNEL_TEXT_SIZE = 6864896
+EXPECTED_KERNEL_TEXT_SHA256 = 'cdd5be4f1b5354548bc1bd2d3a05d3bee23115efb2ca874837f47b1a8fd835fa'
+KERNEL_DMA_SOURCE_WORDS = {
+    # genIOVMSegments wrapper preserves x0 and tail-calls the common generator.
+    0x5E7AF4: 0xAA0403E6,
+    0x5E7AF8: 0xAA0303E5,
+    0x5E7AFC: 0xAA0203E4,
+    0x5E7B00: 0xAA0103E3,
+    0x5E7B04: 0x10FF7F82,
+    0x5E7B08: 0xD503201F,
+    0x5E7B0C: 0x52801001,
+    0x5E7B10: 0x17FFFA78,
+    # The common generator retains the same command and reads its mapper.
+    0x5E651C: 0xAA0003F8,  # x24 = incoming command
+    0x5E659C: 0xF9402308,  # command +64
+    0x5E65A0: 0xB4000248,  # null-dependent path
+    # Inherited prepare also consumes the same command's mapper field.
+    0x5E55F8: 0xAA0003F5,  # x21 = incoming command
+    0x5E56B0: 0xF94022A9,
+    0x5E56B4: 0xB40000A9,
+    0x5E5750: 0xF94022A8,
+    0x5E5754: 0xB40018E8,
+    0x5E5824: 0xF94022A0,  # mapper becomes virtual-call receiver
+    0x5E5828: 0xF9400008,
+    0x5E582C: 0xF942A508,
+    0x5E5830: 0xD63F0100,
+}
+DMA_KERNEL_SYMBOLS = {
+    'constructor': (0x5E75D8, b'__ZN12IODMACommandC2EPK11OSMetaClass'),
+    'generator': (0x5E7AF4, b'__ZN12IODMACommand15genIOVMSegmentsEPFbPS_NS_9Segment64EPvjEPyS2_Pj'),
+    'descriptor': (0x5E52F8, b'__ZN12IODMACommand19setMemoryDescriptorEPK18IOMemoryDescriptorb'),
+    'prepare': (0x5E55A8, b'__ZN12IODMACommand7prepareEyybb'),
+}
+
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # Both original request constructors invoke the IODMACommand parent,
+    # then install the same owned request vtable.
+    0x34E00: 0xAA0003F3,
+    0x34E0C: 0xAA1403E1,
+    0x34E10: 0x940036F6,
+    0x34E14: 0xB0003368,
+    0x34E18: 0x9133A108,
+    0x34E1C: 0xF9000008,
+    0x34E44: 0xAA0003F3,
+    0x34E50: 0xAA1403E1,
+    0x34E54: 0x940036E5,
+    0x34E58: 0xB0003368,
+    0x34E5C: 0x9133A108,
+    0x34E60: 0xF9000008,
+    0x3554C: 0xAA0003F3,
+    # Complete entry-to-call block: the request stays in x0 while the
+    # genIOVMSegments arguments are assembled. No separate command is loaded.
+    0x355B4: 0xD10103FF,
+    0x355B8: 0xA9024FF4,
+    0x355BC: 0xA9037BFD,
+    0x355C0: 0x9100C3FD,
+    0x355C4: 0xAA0003F3,
+    0x355C8: 0xA9017FFF,
+    0x355CC: 0x52800028,
+    0x355D0: 0xB9000FE8,
+    0x355D4: 0xF9406408,
+    0x355D8: 0xF90003E8,
+    0x355DC: 0xD0003301,
+    0x355E0: 0xF9422821,
+    0x355E4: 0x910003E2,
+    0x355E8: 0x910043E3,
+    0x355EC: 0x910033E4,
+    0x355F0: 0x940034F8,
+    0x355F4: 0x35000880,
     # Original embedded controller: acquire three indexed mappers.
     0x12B8: 0xF9408400,
     0x12BC: 0x52800001,
@@ -152,6 +221,20 @@ def verify_instructions(code: bytes) -> None:
             raise ValueError('Original Apple request pool branch differs')
 
 
+def verify_kernel_dma_words(code: bytes) -> None:
+    if len(code) != EXPECTED_KERNEL_TEXT_SIZE:
+        raise ValueError('Original kernel executable extent differs')
+    for at, expected in KERNEL_DMA_SOURCE_WORDS.items():
+        if struct.unpack_from('<I', code, at)[0] != expected:
+            raise ValueError('Original kernel command/mapper flow differs')
+
+
+def verify_true_original_kernel_text(code: bytes) -> None:
+    verify_kernel_dma_words(code)
+    if hashlib.sha256(code).hexdigest() != EXPECTED_KERNEL_TEXT_SHA256:
+        raise ValueError('Original kernel executable fingerprint differs')
+
+
 def effective_request_bit0(controller_bit: int, lookup_predicate: int,
                            auxiliary_nonzero: int) -> int:
     """CPU-only model of bit0 of w25 after the original w24 mask.
@@ -165,11 +248,11 @@ def effective_request_bit0(controller_bit: int, lookup_predicate: int,
 
 
 def verify_mapper_symbol(blob: bytes, target: int, symoff: int, count: int,
-                         stroff: int, strsize: int) -> None:
+                         stroff: int, strsize: int, *,
+                         expected: bytes = b'__ZN8IOMapper28copyMapperForDeviceWithIndexEP9IOServicej') -> None:
     if not (0 < count <= 100000 and 0 <= symoff <= len(blob)-16*count
             and 0 < strsize <= len(blob) and 0 <= stroff <= len(blob)-strsize):
         raise ValueError('Invalid kernel symbol table extent')
-    expected = b'__ZN8IOMapper28copyMapperForDeviceWithIndexEP9IOServicej'
     names = []
     for i in range(count):
         idx, typ, sec, desc, value = struct.unpack_from('<IBBHQ', blob, symoff+16*i)
@@ -214,6 +297,7 @@ def verify_mapper_import(blob: bytes, code: bytes) -> None:
         if ctor.read_data_pointer(blob, main, vp+slot) != base+method:
             raise ValueError('Embedded mapper virtual method differs')
     kernel = main['__TEXT_EXEC']
+    verify_true_original_kernel_text(blob[kernel['offset']:kernel['offset']+kernel['filesize']])
     if target != kernel['vm']+0x5E8E90 or target+320 > kernel['vm']+kernel['filesize']:
         raise ValueError('Mapper target differs from original kernel')
     off = kernel['offset']+target-kernel['vm']
@@ -254,6 +338,29 @@ def verify_mapper_import(blob: bytes, code: bytes) -> None:
     if len(tables) != 1 or pos != end:
         raise ValueError('Kernel symbol table not unique')
     verify_mapper_symbol(blob, target, *tables[0])
+    # The request itself is the original kernel IODMACommand receiver.
+    for call, method in ((0x34E10, 'constructor'), (0x34E54, 'constructor'),
+                         (0x355F0, 'generator')):
+        relative, symbol = DMA_KERNEL_SYMBOLS[method]
+        actual = ctor.ctor_stub_callee(blob, main, nested, base+call,
+                                       struct.unpack_from('<I', code, call)[0])
+        if actual != kernel['vm'] + relative:
+            raise ValueError('Request DMA import target differs')
+        verify_mapper_symbol(blob, actual, *tables[0], expected=symbol)
+    request_vp = ctor.adrp_add_str_vptr(base+0x34E14,
+                                      *struct.unpack_from('<3I', code, 0x34E14))
+    other_vp = ctor.adrp_add_str_vptr(base+0x34E58,
+                                    *struct.unpack_from('<3I', code, 0x34E58))
+    if request_vp != other_vp or not (
+        cconst['vm'] <= request_vp <= cconst['vm']+cconst['size']-168
+    ):
+        raise ValueError('Request DMA vtable outside own const section')
+    for slot, method in ((136, 'descriptor'), (160, 'prepare')):
+        relative, symbol = DMA_KERNEL_SYMBOLS[method]
+        actual = ctor.read_data_pointer(blob, main, request_vp+slot)
+        if actual != kernel['vm']+relative:
+            raise ValueError('Inherited request DMA virtual method differs')
+        verify_mapper_symbol(blob, actual, *tables[0], expected=symbol)
 
 
 def verify_original(kernelcache: bytes) -> None:
@@ -284,6 +391,11 @@ def main() -> int:
     print('EMBEDDED_INDEXED_MAPPERS=0_1_2')
     print('EMBEDDED_INPUT_BIT3_SELECTS_MAPPER_INDEX_2_OTHERWISE_0')
     print('EMBEDDED_INPUT_BIT3_EQUALS_INTERNAL_PRP_BIT3=UNVERIFIED')
+    print('REQUEST_PARENT=ORIGINAL_KERNEL_IODMACommand')
+    print('GEN_IOVM_RECEIVER=SAME_REQUEST_OBJECT')
+    print('SELECTED_MAPPER_FIELD_64_CONSUMED_BY_ORIGINAL_DMA_CODE=SOURCE_VERIFIED')
+    print('INHERITED_DMA_PREPARE_AND_DESCRIPTOR_METHODS=SOURCE_VERIFIED')
+    print('PHYSICAL_PRP_ADDRESS_AND_MAPPER_BINDING=UNVERIFIED')
     print('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED')
     print('ACTIVE_N71_CONTROLLER_BINDING=UNVERIFIED')
     print('COMMAND_BIT13_AFTER_FILTER=CONDITIONAL')
