@@ -51,6 +51,44 @@ DMA_KERNEL_SYMBOLS = {
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # Shared Read/Write handler: selectors start at 0 or 4; set bit3
+    # only when owner byte +496 == 1 and owner pointer +464 is null.
+    # Then acquire the request and invoke inherited descriptor/prepare.
+    0x12DB4: 0xAA0003F3,
+    0x13014: 0x52800098,
+    0x13040: 0x52800018,
+    0x130F8: 0x3947C268,
+    0x130FC: 0x7100051F,
+    0x13100: 0x540000A1,
+    0x13104: 0xF940EA68,
+    0x13108: 0x321D0309,
+    0x1310C: 0xF100011F,
+    0x13110: 0x1A980138,
+    0x13114: 0xF9404A60,
+    0x13118: 0xF9400008,
+    0x1311C: 0xF942C108,
+    0x13120: 0xAA1803E1,
+    0x13124: 0xAA1403E2,
+    0x13128: 0xD63F0100,
+    0x1312C: 0xB40021A0,
+    0x13130: 0xAA0003F8,
+    0x13134: 0x39073014,
+    0x13254: 0xF9400308,
+    0x13258: 0xF9404508,
+    0x1325C: 0xAA1803E0,
+    0x13260: 0xAA1503E1,
+    0x13264: 0x52800002,
+    0x13268: 0xD63F0100,
+    0x1326C: 0x35000040,
+    0x13270: 0xF9006315,
+    0x1327C: 0xF9400308,
+    0x13280: 0xF9405108,
+    0x13284: 0xAA1803E0,
+    0x13288: 0xD2800001,
+    0x1328C: 0x52800023,
+    0x13290: 0x52800024,
+    0x13294: 0xD63F0100,
+    0x13298: 0x35001840,
     # Both original request constructors invoke the IODMACommand parent,
     # then install the same owned request vtable.
     0x34E00: 0xAA0003F3,
@@ -390,6 +428,8 @@ def main() -> int:
     print('MAPPER_INDEXED_DATA_CELL_WIDTH=4')
     print('EMBEDDED_INDEXED_MAPPERS=0_1_2')
     print('EMBEDDED_INPUT_BIT3_SELECTS_MAPPER_INDEX_2_OTHERWISE_0')
+    print('READ_WRITE_SELECTOR_BIT3_SOURCE=OWNER_BYTE496_EQ_1_AND_OWNER_FIELD464_NULL')
+    print('READ_WRITE_OWNER_FIELDS_RUNTIME_VALUES=UNVERIFIED')
     print('EMBEDDED_INPUT_BIT3_EQUALS_INTERNAL_PRP_BIT3=UNVERIFIED')
     print('REQUEST_PARENT=ORIGINAL_KERNEL_IODMACommand')
     print('GEN_IOVM_RECEIVER=SAME_REQUEST_OBJECT')
