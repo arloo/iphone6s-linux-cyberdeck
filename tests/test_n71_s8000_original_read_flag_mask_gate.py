@@ -92,6 +92,37 @@ class OriginalRequestFlagMaskTest(unittest.TestCase):
                         MASK.verify_mapper_symbol(blob, bad_target, 0, 1, 16,
                                                   len(names), expected=bad_name)
 
+    def test_class_reference_registers_shift_and_extent(self):
+        for reg in (0, 1, 2, 8):
+            code = struct.pack('<2I', 0x90000000 | reg,
+                               0x9100A000 | (reg << 5) | reg)
+            self.assertEqual(MASK.original_adrp_add(code, 0x2000, 0, reg), 0x2028)
+            changed = bytearray(code)
+            changed[4] ^= 1
+            with self.assertRaises(ValueError):
+                MASK.original_adrp_add(changed, 0x2000, 0, reg)
+            with self.assertRaises(ValueError):
+                MASK.original_adrp_add(code[:7], 0x2000, 0, reg)
+            with self.assertRaises(ValueError):
+                MASK.original_adrp_add(code, 0x2000, -4, reg)
+        shifted = struct.pack('<2I', 0x90000000, 0x9140A000)
+        with self.assertRaises(ValueError):
+            MASK.original_adrp_add(shifted, 0x2000, 0, 0)
+
+    def test_cast_name_must_belong_to_own_file_backed_strings(self):
+        expected = b'AppleANS2NVMeController'
+        data = expected + b'\0'
+        main = {'__PRELINK_TEXT': {'vm': 0x1000, 'offset': 0, 'filesize': len(data)}}
+        nested = {'__TEXT': {'sections': {'__cstring': {'vm': 0x1000, 'size': len(data)}}}}
+        MASK.verify_class_literal(data, main, nested, 0x1000, expected)
+        for blob, address in ((data.replace(b'ANS2', b'ANSX'), 0x1000),
+                              (data[:-1], 0x1000), (data, 0x0FFF), (data, 0x1001)):
+            with self.assertRaises(ValueError):
+                MASK.verify_class_literal(blob, main, nested, address, expected)
+        for bad in (b'', expected + b'\0', b'x' * 121):
+            with self.assertRaises(ValueError):
+                MASK.verify_class_literal(data, main, nested, 0x1000, bad)
+
     def test_no_runtime_hardware_claims_or_nand_execution(self):
         source = (ROOT/'tools/n71_s8000_original_read_flag_mask_gate.py').read_text()
         self.assertIn('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED',source)

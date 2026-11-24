@@ -51,6 +51,30 @@ DMA_KERNEL_SYMBOLS = {
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # Bind the provider cast objects to original class names and parent.
+    0xB28: 0xF0008B40,
+    0xB2C: 0x91346000,
+    0xB30: 0xD65F03C0,
+    0xB3C: 0x90FF86A1,
+    0xB40: 0x911E6421,
+    0xB44: 0x90008B62,
+    0xB48: 0x91022042,
+    0xB4C: 0x52810103,
+    0xB50: 0x9401079A,
+    0xABB4: 0xB0008B00,
+    0xABB8: 0x91364000,
+    0xABBC: 0xD65F03C0,
+    0x11CB4: 0xD0008AC0,
+    0x11CB8: 0x91364000,
+    0x11CBC: 0xF0FF8621,
+    0x11CC0: 0x9112A821,
+    0x11CC4: 0xD0008AC2,
+    0x11CC8: 0x91346042,
+    0x11CCC: 0x52811F03,
+    0x11CD0: 0x9400C33A,
+    0x11CD4: 0xB0003448,
+    0x11CD8: 0x91262108,
+    0x11CDC: 0xF9000008,
     # Owner initialization: x2 -> byte +496 after successful virtual init;
     # provider x1 -> safeMetaCast result -> pointer +464.
     0x12B78: 0xAA0403F6,
@@ -335,6 +359,53 @@ def verify_mapper_symbol(blob: bytes, target: int, symoff: int, count: int,
         raise ValueError('Mapper symbol not found at resolved stub destination')
 
 
+def original_adrp_add(code: bytes, base: int, at: int, reg: int) -> int:
+    if not (0 <= reg <= 30 and at >= 0 and at % 4 == 0 and at+8 <= len(code)):
+        raise ValueError('Class reference instruction extent differs')
+    adrp, add = struct.unpack_from('<2I', code, at)
+    if add & 0xFFC003FF != 0x91000000 | (reg << 5) | reg:
+        raise ValueError('Class reference ADD registers or shift differ')
+    return READ.GATE.adrp_target(base+at, adrp, reg) + ((add >> 10) & 0xFFF)
+
+
+def verify_class_literal(blob: bytes, main: dict, nested: dict,
+                         address: int, expected: bytes) -> None:
+    if not expected or len(expected) > 120 or b'\0' in expected:
+        raise ValueError('Invalid expected class name')
+    data = expected + b'\0'
+    section = nested['__TEXT']['sections']['__cstring']
+    pre = main['__PRELINK_TEXT']
+    if not section['vm'] <= address <= section['vm']+section['size']-len(data):
+        raise ValueError('Class name outside own C-string section')
+    delta = address-pre['vm']
+    off = pre['offset']+delta
+    if not (0 <= delta <= pre['filesize']-len(data)
+            and 0 <= off <= len(blob)-len(data)):
+        raise ValueError('Class name outside file-backed prelink text')
+    if blob[off:off+len(data)] != data:
+        raise ValueError('Original provider cast class name differs')
+
+
+def verify_owner_cast_types(blob: bytes, main: dict, nested: dict,
+                            base: int, code: bytes) -> None:
+    ctor = READ.GATE
+    embedded = ctor.read_data_pointer(blob, main,
+                                     original_adrp_add(code, base, 0x12C38, 8))
+    ans2 = ctor.read_data_pointer(blob, main,
+                                 original_adrp_add(code, base, 0x12C54, 8))
+    if embedded == ans2:
+        raise ValueError('Distinct provider cast metaclasses alias')
+    references = ((0xB28, 0, embedded), (0xABB4, 0, ans2),
+                  (0x11CB4, 0, ans2), (0x11CC4, 2, embedded))
+    for at, reg, expected in references:
+        if original_adrp_add(code, base, at, reg) != expected:
+            raise ValueError('Provider cast metaclass/parent reference differs')
+    for at, name in ((0xB3C, b'AppleEmbeddedNVMeController'),
+                     (0x11CBC, b'AppleANS2NVMeController')):
+        verify_class_literal(blob, main, nested,
+                             original_adrp_add(code, base, at, 1), name)
+
+
 def verify_mapper_import(blob: bytes, code: bytes) -> None:
     ctor = READ.GATE
     main = ctor.KMAP.macho_segments(blob, 0)
@@ -412,6 +483,14 @@ def verify_mapper_import(blob: bytes, code: bytes) -> None:
             raise ValueError('Owner provider cast import target differs')
         verify_mapper_symbol(blob, actual, *tables[0],
                              expected=b'__ZN15OSMetaClassBase12safeMetaCastEPKS_PK11OSMetaClass')
+    verify_owner_cast_types(blob, main, nested, base, code)
+    for call in (0xB50, 0x11CD0):
+        actual = ctor.ctor_stub_callee(blob, main, nested, base+call,
+                                       struct.unpack_from('<I', code, call)[0])
+        if actual != kernel['vm']+0x557468:
+            raise ValueError('Provider metaclass constructor target differs')
+        verify_mapper_symbol(blob, actual, *tables[0],
+                             expected=b'__ZN11OSMetaClassC2EPKcPKS_j')
     # The request itself is the original kernel IODMACommand receiver.
     for call, method in ((0x34E10, 'constructor'), (0x34E54, 'constructor'),
                          (0x355F0, 'generator')):
@@ -467,7 +546,10 @@ def main() -> int:
     print('READ_WRITE_SELECTOR_BIT3_SOURCE=OWNER_BYTE496_EQ_1_AND_OWNER_FIELD464_NULL')
     print('OWNER_BYTE496_WRITER=INITIALIZER_X2_AFTER_VIRTUAL_INIT_SUCCESS')
     print('OWNER_FIELD464_WRITER=SAFE_METACAST_OF_PROVIDER_ARGUMENT')
-    print('OWNER_FIELD464_CAST_TYPE_AND_LIVE_RESULT=UNVERIFIED')
+    print('OWNER_FIELD456_CAST_CLASS=AppleEmbeddedNVMeController')
+    print('OWNER_FIELD464_CAST_CLASS=AppleANS2NVMeController')
+    print('ANS2_PARENT_METACLASS=AppleEmbeddedNVMeController')
+    print('OWNER_FIELD464_LIVE_CAST_RESULT=UNVERIFIED')
     print('READ_WRITE_OWNER_FIELDS_RUNTIME_VALUES=UNVERIFIED')
     print('EMBEDDED_INPUT_BIT3_EQUALS_INTERNAL_PRP_BIT3=UNVERIFIED')
     print('REQUEST_PARENT=ORIGINAL_KERNEL_IODMACommand')
