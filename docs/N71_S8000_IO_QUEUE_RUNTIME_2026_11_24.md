@@ -4,7 +4,7 @@
 
 This change connects the previously host-only DMA allocator and queue encoders to an explicitly armed kernel path. Its new physical question is whether the S8000 controller accepts **Admin Create I/O CQ followed by Admin Create I/O SQ**, QID 1, depth 16, polling only. Identify Namespace1 is required setup within this new experiment; the already accepted 64 GB geometry is not a new milestone.
 
-One physical module insertion reached the new owned mappings, then the initial live gate refused before either Create command. **Physical queue acceptance has not yet been established**. The source-proven phase-contract defect and its host-tested correction are documented below. Neither NVM Read nor NVM Write is reachable through this mode. No block device, filesystem, NAND persistence or DMA-drain claim follows from this implementation.
+One physical module insertion reached the new owned mappings, then the initial live gate refused before either Create command. That first candidate did not establish queue acceptance. The corrected candidate subsequently received valid Create CQ and Create SQ completions, followed by a shutdown fault; see the latest physical section below. Neither NVM Read nor NVM Write is reachable through this mode. No block device, filesystem, NAND persistence or DMA-drain claim follows from this implementation.
 
 ## Explicit selection and ownership
 
@@ -67,3 +67,15 @@ The corrected candidate passes all **1,917** host tests, the synthetic HBPP audi
 A new private RAM image packages the corrected storage module at `/usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko` without loading it automatically. Its SHA-256 is `1921795d5c31e84fc5a6e7f41c8d2a8395e8fb928d08b95d87ef300ad1e142fa` (27949306 bytes). The charger module is updated from the older binary to the already physically observed phase-diagnostic binary `b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7`; the finite 300 mA startup profile and guards are preserved. The complete runtime hash manifest, gzip/CPIO roundtrip, module ABI, and byte-identical remaining rootfs entries are verified. Bootloader, bootargs, DTBs and compressed kernel are byte-identical to the reference.
 
 The attended launcher validates image hash/size, preserves a still-running Linux session, and otherwise uses the existing owner-assisted DFU/Pongo workflow. The image remains private because it contains owner credentials and device assets. It has not yet been physically booted; no new hardware command was sent during packaging.
+
+## Corrected candidate: first physical CQ/SQ acceptance, shutdown fault
+
+The owner booted the verified private RAM image and a new directly attached N71/S8000 session was verified over authenticated, strictly pinned USB SSH. Both embedded module hashes and the complete runtime hash manifest matched the prepared payload. Exactly one corrected storage-module insertion was performed in this boot.
+
+The controller accepted Admin Create CQ (opcode 5/CID 2) and Create SQ (opcode 1/CID 3), QID 1/depth 16/byte1=0. Each completion had phase/status 0001, SQID 0 and the expected SQ head. The wire-level validator accepted both snapshots and the create-only summary returned rc 0. **This establishes physical volatile queue creation acceptance**, not namespace NVM block-data transfer.
+
+The subsequent normal-shutdown attempt failed: the first shutdown poll observed CSTS 0x7 (CFS set), shutdown rc=-2; controller disable timed out after 2,000 polls with CSTS still 0x7. Both PCI bus-master bits were readback-verified off, and the whole pilot retained all DMA mappings/pages and original ownership with rc=-3. No module unload, in-boot retry, NVM Read/Write or internal block device followed. The core branch proves CFS was clear in its pre-shutdown status sample; the exact onset and cause are not established. Do not reinterpret the two successful Create completions as a stable controller lifecycle.
+
+The tested kernel's native `drivers/nvme/host/pci.c` uses `nvme_delete_io_queues` before `nvme_disable_ctrl`; the helper completes Delete SQ before issuing Delete CQ. The current create-only pilot does not perform these volatile deletion commands. A separate, explicitly armed empty-queue deletion trial is therefore the next concrete hypothesis. This source comparison does not prove that the omitted deletion caused the S8000 CFS, nor qualify a data Read. Even accepted queue deletion must not release any DMA backing.
+
+Sanitized physical evidence: [first corrected queue acceptance](N71_S8000_IO_QUEUE_ACCEPTANCE_2026_11_24.json).

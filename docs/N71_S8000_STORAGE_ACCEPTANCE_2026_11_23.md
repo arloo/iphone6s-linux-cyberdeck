@@ -30,7 +30,8 @@ The physical storage milestone is already accepted: **the real ANS/S3E controlle
 - [x] **Admin Identify Namespace 1 completed on physical NAND hardware**: 15,625,000 × 4096-byte LBAs = 64,000,000,000 bytes nominal.
 - [x] Controlled controller shutdown, disable and endpoint BME-off observed; previous DMA resources **still quarantined**.
 - [ ] Independent proof that every outstanding DMA transaction has drained; none is currently available.
-- [ ] Real I/O CQ/SQ creation and physical NVMe NVM Read of LBA0; **not yet done**.
+- [x] Physical Admin Create I/O CQ and SQ for QID1/depth16 accepted with exact valid completions on 24 November; the subsequent shutdown raised CFS.
+- [ ] Physical NVMe NVM Read of LBA0 and stable queue/controller teardown; **not yet done**.
 - [ ] Read-only Linux block device or persistent NAND-backed Linux; **not yet done**.
 
 ## 2026-11-23 live low-reserve physical read-only preflight
@@ -180,6 +181,12 @@ Source inspection proves a phase-contract integration defect: the new live path 
 ## 2026-11-24 corrected module embedded in attended RAM payload
 
 The corrected live-phase module is now included, inert, in a new owner-private RAM image with a fully verified runtime hash manifest. The already observed phase-diagnostic SN2400 binary replaces the older bundled charger binary; its finite startup policy is unchanged. All other rootfs entries, bootloader, bootargs, DTBs and compressed kernel remain byte-identical. Image SHA-256: `1921795d5c31e84fc5a6e7f41c8d2a8395e8fb928d08b95d87ef300ad1e142fa`. The owner-attended launcher is prepared; no boot, S3E insertion or NAND command was run during packaging. See [RAM payload preparation](N71_S8000_IO_QUEUE_RUNTIME_2026_11_24.md#owner-attended-ram-payload-prepared).
+
+## 2026-11-24 first corrected physical I/O CQ/SQ acceptance
+
+The corrected module received valid Admin Create CQ and Create SQ completions (status 0001, CID 2/3, SQID 0, expected heads), with command byte1=0, QID 1 and depth 16. This is a new physical acceptance milestone. Identify ran only as setup. No NVM block-data Read/Write was submitted.
+
+Normal shutdown then observed CSTS 0x7/CFS and disable timed out. Both masters were disabled; all DMA backing and driver/power ownership remain pinned. Queue acceptance does not establish stable teardown, data-DMA transport, DMA drain or NAND-backed Linux. The next test hypothesis is bounded deletion of the unused SQ, then CQ, before shutdown, matching the inspected native Linux PCI NVMe order while retaining every backing allocation. Detailed results: [queue runtime report](N71_S8000_IO_QUEUE_RUNTIME_2026_11_24.md#corrected-candidate-first-physical-cqsq-acceptance-shutdown-fault) and [sanitized acceptance evidence](N71_S8000_IO_QUEUE_ACCEPTANCE_2026_11_24.json).
 
 ## Mandatory next steps (fail-closed)
 

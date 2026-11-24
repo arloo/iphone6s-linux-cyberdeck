@@ -66,14 +66,14 @@
     "phase_correct_live_owner_gate": true,
     "diagnostic_rejection_bits": true,
     "disabled_preparation_gate_unchanged": true,
-    "hardware_loaded": false,
+    "hardware_loaded": true,
     "requires_fresh_boot": true,
     "validation": {
       "ARM64_build": "PASS",
       "host_tests_passed": 1917,
       "HBPP_audit": "PASS",
       "manifest_and_evidence": "PASS",
-      "hardware_queue_acceptance": "NOT_TESTED"
+      "hardware_queue_acceptance": "VALID_CQ_AND_SQ_COMPLETIONS; SHUTDOWN_CFS"
     },
     "RAM_payload": {
       "sha256": "1921795d5c31e84fc5a6e7f41c8d2a8395e8fb928d08b95d87ef300ad1e142fa",
@@ -83,8 +83,9 @@
       "all_other_rootfs_entries_identical": true,
       "bootloader_DTBS_kernel_identical": true,
       "runtime_hash_manifest_verified": true,
-      "physically_booted": false
+      "physically_booted": true
     }
   },
-  "privacy": "No raw NAND payload, firmware, physical DMA addresses, device or backup identifiers published."
+  "privacy": "No raw NAND payload, firmware, physical DMA addresses, device or backup identifiers published.",
+  "live_phase_retest_evidence": "N71_S8000_IO_QUEUE_ACCEPTANCE_2026_11_24.json"
 }
