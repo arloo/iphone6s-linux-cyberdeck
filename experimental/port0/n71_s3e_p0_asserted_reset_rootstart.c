@@ -25,7 +25,9 @@
  * remains retained. A further explicit delete opt-in removes the empty
  * SQ then CQ contexts before shutdown, retaining every DMA allocation.
  * Explicit ans_lba0_read_once adds one guarded 4-KiB Read after CQ/SQ
- * creation and before deletion. No NAND write or block-device interface.
+ * creation and before deletion. The mutually exclusive read-series mode
+ * submits four retained single-sector Reads for LBA0/LBA1 repeatability.
+ * No NAND write or block-device interface is available.
  */
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -109,6 +111,13 @@ static bool ans_hmb_owned;
 static bool ans_identify_once;
 static bool ans_io_queue_once;
 static bool ans_lba0_read_once;
+static bool ans_read_series_once;
+static unsigned int ans_read_series_flags = ~0U;
+module_param(ans_read_series_once, bool, 0400);
+MODULE_PARM_DESC(ans_read_series_once, "explicit four-Read repeatability trial: LBA0,LBA1,LBA0,LBA1; distinct retained tags/buffers and private comparison; no writes");
+module_param(ans_read_series_flags, uint, 0400);
+MODULE_PARM_DESC(ans_read_series_flags, "series must explicitly select tested FlatDMA flags32; default unselected and no alternative retry");
+
 static unsigned int ans_lba0_read_flags = ~0U;
 module_param(ans_lba0_read_once, bool, 0400);
 MODULE_PARM_DESC(ans_lba0_read_once, "explicit single 4096-byte NVM Read of NS1 LBA0 after accepted CQ/SQ setup; all backing retained and payload never exported");
@@ -1021,6 +1030,9 @@ static int __init n71_port0_init(void)
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
         return -EPERM;
     if (ans_io_queue_delete_once && !ans_io_queue_once) return -EPERM;
+    if (!n71_read_series_mode_valid(ans_read_series_once,ans_read_series_flags,
+            ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,
+            ans_io_queue_flags,ans_lba0_read_once)) return -EPERM;
     if (!n71_lba0_mode_valid(ans_lba0_read_once,ans_lba0_read_flags,
             ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,
             ans_io_queue_flags)) return -EPERM;

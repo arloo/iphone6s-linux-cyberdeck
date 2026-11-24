@@ -16,7 +16,7 @@ static struct {
 static int n71_lba0_invalidate_owned(void *ctx)
 {
     struct n71_storage_dart_context *m=ctx;
-    if (!m || !ans_lba0_read_once || !ans_io_queue_once ||
+    if (!m || !(ans_lba0_read_once || ans_read_series_once) || !ans_io_queue_once ||
         !n71_io_queue_memory.prepared || !n71_io_queue_memory.mapped ||
         !n71_admin_memory.prepared || !n71_admin_memory.dart_mapped ||
         !n71_ro_io_dma_memory.ready || n71_ro_io_dma_memory.quarantined ||

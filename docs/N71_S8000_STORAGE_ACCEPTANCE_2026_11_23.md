@@ -16,6 +16,12 @@ One physical trial completed Create CQ, Create SQ, Delete SQ, Delete CQ, normal 
 
 At this earlier empty-queue checkpoint, the first namespace data Read remained pending; the subsequent first-Read acceptance is recorded above. NVM writes, block registration and persistence remain unqualified. Reuse accepted Identify/64 GB and queue lifecycle evidence. Detailed [physical teardown report](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md#physical-acceptance-one-complete-empty-queue-lifecycle) and [sanitized acceptance](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json).
 
+## 2026-11-24 fixed repeatability candidate prepared, not physically tested
+
+The first LBA0 Read remains accepted and is not repeated as discovery. A separate default-off mode now prepares exactly four single-sector commands for 0,1,0,1 with distinct FlatDMA tags 1..4, eight retained DMA frames and four unmapped CPU-only snapshots. Private pair comparison and repeated checks of earlier buffers target bounded repeatability and observed late changes. No tag/data/SGL/queue slot is reused, and a short retained-RAM observer cannot authorize DMA retirement.
+
+The ARM64 build and all 1,928 host tests, HBPP audit and evidence validator pass. An inert, hash-verified RAM image is prepared; **no four-Read physical trial has been attempted**. The accepted first-Read image and current held epoch remain unchanged. [Trial scope and acceptance](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md); [candidate metadata](N71_S8000_READ_SERIES_CANDIDATE_2026_11_24.json).
+
 ## 2026-11-24 LBA0 preparation checkpoint before the successful physical trial
 
 Following the owner's approval to proceed from the completed queue lifecycle, the real Read call path is now connected behind separate default-off parameters. It can issue only one canonical NVM Read of namespace1/LBA0/NLB0, 4096 bytes, on I/O QID1. The explicit Read transport is flags32/tag1, derived from the working Identify FlatDMA convention and the original source-verified tag stride. Queue flags stay0. This is a declared Linux protocol experiment, not an inference that the original live iOS factory uses the same policy.

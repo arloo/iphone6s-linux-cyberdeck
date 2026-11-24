@@ -558,6 +558,7 @@ static int n71_storage_admin_identify_once(void *ctx)
     rc=n71_admin_prepare(ctx);
     if (!rc) {
         rc=n71_admin_once_core(&o,ctx,&r);
+        if (ans_read_series_once) n71_read_series_observe_retained_ro(ctx);
         n71_admin_late_dma_probe_ro(&r);
         /* Read existing software lifecycle fields; no extra MMIO reads. */
         {

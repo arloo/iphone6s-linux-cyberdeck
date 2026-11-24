@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-24",
+  "scope": "Bounded four single-sector Reads to test two-LBA repeatability and observed buffer stability",
+  "module_sha256": "cb3b398f4ebd1f3a9227ccf411358be67a6a63fb29582f98a5a68498386189c1",
+  "module_bytes": 882584,
+  "kernel_vermagic": "7.3.0-rc1-n71-batt2-g68aadac820d0-dirty SMP preempt mod_unload aarch64",
+  "RAM_image_sha256": "1efec7542fabc129b2aaa8c8d52be68dd332eb18c2846aac8a6c10763085c18b",
+  "RAM_image_bytes": 27982809,
+  "runtime_module_path": "/usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko",
+  "planned_parameters": {
+    "ans_io_queue_once": 1,
+    "ans_io_queue_flags": 0,
+    "ans_io_queue_delete_once": 1,
+    "ans_lba0_read_once": 0,
+    "ans_read_series_once": 1,
+    "ans_read_series_flags": 32
+  },
+  "fixed_Reads": [
+    {
+      "index": 0,
+      "NSID": 1,
+      "LBA": 0,
+      "NLB_field": 0,
+      "bytes": 4096,
+      "FlatDMA_tag": 1,
+      "IO_CID": 1,
+      "expected_SQ_head": 1,
+      "SQ_slot": 0,
+      "CQ_slot": 0
+    },
+    {
+      "index": 1,
+      "NSID": 1,
+      "LBA": 1,
+      "NLB_field": 0,
+      "bytes": 4096,
+      "FlatDMA_tag": 2,
+      "IO_CID": 2,
+      "expected_SQ_head": 2,
+      "SQ_slot": 1,
+      "CQ_slot": 1
+    },
+    {
+      "index": 2,
+      "NSID": 1,
+      "LBA": 0,
+      "NLB_field": 0,
+      "bytes": 4096,
+      "FlatDMA_tag": 3,
+      "IO_CID": 3,
+      "expected_SQ_head": 3,
+      "SQ_slot": 2,
+      "CQ_slot": 2
+    },
+    {
+      "index": 3,
+      "NSID": 1,
+      "LBA": 1,
+      "NLB_field": 0,
+      "bytes": 4096,
+      "FlatDMA_tag": 4,
+      "IO_CID": 4,
+      "expected_SQ_head": 4,
+      "SQ_slot": 3,
+      "CQ_slot": 3
+    }
+  ],
+  "NVM_opcode": 2,
+  "IO_queue_id": 1,
+  "Read_count_limit": 4,
+  "DMA_data_SGL_frames": 8,
+  "unmapped_CPU_snapshots": 4,
+  "private_equalities": [
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      3
+    ]
+  ],
+  "data_guard_bytes_per_frame": 12288,
+  "sector_word_witnesses_per_Read": 512,
+  "retained_RAM_observer": {
+    "sample_count": 5,
+    "interval_us": 50000,
+    "hardware_commands": false,
+    "unchanged_is_DMA_drain_proof": false
+  },
+  "all_staging_before_BME": true,
+  "tag0_and_unused_slots_preserved": true,
+  "ring_wrap": false,
+  "buffer_or_descriptor_reuse": false,
+  "all_backing_retained": true,
+  "NVM_write_available": false,
+  "payload_or_hash_exported": false,
+  "block_interface_registered": false,
+  "host_validation": {
+    "ARM64_build": "PASS",
+    "tests_passed": 1928,
+    "HBPP_audit": "PASS",
+    "manifest_and_evidence": "PASS"
+  },
+  "RAM_packaging": {
+    "all_other_entries_identical": true,
+    "boot_kernel_prefix_identical": true,
+    "complete_runtime_hashes_verified": true,
+    "gzip_CPIO_roundtrip_verified": true,
+    "storage_autoload": false
+  },
+  "physically_booted": false,
+  "module_inserted": false,
+  "series_attempted": false,
+  "series_accepted": false,
+  "fresh_attended_boot_required": true
+}
