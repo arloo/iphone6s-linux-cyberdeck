@@ -6,7 +6,7 @@
  * I/O SQ, CQ, one 4-KiB data sector, and an isolated FlatDMA SGL,
  * each in a separate 16-KiB Linux page.
  *
- * This module-local allocator is intentionally WITHOUT A CALL SITE.
+ * This module-local allocator is invoked only by the explicit queue trial.
  * It cannot establish NVMMU FlatDMA semantics, DART ownership, I/O queue
  * protocol acceptance, DMA drain, or authorization to read the NAND.
  *
@@ -133,7 +133,7 @@ static int n71_ro_io_dma_claim_valid(unsigned long long pa,
     return 0;
 }
 
-/* Deliberately not invoked from n71_admin_prepare or module init.
+/* Invoked indirectly only by explicit queue preparation before BME.
  * Precondition: the already-working eight admin pages are owned,
  * controller disabled, PCIe master off, and no historical DMA epoch.
  */

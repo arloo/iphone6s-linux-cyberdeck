@@ -4,7 +4,7 @@
 Unlike the existing host-native L2 staging test, the allocation functions
 call Linux __get_free_page, dma_map_single, dma_unmap_single and free_page.
 The proof that these compile is the isolated ARM64 kernel-module build;
-these offline tests enforce fail-closed structure, no live call site and
+these offline tests enforce fail-closed structure, explicit opt-in and
 physical-ownership/epoch boundaries without loading the phone module.
 """
 from pathlib import Path
@@ -50,7 +50,7 @@ class PhysicalIOMemoryOwnershipTests(unittest.TestCase):
         self.assertLess(alloc.index("n71_ro_io_dma_claim_valid(pa, foreign, foreign_count, i)"),
                         alloc.index("dma_map_single(dev,"))
 
-    def test_pre_bme_required_and_must_not_run_from_existing_identify(self):
+    def test_pre_bme_required_and_allocator_is_only_in_explicit_runtime(self):
         self.assertIn("READ_ONCE(n71_admin_dma_epoch_latched)", SOURCE)
         self.assertIn("n71_unreleased", SOURCE)
         self.assertIn("dev_is_dma_coherent(dev)", SOURCE)
@@ -85,7 +85,7 @@ class PhysicalIOMemoryOwnershipTests(unittest.TestCase):
     def test_nvmmu_flatdma_read_tag_is_candidate_not_live_map(self):
         self.assertIn("N71_RO_READ_FLATDMA_TAG_CANDIDATE", SOURCE)
         self.assertIn("NOT an active DART", SOURCE)
-        self.assertIn("WITHOUT A CALL SITE", SOURCE)
+        self.assertIn("only by the explicit queue trial", SOURCE)
         self.assertNotIn("n71_s3e_ro_stage_io_queue_l2(", SOURCE)
         self.assertNotIn("n71_s3e_ro_encode_one_sector(", SOURCE)
         self.assertNotIn("dma_sync_single_for_device(", SOURCE)

@@ -195,7 +195,7 @@ class N71S3EReadOnlyIOPlanTests(unittest.TestCase):
                        "N71_RO_IO_FLAG_UNQUALIFIED 0U"):
             self.assertIn(phrase, HEADER)
 
-    def test_header_is_inert_and_pilot_has_no_io_submission(self):
+    def test_header_is_pure_and_nvm_read_remains_unwired(self):
         for forbidden in ("writel(", "writew(", "dma_map_single(",
                           "dma_unmap_single(", "msleep(", "request_mem_region(",
                           "printk(", "pr_info(", "blk_mq_start_request("):

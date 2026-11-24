@@ -25,6 +25,8 @@ static struct {
     bool data_arrived,namespace_validated,intms_saved;
     unsigned int old_intms,stage;
     unsigned int cq_polls,data_polls;
+    u64 nsze;
+    unsigned int lba_bytes;
 } n71_admin_memory;
 static void n71_storage_admin_free(void)
 {
@@ -125,7 +127,7 @@ static void n71_admin_write(unsigned int off,unsigned int value)
     writel(value,(u8 __iomem *)n71_nvme_mmio+off);
     readl((u8 __iomem *)n71_nvme_mmio+off);
 }
-/* Pre-epoch DMA allocations for future I/O SQ/CQ/data/SGL; no call site. */
+/* Pre-epoch I/O backing: only the explicit queue trial calls the allocator. */
 #include "n71_s3e_ro_io_dma_alloc.h"
 /* Original S8000 8 MiB tag stride: isolated TCB1/SGL CPU staging only. */
 #include "n71_s3e_ro_flatdma_tag1_stage.h"
@@ -184,6 +186,7 @@ static void n71_admin_cc(void *ctx,unsigned int value)
 }
 static unsigned int n71_admin_csts(void *ctx) {return n71_admin_reg(0x1c);}
 static void n71_admin_delay(void *ctx,unsigned int ms) {usleep_range(ms*1000UL,ms*1000UL+100);}
+#include "n71_s3e_io_queue_runtime.h"
 static int n71_admin_identify_ns1(void *ctx)
 {
     struct device *d=n71_nvmmu_memory.dev;
@@ -198,7 +201,8 @@ static int n71_admin_identify_ns1(void *ctx)
         n71_admin_reg(0x14)!=0x460001U || n71_admin_reg(0x1c)!=1 ||
         !(n71_admin_reg(0x0c)&1))
         return -EPERM;
-    /* The one and only submitted opcode is Identify, namespace 1, CNS 0. */
+    /* Initial command is Identify NS1/CNS0. Only the explicit queue trial
+     * may subsequently submit Create CQ/SQ; no NVM command is issued. */
     dma_wmb();
     n71_admin_write(0x1000,1);
     n71_admin_memory.submitted=true;
@@ -258,8 +262,11 @@ static int n71_admin_identify_ns1(void *ctx)
     if (!nsze || ncap>nsze || nuse>nsze || format>ns->nlbaf ||
         lbads<9 || lbads>16 || nsze>(U64_MAX>>lbads)) return -EPROTO;
     n71_admin_memory.namespace_validated=true;
+    n71_admin_memory.nsze=nsze;
+    n71_admin_memory.lba_bytes=1U<<lbads;
     pr_info("n71-s3e-p0: IDENTIFY_NAMESPACE_REAL nsid=1 nsze=%llu ncap=%llu nuse=%llu lba_bytes=%u capacity_bytes=%llu data_tail_arrived=1 data_wait_polls=%u personal_identifiers_redacted=YES no_block_IO=YES\n",
         nsze,ncap,nuse,1U<<lbads,nsze<<lbads,n71_admin_memory.data_polls);
+    if (ans_io_queue_once) return n71_io_queue_create_once(ctx);
     return 0;
 }
 static int n71_admin_prepare(void *ctx)
@@ -273,7 +280,7 @@ static int n71_admin_prepare(void *ctx)
     BUILD_BUG_ON(sizeof(command)!=64);
     BUILD_BUG_ON(sizeof(struct nvme_completion)!=16);
     /* Compile-time ABI guards for the future read-only I/O path.
-     * No controller command or queue mapping is activated here. */
+     * These guards perform no command submission or queue-map mutation. */
     BUILD_BUG_ON(offsetof(struct nvme_rw_command, dptr)!=24);
     BUILD_BUG_ON(offsetof(struct nvme_rw_command, slba)!=40);
     BUILD_BUG_ON(offsetof(struct nvme_rw_command, length)!=48);
@@ -340,6 +347,10 @@ static int n71_admin_prepare(void *ctx)
         n71_admin_reg(0x2c) || n71_admin_reg(0x30)!=N71_ADMIN_CQ_IOVA ||
         n71_admin_reg(0x34)) return -EIO;
     n71_admin_memory.prepared=true;n71_admin_memory.stage=5;
+    if (ans_io_queue_once) {
+        rc=n71_io_queue_prepare(ctx);
+        if (rc) return rc;
+    }
     pr_info("n71-s3e-p0: ADMIN_PREPARED queue_depth=16 controller_page_bytes=4096 host_page_bytes=%lu opcode=6 nsid=1 cns=0 FlatDMA_tag=0 only_owned_memory=YES\n",PAGE_SIZE);
     return 0;
 }
@@ -695,6 +706,12 @@ static int n71_storage_admin_identify_once(void *ctx)
         rc,n71_admin_memory.stage,
         readl((u8 __iomem *)((struct n71_storage_dart_context *)ctx)->dart+0x10),
         readl((u8 __iomem *)((struct n71_storage_dart_context *)ctx)->local+0x22c));
+    if (ans_io_queue_once && n71_ro_io_dma_memory.ready) {
+        n71_ro_io_dma_memory.quarantined=true;
+        n71_unreleased=true;
+        pr_info("n71-s3e-p0: IO_QUEUE_BACKING_QUARANTINED io_pages=4 all_admin_hmb_dart_nvmmu_retained=YES release_authorized=NO\n");
+        return -3;
+    }
     if (rc==-3) return -3;
     if (n71_admin_unprepare(ctx)) return -3;
     return rc;

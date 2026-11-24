@@ -20,7 +20,9 @@
  * The separate ans_hmb_owned mode permits bounded SART/HMB writes.
  * Explicit ans_identify_once adds owned queues and a single Identify NS1,
  * with BME/CC.EN enabled only after all DMA owners and guards qualify.
- * No block I/O or NAND host-write opcode is available.
+ * Explicit ans_io_queue_once may then create volatile I/O CQ/SQ on ADMIN
+ * QID0 with a separately selected command-flag hypothesis. All backing
+ * remains retained. No block I/O or NAND host-write opcode is available.
  */
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -102,6 +104,12 @@ static bool nvmmu_owned_tables;
 static bool ans_hmb_ro;
 static bool ans_hmb_owned;
 static bool ans_identify_once;
+static bool ans_io_queue_once;
+static unsigned int ans_io_queue_flags = ~0U;
+module_param(ans_io_queue_once, bool, 0400);
+MODULE_PARM_DESC(ans_io_queue_once, "explicit one-shot admin Create CQ/SQ after Identify setup; no NVM reads/writes; all backing retained until reboot");
+module_param(ans_io_queue_flags, uint, 0400);
+MODULE_PARM_DESC(ans_io_queue_flags, "experimental queue command byte1: explicitly select 0 or 32; default unselected and refused when queue trial armed");
 /* Conservative latch: set before an admin BME write; never clear on error,
  * shutdown or disable. The read-only opt-in remains a second denial signal. */
 static bool n71_admin_dma_epoch_latched;
@@ -998,6 +1006,9 @@ static int __init n71_port0_init(void)
             ans_queue_retire_probe || ans_phase_trace_ro))
         return -EPERM;
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
+        return -EPERM;
+    if (!n71_io_queue_mode_valid(ans_io_queue_once, ans_identify_once,
+            ans_io_queue_flags, ans_queue_retire_probe, ans_late_dma_probe_ro))
         return -EPERM;
     if (!n71_board_gate())
         return -EPERM;

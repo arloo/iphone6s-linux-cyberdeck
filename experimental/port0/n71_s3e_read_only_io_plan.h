@@ -112,7 +112,9 @@ static inline int n71_s3e_ro_validate_layout(
 
 /* Queue commands are purely speculative until the original S8000 vendor
  * flags, queue ownership and ABI are independently verified. They MUST
- * remain unsubmitted in the current pilot driver. 16 entries, QID 1,
+ * remain unsubmitted by the default Identify path. The separate explicit
+ * queue-only trial may select a flags hypothesis for these ADMIN commands.
+ * 16 entries, QID 1,
  * contiguous buffer, completion interrupts disabled (polling only). */
 static inline int n71_s3e_ro_encode_create_cq(
     unsigned char *out, const struct n71_s3e_ro_io_layout *layout)
