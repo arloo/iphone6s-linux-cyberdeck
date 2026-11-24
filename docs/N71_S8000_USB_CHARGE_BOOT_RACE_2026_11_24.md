@@ -44,3 +44,41 @@ The owner-attended new RAM boot was verified over direct USB SSH. The running st
 **Correction to interpretation:** the running module remained the older binary SHA-256 06b497deb2baf3724fe3d03f72870df2910d40b27afd71e176df52f2358aafea, lacking the diagnostic phase field. Its logged zero is ambiguous: a preceding battery guard failure can leave the VBUS variable zero without any ADC conversion. The successful delayed startup disproves early arming as a sufficient explanation, but does not establish an ADC malfunction. Prior physical evidence in N71_S8000_CHARGING_GUARD_FOLLOWUP_2026_11_18.md demonstrated precisely this log signature for an upper-voltage battery guard (4.201 V), with phase=battery.
 
 The existing phase-aware batt2 diagnostic build and its later 120 mA-support revision were identified offline by matching kernel vermagic and log-format strings. Neither was loaded or rearmed in this session. Two additional host-only C harness cases verify that upper battery voltage causes rollback without any ADC read, whereas a real zero conversion also causes rollback but performs the ADC read. All 26 simulated cases pass. No threshold, lease, hardware register or storage state was changed. A future physical diagnostic requires the phase-aware module and independently observed electrical conditions; a repeated fault must remain fail-closed.
+
+
+## Physical follow-up: phase-aware module boot and small positive charge balance
+
+A further owner-attended N71/S8000 RAM boot physically loaded the staged
+phase-aware charger module. The on-phone module file SHA-256 is
+b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7;
+startup still matches
+538680df3dd663b022adea2a8291bbbccff5bee9c677bc6ab06d42678f35ade7.
+The candidate image SHA-256 is
+44ca99abd83ba5ddbcf81bda0fdf7c0c5b5d69991b31ea8f75d875d240f588fa.
+Only the SN2400 module and its runtime-hash manifest entry changed from the
+previous USB-stable candidate. Kernel, DTBs, bootloader, splash, startup,
+battery safeguards and finite lease were preserved.
+
+At uptime 59.599 s the module applied the existing 300 mA input profile,
+with 5.025 V baseline VBUS and the unchanged 3600-second lease.
+Real monitor events continued through uptime 467.463 s at 4.875 V VBUS,
+without MONITOR_STOP, BATTERY_GUARD, RESTORE or ROLLBACK_FAILED in this boot.
+
+A subsequent read-only 25-sample BQ27540 observation spanning 125.19 s
+recorded 53% capacity throughout, 31.5-31.6 C, all health=Good and all
+USB=configured. Net battery current ranged from -54 to +96 mA; its
+arithmetic sample mean was +38.72 mA (19 positive, 3 zero, 3 negative).
+Reported remaining charge increased from 688 to 689 mAh. This is a small
+positive idle-session balance with intermittent discharge, not continuous
+positive current or a qualified charging margin for storage activity.
+The later snapshot showed 53%, 31.7 C and zero net current.
+
+The previously failed boot had different cell voltage/SOC and lacked
+phase diagnostics; this new successful monitor does not retrospectively
+prove its rollback cause. No fault was forced. No 500 mA profile,
+brightness change, S3E module or NAND operation was performed.
+The 500 mA source attestation remains pending. Storage remains blocked
+until power margin is physically qualified under the intended workload.
+
+Sanitized physical evidence:
+[phase-aware boot and battery observations](../results/2026-11-24-n71-sn2400-phase-boot.json).
