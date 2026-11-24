@@ -93,6 +93,25 @@ class TestN71OriginalAppleAdtGraph(unittest.TestCase):
     def test_malicious_size_overflow_rejected(self):
         raw=bytearray(specimen());struct.pack_into("<I",raw,40,0x7fffffff)
         with self.assertRaises(M.InvalidAdt):M.parse_adt(bytes(raw))
+    def test_storage_nvmmu_parent(self):
+        def fixture():
+            nodes=M.parse_adt(specimen())
+            nodes[M.ROOT+"nvme-mmu0"]={
+                M.HANDLE:u32(99),"compatible":b"nvme-mmu,s8000\0",
+                "reg":b"\0"*32}
+            return nodes
+        self.assertTrue(M.verify_storage_nvmmu_parent(fixture()))
+        for case in ("missing","wrong_handle","wrong_compatible","wrong_reg"):
+            with self.subTest(case=case):
+                n=fixture()
+                a=n[M.ROOT+"nvme-mmu0"]
+                if case=="missing":del n[M.ROOT+"nvme-mmu0"]
+                if case=="wrong_handle":a[M.HANDLE]=u32(100)
+                if case=="wrong_compatible":a["compatible"]=b"unknown\0"
+                if case=="wrong_reg":a["reg"]=b"\0"*16
+                with self.assertRaises(M.InvalidAdt):
+                    M.verify_storage_nvmmu_parent(n)
+
     def test_source_does_not_log_private_phandles(self):
         s=SRC.read_text()
         for sensitive in ("print(ref_to_path)", "print(parent)", "print(nodes)",

@@ -120,15 +120,36 @@ def verify_apple_logical_iommu_graph(nodes:dict[str,dict[str,bytes]])->bool:
             "DART0/1/2 must have distinct logical phandles")
     return True
 
+def verify_storage_nvmmu_parent(nodes:dict[str,dict[str,bytes]])->bool:
+    """Additional storage-specific topology proof; no physical stream claim."""
+    verify_apple_logical_iommu_graph(nodes)
+    nvmmu=ROOT+"nvme-mmu0"
+    require(nvmmu in nodes,"Original storage NVMMU node missing")
+    attrs=nodes[nvmmu]
+    require(attrs.get("compatible")==b"nvme-mmu,s8000\0",
+            "Original storage NVMMU compatible differs")
+    require(len(attrs.get(HANDLE,b""))==4 and
+            nodes[PORT0][PARENT][8:12]==attrs[HANDLE],
+            "Third storage parent is not the NVMMU")
+    require(attrs[HANDLE]!=nodes[MAPPER0][HANDLE],
+            "Storage DART0 and NVMMU identities must differ")
+    require(len(attrs.get("reg",b""))==32,
+            "Original storage NVMMU resource count differs")
+    return True
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("owner_private_apple_runtime_adt",type=Path)
+    p.add_argument("--storage-nvmmu",action="store_true",help="also verify third storage parent")
     args=p.parse_args()
     try:
         f=args.owner_private_apple_runtime_adt
         require(f.is_file() and not f.is_symlink() and f.stat().st_size<=2_000_000,
                 "No private ADT, or unsafe symlink")
-        verify_apple_logical_iommu_graph(parse_adt(f.read_bytes()))
+        nodes=parse_adt(f.read_bytes())
+        verify_apple_logical_iommu_graph(nodes)
+        if args.storage_nvmmu:verify_storage_nvmmu_parent(nodes)
     except (InvalidAdt,OSError,UnicodeError,struct.error,RecursionError):
         print("N71_ORIGINAL_APPLE_ADT_LOGICAL_IOMMU_GRAPH_NOT_PROVEN",file=sys.stderr)
         return 2
@@ -138,6 +159,9 @@ def main():
     print("N71_BASEBAND_PCIE_BRIDGE2_TO_DART2_LOGICAL_MAPPER_PASS=YES")
     print("N71_ORIGINAL_APPLE_DART0_DART1_DART2_MAPPERS_DISTINCT=YES")
     print("N71_THREE_APPLE_DART_MAPPER_LOGICAL_INDEX_ZERO_PASS=YES")
+    if args.storage_nvmmu:
+        print("N71_STORAGE_THIRD_PARENT_NVME_MMU0_PASS=YES")
+        print("N71_STORAGE_PHYSICAL_DMA_ROUTING_PROVEN=NO")
     print("N71_ORIGINAL_ADT_PARENT_PHANDLE_VALUES_OR_PRIVATE_CONTENT_EXPORTED=NO")
     print("N71_PHYSICAL_PCIE_REQUESTER_TO_DART1_SID_PROVEN=NO")
     print("N71_NATIVE_BCM4350_PCIE_WLAN_DATA_PATH_PROVEN=NO")
