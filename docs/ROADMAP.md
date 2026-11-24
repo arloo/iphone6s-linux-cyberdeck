@@ -1,6 +1,6 @@
 # Hardware-first roadmap — reviewed 2026-11-16
 
-**Storage status update (2026-11-23):** The 64 GB ANS namespace is physically identified; separate I/O SQ/CQ candidate mappings, a four-page pre-BME DMA allocator and a distinct FlatDMA tag1 TCB/SGL are host-compiled only. The original Apple `IONVMeFamily` source now verifies NVM Read opcode and command field placement; vendor transfer flags, hardware read and independent DMA drain remain blockers. Consult the [canonical storage acceptance ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md) before hardware work.
+**Storage status update (2026-11-24):** The real N71/S8000 completed one 4 KiB NVM Read of NS1/LBA0 with exact I/O completion and independent guarded data arrival, followed by accepted Delete SQ/CQ and shutdown/disable/BME-off. All backing remains retained. Next qualify bounded repeated/additional-LBA reads and read-only block transport; independent DMA retirement and persistence remain open. [Physical evidence](N71_S8000_LBA0_READ_SUCCESS_2026_11_24.md) and [canonical ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md).
 
 Active target: **N71 / Samsung S8000**. N71m / S8003 remains deferred until compatible hardware is available.
 

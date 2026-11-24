@@ -2,19 +2,27 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
+## Current physical checkpoint: first 4 KiB namespace data Read accepted
+
+Exactly one physical NVM Read of NS1/LBA0 completed on I/O QID1 with validated status 0001/CID 1/SQID 1/head 1. Independently, 512/512 64-bit sector witnesses changed and the 12 KiB guard remained intact. Delete SQ/CQ and normal shutdown/disable/BME-off also succeeded. This is the first accepted namespace block-data Read; the historical 64 GB Identify result is setup, not a repeated milestone.
+
+All DMA backing and original ownership remain retained. No NVM Write, payload export, Linux block device, filesystem mount or internal Linux installation is established. Repeated reads, additional LBAs and independent DMA retirement remain open. Reuse this acceptance; any further LBA0 read must target a named repeatability/transport question.
+
+[Physical success report](N71_S8000_LBA0_READ_SUCCESS_2026_11_24.md) and [sanitized acceptance](N71_S8000_LBA0_READ_ACCEPTANCE_2026_11_24.json).
+
 ## Current physical checkpoint: empty I/O queue lifecycle accepted
 
 One physical trial completed Create CQ, Create SQ, Delete SQ, Delete CQ, normal controller shutdown (CSTS 0x9), disable (CSTS 0) and readback-verified BME-off. All four exact Admin CQEs validated with status 0001 and the expected CID/SQID/head. This extends the earlier creation-only acceptance; the previous shutdown CFS was not observed in this new trace. All DMA backing/ownership remains retained, and only one such lifecycle is recorded.
 
-**The next unresolved hardware milestone is a qualified namespace block-data NVM Read. No LBA0/data Read, NVM Write, internal block device or NAND-backed Linux is established.** Reuse accepted Identify/64 GB and queue lifecycle evidence. Detailed [physical teardown report](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md#physical-acceptance-one-complete-empty-queue-lifecycle) and [sanitized acceptance](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json).
+At this earlier empty-queue checkpoint, the first namespace data Read remained pending; the subsequent first-Read acceptance is recorded above. NVM writes, block registration and persistence remain unqualified. Reuse accepted Identify/64 GB and queue lifecycle evidence. Detailed [physical teardown report](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md#physical-acceptance-one-complete-empty-queue-lifecycle) and [sanitized acceptance](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json).
 
-## 2026-11-24 bounded LBA0 Read candidate prepared, not physically tested
+## 2026-11-24 LBA0 preparation checkpoint before the successful physical trial
 
 Following the owner's approval to proceed from the completed queue lifecycle, the real Read call path is now connected behind separate default-off parameters. It can issue only one canonical NVM Read of namespace1/LBA0/NLB0, 4096 bytes, on I/O QID1. The explicit Read transport is flags32/tag1, derived from the working Identify FlatDMA convention and the original source-verified tag stride. Queue flags stay0. This is a declared Linux protocol experiment, not an inference that the original live iOS factory uses the same policy.
 
 Tag1 is staged in owned shadow memory and published only before BME, preserving tag0; payload arrival and the 12 KiB surrounding guard are checked independently of the exact I/O CQE. Accepted Read/data evidence is required before Delete SQ/CQ. All DMA backing stays retained. No write, arbitrary sector/length, block-device interface or payload export is available.
 
-The ARM64 build and all 1,923 host tests, HBPP audit and evidence validation pass. A verified inert RAM image is prepared, but **no physical NVM Read has been attempted**. [Read trial, source limits and acceptance](N71_S8000_LBA0_READ_TRIAL_2026_11_24.md); [candidate metadata](N71_S8000_LBA0_READ_CANDIDATE_2026_11_24.json).
+The ARM64 build and all 1,923 host tests, HBPP audit and evidence validation pass. At this preparation checkpoint the inert RAM image had not been tested; its subsequent one-sector physical acceptance is recorded above. [Read trial, source limits and acceptance](N71_S8000_LBA0_READ_TRIAL_2026_11_24.md); [candidate metadata](N71_S8000_LBA0_READ_CANDIDATE_2026_11_24.json).
 
 ## 2026-11-24 historical test reconciliation — reuse completed milestones
 
@@ -46,7 +54,8 @@ The physical storage milestone is already accepted: **the real ANS/S3E controlle
 - [ ] Independent proof that every outstanding DMA transaction has drained; none is currently available.
 - [x] Physical Admin Create I/O CQ and SQ for QID1/depth16 accepted with exact valid completions on 24 November; the subsequent shutdown raised CFS.
 - [x] Delete unused SQ then CQ and normal shutdown/disable/BME-off observed in one complete physical cycle on 24 November; all backing retained.
-- [ ] Physical NVMe NVM Read of LBA0 and repeated/sustained I/O data stability; **not yet done**.
+- [x] Exactly one physical 4096-byte NVM Read of NS1/LBA0 with validated I/O CQE and independent guarded data arrival; successful Delete/shutdown/disable/BME-off.
+- [ ] Repeated/additional-LBA/multisector reads, sustained data stability and independent DMA retirement; **not yet done**.
 - [ ] Read-only Linux block device or persistent NAND-backed Linux; **not yet done**.
 
 ## 2026-11-23 live low-reserve physical read-only preflight
@@ -209,10 +218,10 @@ A separate default-off `ans_io_queue_delete_once` mode implements bounded Admin 
 
 ## Mandatory next steps (fail-closed)
 
-1. **Original Apple policy and the bounded Linux trial remain distinct:** the original Read wire builder, PRP/IOVM generator, mapper alternatives and conditional CDW0-bit13 source flow are qualified as documented; live iOS provider/predicate/factory values remain unobserved. Do not claim those runtime values from a PCI personality or accepted queue commands. For the owner's first explicit Linux Read experiment, use only the fixed flags32 FlatDMA hypothesis, disjoint source-verified tag1, known Identify-derived device-to-host descriptor pattern, all owned/pre-BME publication gates, and the already accepted queue lifecycle. This experiment must establish its own exact I/O CQE plus independent guarded data arrival before any NVM Read acceptance claim; Identify alone is not that evidence. The original iOS-policy investigation remains open and is not silently marked complete. See [the explicit Read trial](N71_S8000_LBA0_READ_TRIAL_2026_11_24.md).
+1. **Original Apple policy and the bounded Linux trial remain distinct:** the original Read wire builder, PRP/IOVM generator, mapper alternatives and conditional CDW0-bit13 source flow are qualified as documented; live iOS provider/predicate/factory values remain unobserved. Do not claim those runtime values from a PCI personality or accepted queue commands. The first explicit Linux Read has now physically accepted the fixed flags32 FlatDMA configuration, disjoint source-verified tag1, known Identify-derived device-to-host descriptor pattern, all owned/pre-BME publication gates, and the already accepted queue lifecycle. Its exact I/O CQE and independent guarded data arrival are accepted for one Read; Identify alone was not that evidence. Future reads must retain this explicit configuration and their own completion/data proof. The original iOS-policy investigation remains open and is not silently marked complete. See [the explicit Read trial](N71_S8000_LBA0_READ_TRIAL_2026_11_24.md).
 2. **Independent DMA lifetime:** identify a transaction-drain/fence mechanism or retain all mapped pages and driver ownership through the entire experimental boot. `CSTS`, CC, BME-off and DART bit31-clear **do not prove quiescence**.
 3. **Owner-attended hardware preflight:** stable battery reserve preferably at least 50%, physically qualified bounded charger and temperature below the owner's maximum 38°C, healthy VBUS, fresh clean S3E epoch. Do not loosen the user's temperature ceiling or silently alter brightness.
-4. **One real read-only trial:** before any physical I/O SQ/CQ or read execution, qualify all four DART streams, new owned pages, tag1 TCB/SGL and queue completions. Issue exactly one 4096-byte read for namespace1 LBA0, confirm CQ phase/CID/SQID/status and private payload ownership; **do not print raw LBA0/iOS contents**.
+4. **Next bounded Read qualification:** the first exact 4096-byte NS1/LBA0 Read is accepted. Do not repeat it as first-access or capacity discovery. Any further LBA0 read must test named repeatability/transport behavior; additional-LBA or multisector work requires its own explicit bounded implementation and guarded data/completion evidence. Keep payload bytes/hashes private, retain every DMA owner and do not reuse the currently held epoch. Qualify repeated data transfer before claiming a usable read-only block interface.
 5. **Read-only block device:** only after safe repeated physical reads and adequate DMA lifetime evidence; disable automount. NAND writes, formatting or installing Linux on the internal media require separate explicit approval, backup and recovery plan.
 
 ## GitHub issue coordination

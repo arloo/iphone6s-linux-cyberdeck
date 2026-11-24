@@ -52,9 +52,11 @@
     "gzip_CPIO_roundtrip_verified": true,
     "storage_autoload": false
   },
-  "physically_booted": false,
-  "module_inserted": false,
-  "NVM_Read_attempted": false,
-  "NVM_Read_accepted": false,
-  "fresh_attended_boot_required": true
+  "physically_booted": true,
+  "module_inserted": true,
+  "NVM_Read_attempted": true,
+  "NVM_Read_accepted": true,
+  "fresh_attended_boot_required": true,
+  "accepted_Read_count": 1,
+  "physical_evidence_file": "N71_S8000_LBA0_READ_ACCEPTANCE_2026_11_24.json"
 }

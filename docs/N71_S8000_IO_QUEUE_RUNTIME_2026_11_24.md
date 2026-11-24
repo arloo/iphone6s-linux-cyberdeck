@@ -87,3 +87,5 @@ The subsequent default-off empty-SQ/CQ deletion candidate is now ARM64-built, pa
 The empty-queue deletion candidate was subsequently physically accepted for one complete Create/Delete/shutdown cycle. See [sanitized lifecycle evidence](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json). No independent DMA retirement or NVM data Read follows from this result.
 
 A separate default-off one-block Read candidate now reuses the accepted queue lifecycle. It is ARM64-built, passes all 1,923 host tests and is packaged inert in RAM, but remains physically untested. Read command flags32 use a disjoint FlatDMA tag1 under the declared experimental scope; queue flags0 and the accepted empty-queue milestone remain distinct. See [LBA0 trial](N71_S8000_LBA0_READ_TRIAL_2026_11_24.md).
+
+The subsequent separately armed LBA0 Read has now physically accepted one 4096-byte data transfer with exact I/O CQE and independent guard-checked data, followed by successful queue/controller teardown. See [first-Read evidence](N71_S8000_LBA0_READ_SUCCESS_2026_11_24.md). This does not establish a block device, repeated stability or DMA release.
