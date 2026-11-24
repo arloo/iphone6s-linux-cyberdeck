@@ -42,6 +42,16 @@ PROVENANCE_WORDS = {
     0x355FC: 0xF140043F,  # compare byte count to 0x1000 (4 KiB)
     0x35608: 0x92402D09,  # byte offset mask 0xFFF
     0x35610: 0xF13FFD3F,  # compare segment end to 0xFFF
+    0x355F4: 0x35000880,  # abort if IOVM segment generation fails
+    0x35654: 0xB940BA68,  # load internal request flags
+    0x35658: 0x373800C8,  # bit7 alternative
+    0x3565C: 0x37180428,  # bit3 selects direct first-segment helper
+    0x356C8: 0x371800C8,  # same selection on bit7 path after length check
+    0x356E0: 0x910043E1,  # pass generated segment array
+    0x356E4: 0xAA1303E0,  # request object
+    0x356E8: 0x94000015,  # invoke direct first-segment helper
+    0x356EC: 0x52800014,  # success return
+    0x35744: 0xF9400028,  # load first generated segment address
     0x35668: 0x940000F8,  # short/single-page PRP helper path
     0x356D4: 0x94000032,  # alternate PRP helper path
     0x35748: 0xF9009808,  # store first PRP in request at +304
@@ -150,6 +160,7 @@ CALL_TARGETS = {
     0x355F0: 0x429D0,
     0x35668: 0x35A48,
     0x356D4: 0x3579C,
+    0x356E8: 0x3573C,
     0x00278: 0x228C0,  # wrapper 1 -> original request-pool ctor
     0x00680: 0x228C0,  # wrapper 2 -> same request-pool ctor
     0x22B6C: 0x228C0,  # wrapper 3 -> same request-pool ctor
@@ -208,6 +219,7 @@ def main() -> int:
     print("ORIGINAL_REQUEST_BUILDER_THEN_IOVM_MAPPING=PROVEN")
     print("ORIGINAL_PRP_PAGE_GRANULARITY_BYTES=4096")
     print("ORIGINAL_PRP1_AND_MULTIPAGE_HELPERS=PROVEN")
+    print("ORIGINAL_BIT3_DIRECT_FIRST_GENERATED_SEGMENT_TO_PRP1=VERIFIED_CONDITIONAL")
     print("ORIGINAL_READ_OPTION_AND_PRP_POINTERS_DISTINCT=YES")
     print("ORIGINAL_REQUEST_FLAG_BIT3_TO_CDW0_BIT13=PROVEN_CONDITIONAL")
     print("ORIGINAL_REQUEST_INITIALIZER_X6_NONZERO_SETS_BIT3=PROVEN")
