@@ -2,6 +2,27 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
+## 2026-11-24 historical test reconciliation — reuse completed milestones
+
+The physical storage milestone is already accepted: **the real ANS/S3E controller completed Identify Namespace 1 and transferred namespace metadata through DMA**. The next unresolved hardware target must be called **namespace block-data NVM Read**, rather than the first data received from storage. The owner independently confirmed the nominal 64 GB internal capacity on 24 November.
+
+| Operation | Historical evidence | Reuse / remaining scope |
+| --- | --- | --- |
+| Physical admin Identify Namespace 1 and DMA payload | 18–20 November original captures; completion present/status 0001, completed=1, data_arrived=1, data_tail_arrived=1 | Completed: 15,625,000 logical blocks, 4,096 bytes each, 64,000,000,000 bytes. Do not repeat solely to rediscover capacity. |
+| Controller shutdown, disable and BME-off | Later original captures show shutdown CSTS=0x9, shutdown/disable rc=0, disable CSTS=0 and master_off=1 | Observed; retain as distinct from independent DMA quiescence. |
+| DMA allocation / mapping retirement | The archived pilot keeps queue, HMB, DART and NVMMU resources quarantined | Still unqualified; do not infer release permission from a valid Identify or controller stop. |
+| I/O queue submission and NVM Read of namespace 1 LBA0 | No completed block-read evidence found in the reviewed archives; commits 59bc4a0, 1c67cea and 85c4891 stage inert builders, allocation and tag1 support | Pending physical qualification; source preparation is not a completed block read. |
+| Linux internal-storage block device, partition read or filesystem mount | Not demonstrated by the reviewed physical storage reports | Pending; the 64 GB geometry response is not evidence of reading all 64 GB or a filesystem. |
+| Ext4 file read/write through a 64 MiB NBD image | Verified 16 November over USB, with the image hosted on the Dell | Completed companion-storage experiment; it did not read the iPhone's NAND. |
+
+**Archive scope and overlap:** 178 text archives/manifests were inspected across the private S3E/NVMe/storage test directories; 102 were byte-distinct and 76 were exact copies. Twenty byte-distinct files contain the successful Identify geometry, all agreeing on the same namespace. These counts are **not numbers of independent experiments or boots**: files also contain repeated snapshots of an existing boot. The existing post-stop analyzer finds 12 event signatures with consistent shutdown snapshots and retained/quarantined mappings; this does not establish 12 independently identified boots or DMA drain. No block-read completion marker was found in this bounded archive scan; the conclusion is also consistent with the versioned acceptance ledger and inert I/O-builder changes.
+
+**History coverage:** the newer working checkout is shallow at 316a1a5416a3efb77a45e634ba3797bd863178d1. The retained older, non-shallow checkout ends at that exact same commit, so both histories were consulted rather than mistaking the shallow boundary for the start of development. The historical Identify result is documented in commit 18bf1ce and [the physical Identify report](N71_S8000_NVME_IDENTIFY_SUCCESS_2026_11_18.md); later shutdown/retirement evidence is in [the archived DMA audit](N71_S8000_S3E_DMA_RETIREMENT_AUDIT_2026_11_20.md). The separate NBD result is documented in [companion storage](COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md).
+
+**Interpretation of rc=-3:** the complete pilot return value must not overwrite the separately proven command result. The inspected successful captures report submitted=1, completed=1 and data_arrived=1 despite rc=-3/stopped=0. Later shutdown traces separately establish successful shutdown/disable while the legacy post-stop qualification and conservative DMA quarantine remain unresolved. The earliest capture has less shutdown-phase detail and must not be retrospectively assigned a more specific failure cause.
+
+**Continuation rule:** reuse the accepted Identify/geometry/DMA evidence. Continue from the original request mapper/provider-cast contract and independent DMA-lifetime questions. Any future physical trial must target a named unresolved hypothesis with an expected new observation; another standalone Identify is not the next milestone. An Identify needed inside a genuinely new, justified trial is setup/regression work and must be labeled as such. No archived harness, iPhone storage command or new hardware experiment was executed for this reconciliation.
+
 ## Verified on real phone
 
 - [x] N71/Samsung S8000 native RAM Linux boots; touchscreen, Wi-Fi, BLE and authenticated USB SSH work.
