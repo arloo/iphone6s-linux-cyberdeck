@@ -41,10 +41,10 @@ static int n71_read_series_prepare(void *ctx)
     int rc=-EPERM;
     BUILD_BUG_ON(N71_READ_SERIES_COUNT!=4U);
     BUILD_BUG_ON(N71_READ_SERIES_COUNT>=N71_RO_Q_ENTRIES);
-    if (!ans_read_series_once || n71_read_series_memory.staged ||
+    if (!n71_series_enabled() || n71_read_series_memory.staged ||
         n71_read_series_memory.prepared || !n71_io_pre_bme(ctx) ||
         !n71_io_queue_memory.prepared ||
-        !n71_read_series_mode_valid(1,ans_read_series_flags,ans_identify_once,
+        !n71_read_series_mode_valid(1,n71_series_flags(),ans_identify_once,
             ans_io_queue_once,ans_io_queue_delete_once,ans_io_queue_flags,
             ans_lba0_read_once)) return -EPERM;
     rc=n71_ro_io_dma_foreign_ranges(ctx,foreign,&count);
@@ -156,7 +156,7 @@ out:
 }
 static int n71_read_series_running(void *ctx)
 {
-    return ans_read_series_once && ans_read_series_flags==N71_LBA0_READ_FLAGS &&
+    return n71_series_enabled() && n71_series_flags()==N71_LBA0_READ_FLAGS &&
         n71_read_series_memory.prepared && !n71_read_series_memory.quarantined &&
         n71_io_queue_memory.cq_created && n71_io_queue_memory.sq_created &&
         !n71_io_queue_memory.sq_delete_posted &&
@@ -176,7 +176,7 @@ static int n71_read_series_submit(void *ctx,unsigned int step,
     bool foreign;
     if (!n71_read_series_qualified(ctx,step) ||
         !n71_read_series_command_valid(command,step,&n71_io_layout,
-             n71_admin_memory.nsze,n71_admin_memory.lba_bytes,ans_read_series_flags))
+             n71_admin_memory.nsze,n71_admin_memory.lba_bytes,n71_series_flags()))
         return -EPERM;
     sq=(u8 *)n71_ro_io_dma_memory.page[0]+step*64U;
     cq=(struct nvme_completion *)n71_ro_io_dma_memory.page[1]+step;
@@ -319,17 +319,19 @@ static int n71_read_series_completed_safely(void)
 static int n71_read_series_once(void *ctx)
 {
     const struct n71_read_series_ops ops={
-        .qualified=n71_read_series_qualified,.submit=n71_read_series_submit,
+        .qualified=ans_ro_block_once ? n71_ro_block_qualified : n71_read_series_qualified,
+        .submit=n71_read_series_submit,
         .wait_cqe=n71_read_series_wait_cqe,.ack_cq=n71_read_series_ack,
         .wait_data=n71_read_series_wait_data,.snapshot=n71_read_series_snapshot,
-        .stable=n71_read_series_stable,.compare_pairs=n71_read_series_compare};
+        .stable=ans_ro_block_once ? n71_ro_block_stable : n71_read_series_stable,
+        .compare_pairs=n71_read_series_compare};
     struct n71_read_series_result r={0};
     int rc;
     unsigned int i;
-    if (!ans_read_series_once || n71_read_series_memory.attempted) return -EPERM;
+    if (!n71_series_enabled() || n71_read_series_memory.attempted) return -EPERM;
     n71_read_series_memory.attempted=true;
     rc=n71_read_series_core(&ops,ctx,&n71_io_layout,n71_admin_memory.nsze,
-            n71_admin_memory.lba_bytes,ans_read_series_flags,&r);
+            n71_admin_memory.lba_bytes,n71_series_flags(),&r);
     n71_read_series_memory.series_ok=!rc;
     for (i=0;i<n71_read_series_memory.issued && i<4U;i++)
         pr_info("n71-s3e-p0: READ_SERIES_STATUS index=%u lba=%u tag=%u cqe_seen=%u status=%04x cqe_valid=%u cq_acked=%u data_arrived=%u guard_ok=%u changed_words=%u cq_polls=%u data_polls=%u payload_redacted=YES\n",
@@ -341,7 +343,7 @@ static int n71_read_series_once(void *ctx)
     pr_info("n71-s3e-p0: READ_SERIES_ONCE rc=%d issued=%u accepted=%u snapshots=%u stability_checks=%u lba0_equal=%u lba1_equal=%u prior_buffers_unchanged=%u unique_tags=4 no_buffer_reuse=YES flags=%u nvm_write_submitted=NO payload_and_hashes_redacted=YES dma_release_authorized=NO\n",
         rc,n71_read_series_memory.issued,r.accepted,r.snapshotted,r.stability_checks,
         n71_read_series_memory.lba0_equal,n71_read_series_memory.lba1_equal,
-        !n71_read_series_memory.stability_failed,ans_read_series_flags);
+        !n71_read_series_memory.stability_failed,n71_series_flags());
     if (rc) n71_read_series_memory.quarantined=true;
     return rc;
 }
@@ -351,7 +353,7 @@ static void n71_read_series_observe_retained_ro(void *ctx)
 {
     unsigned int i,samples=0;
     bool unchanged=true;
-    if (!ans_read_series_once || !n71_read_series_memory.completed) return;
+    if (!n71_series_enabled() || !n71_read_series_memory.completed) return;
     for (i=0;i<5;i++) {
         if (n71_read_series_stable(ctx,n71_read_series_memory.completed)) unchanged=false;
         samples++;

@@ -10,6 +10,12 @@ Create/Delete SQ/CQ and normal controller shutdown (CSTS 0x9), disable (CSTS 0) 
 
 This extends the earlier first Read and 64 GB Identify evidence rather than repeating them as discovery. Ring wrap, reuse, long-duration transport, arbitrary-LBA access, independent DMA retirement and a usable Linux block interface remain open. [Physical report](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md#physical-acceptance-four-reads-with-private-pair-equality) and [sanitized acceptance](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json).
 
+## Next candidate: temporary Linux block bridge prepared, not physically tested
+
+The accepted four-Read transport now has a separate default-off Linux gendisk/bio qualification mode. Four trusted kernel bios in sequence 0,1,0,1 are admitted individually; exact CQE/data/guard/snapshot stability precedes their CPU-only target copy and completion. The kernel client privately compares the returned sectors. Geometry is the accepted 64 GB/4 KiB, but the trial permits only four bios, disables partition scanning and denies all userspace opens. It is not an unrestricted or mountable storage service.
+
+Admission closes and any pending bio is errored before joining the client and removing the temporary software disk. All hardware DMA, snapshots, CPU target frames and original owners remain retained. The exact-kernel build is warning-free, five new tests cover real admission/terminal states and integration restrictions, and the private RAM candidate preserves every rootfs record except the module and runtime hash list. No new phone Read, insertion, block registration or reboot has occurred; the current successful-series epoch remains held. [Trial/acceptance contract](N71_S8000_RO_BLOCK_BRIDGE_TRIAL_2026_11_24.md) and [candidate metadata](N71_S8000_RO_BLOCK_BRIDGE_CANDIDATE_2026_11_24.json).
+
 ## Earlier physical checkpoint: first 4 KiB namespace data Read accepted
 
 Exactly one physical NVM Read of NS1/LBA0 completed on I/O QID1 with validated status 0001/CID 1/SQID 1/head 1. Independently, 512/512 64-bit sector witnesses changed and the 12 KiB guard remained intact. Delete SQ/CQ and normal shutdown/disable/BME-off also succeeded. This is the first accepted namespace block-data Read; the historical 64 GB Identify result is setup, not a repeated milestone.

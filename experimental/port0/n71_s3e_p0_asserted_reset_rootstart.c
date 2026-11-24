@@ -27,12 +27,20 @@
  * Explicit ans_lba0_read_once adds one guarded 4-KiB Read after CQ/SQ
  * creation and before deletion. The mutually exclusive read-series mode
  * submits four retained single-sector Reads for LBA0/LBA1 repeatability.
- * No NAND write or block-device interface is available.
+ * A separate default-off block-bridge mode tests four trusted kernel bios
+ * through a temporary read-only gendisk. Userspace opens and all writes
+ * remain denied; no unrestricted block-device service is available.
  */
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/bio.h>
+#include <linux/blkdev.h>
+#include <linux/completion.h>
+#include <linux/kthread.h>
+#include <linux/spinlock.h>
+#include "n71_s3e_ro_block_core.h"
 #include <linux/sizes.h>
 #include "../port1/n71-dart-all-stream-owned-roots-trial.h"
 #include "../port1/n71-port-local-trial.h"
@@ -113,6 +121,21 @@ static bool ans_io_queue_once;
 static bool ans_lba0_read_once;
 static bool ans_read_series_once;
 static unsigned int ans_read_series_flags = ~0U;
+static bool ans_ro_block_once;
+static unsigned int ans_ro_block_flags = ~0U;
+module_param(ans_ro_block_once, bool, 0400);
+MODULE_PARM_DESC(ans_ro_block_once, "explicit temporary read-only Linux block bridge; four trusted kernel bios only, no userspace opens or writes; all DMA retained");
+module_param(ans_ro_block_flags, uint, 0400);
+MODULE_PARM_DESC(ans_ro_block_flags, "block bridge must explicitly select tested FlatDMA flags32; default unselected");
+static inline bool n71_series_enabled(void)
+{
+    return ans_read_series_once || ans_ro_block_once;
+}
+static inline unsigned int n71_series_flags(void)
+{
+    return ans_ro_block_once ? ans_ro_block_flags : ans_read_series_flags;
+}
+
 module_param(ans_read_series_once, bool, 0400);
 MODULE_PARM_DESC(ans_read_series_once, "explicit four-Read repeatability trial: LBA0,LBA1,LBA0,LBA1; distinct retained tags/buffers and private comparison; no writes");
 module_param(ans_read_series_flags, uint, 0400);
@@ -1030,6 +1053,9 @@ static int __init n71_port0_init(void)
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
         return -EPERM;
     if (ans_io_queue_delete_once && !ans_io_queue_once) return -EPERM;
+    if (!n71_ro_block_mode_valid(ans_ro_block_once,ans_ro_block_flags,
+            ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,
+            ans_io_queue_flags,ans_lba0_read_once,ans_read_series_once)) return -EPERM;
     if (!n71_read_series_mode_valid(ans_read_series_once,ans_read_series_flags,
             ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,
             ans_io_queue_flags,ans_lba0_read_once)) return -EPERM;
