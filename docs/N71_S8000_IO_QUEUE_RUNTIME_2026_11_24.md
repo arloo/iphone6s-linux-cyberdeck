@@ -79,3 +79,5 @@ The subsequent normal-shutdown attempt failed: the first shutdown poll observed 
 The tested kernel's native `drivers/nvme/host/pci.c` uses `nvme_delete_io_queues` before `nvme_disable_ctrl`; the helper completes Delete SQ before issuing Delete CQ. The current create-only pilot does not perform these volatile deletion commands. A separate, explicitly armed empty-queue deletion trial is therefore the next concrete hypothesis. This source comparison does not prove that the omitted deletion caused the S8000 CFS, nor qualify a data Read. Even accepted queue deletion must not release any DMA backing.
 
 Sanitized physical evidence: [first corrected queue acceptance](N71_S8000_IO_QUEUE_ACCEPTANCE_2026_11_24.json).
+
+The subsequent default-off empty-SQ/CQ deletion candidate is now ARM64-built, passes all 1,919 host tests and is packaged in a verified inert RAM image. It has not been physically tested. See [deletion trial and acceptance criteria](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md).

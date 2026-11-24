@@ -287,6 +287,8 @@ static int n71_admin_prepare(void *ctx)
     BUILD_BUG_ON(offsetof(struct nvme_create_cq, prp1)!=24);
     BUILD_BUG_ON(offsetof(struct nvme_create_cq, cqid)!=40);
     BUILD_BUG_ON(offsetof(struct nvme_create_sq, sqid)!=40);
+    BUILD_BUG_ON(offsetof(struct nvme_delete_queue, qid)!=40);
+    BUILD_BUG_ON(nvme_admin_delete_sq!=0x00 || nvme_admin_delete_cq!=0x04);
     BUILD_BUG_ON(offsetof(struct nvme_create_sq, cqid)!=46);
     BUILD_BUG_ON(N71_RO_HOST_FRAME_BYTES!=SZ_16K);
     BUILD_BUG_ON(N71_RO_DART_STREAMS!=4);

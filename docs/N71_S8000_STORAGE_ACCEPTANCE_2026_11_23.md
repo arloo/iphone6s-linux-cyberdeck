@@ -46,7 +46,7 @@ After the latest original Apple vtable analysis was committed, native Linux rema
 
 **Immediate owner-attended power priority:** restore reliable charging and battery reserve via a qualified physical supply and recovery procedure; iOS charging/reboot is an available fallback if required, but no reboot was remotely initiated. With the fuel-gauge below the permitted guarded Linux lease floor, **no further S3E, DMA or NAND hardware trials are authorized**, even if the original Apple Read source analysis continues safely on the Dell. This is a measured physical blocker, not a statement that internal NAND storage was accessed.
 
-## Implemented/verified offline on Dell; never submitted to device
+## Host preparation checkpoint before the 24 November queue-only trials
 
 - [x] Kernel-compiled, inert 64-byte `Create I/O CQ`, `Create I/O SQ`, and one-4096-byte `Read (0x02)` candidate encoders; read range validated.
 - [x] Inert four-stream DART0 L2 leaves 18/19 for I/O SQ/CQ, preserving admin leaves 16/17, with atomic host-C ownership checks.
@@ -187,6 +187,10 @@ The corrected live-phase module is now included, inert, in a new owner-private R
 The corrected module received valid Admin Create CQ and Create SQ completions (status 0001, CID 2/3, SQID 0, expected heads), with command byte1=0, QID 1 and depth 16. This is a new physical acceptance milestone. Identify ran only as setup. No NVM block-data Read/Write was submitted.
 
 Normal shutdown then observed CSTS 0x7/CFS and disable timed out. Both masters were disabled; all DMA backing and driver/power ownership remain pinned. Queue acceptance does not establish stable teardown, data-DMA transport, DMA drain or NAND-backed Linux. The next test hypothesis is bounded deletion of the unused SQ, then CQ, before shutdown, matching the inspected native Linux PCI NVMe order while retaining every backing allocation. Detailed results: [queue runtime report](N71_S8000_IO_QUEUE_RUNTIME_2026_11_24.md#corrected-candidate-first-physical-cqsq-acceptance-shutdown-fault) and [sanitized acceptance evidence](N71_S8000_IO_QUEUE_ACCEPTANCE_2026_11_24.json).
+
+## 2026-11-24 explicit unused SQ/CQ deletion candidate
+
+A separate default-off `ans_io_queue_delete_once` mode implements bounded Admin Delete SQ then Delete CQ after both known-good Create completions. It follows the inspected native Linux queue teardown order without copying its memory-release behavior. Every existing DMA allocation and owner remains pinned. The exact-kernel ARM64 build, all 1,919 host tests, HBPP audit and evidence validator pass; an inert RAM image is prepared. This remains an untested physical hypothesis for the post-create CFS, not an accepted fix or a data Read. The current faulted boot is not reused. See [empty-queue deletion scope and acceptance](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md).
 
 ## Mandatory next steps (fail-closed)
 

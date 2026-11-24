@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-24",
+  "scope": "Explicit Admin deletion of unused SQ then CQ, before shutdown; all backing retained",
+  "module_sha256": "a88fe1d4d46fd249779f5767e03419ccaa02ca9d4c26e94db21c9b0a12028f75",
+  "module_bytes": 776024,
+  "kernel_vermagic": "7.3.0-rc1-n71-batt2-g68aadac820d0-dirty SMP preempt mod_unload aarch64",
+  "RAM_image_sha256": "818cd3dd8ec2daeef1095b7536e70c01fb1d485dd02bed84c28f9864c5aa3d0f",
+  "RAM_image_bytes": 27952603,
+  "runtime_module_path": "/usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko",
+  "both_Create_completions_required": true,
+  "planned_parameters": {
+    "ans_io_queue_once": 1,
+    "ans_io_queue_delete_once": 1,
+    "ans_io_queue_flags": 0
+  },
+  "planned_admin_commands": [
+    {
+      "opcode": 0,
+      "CID": 4,
+      "queue_id": 1,
+      "kind": "Delete SQ"
+    },
+    {
+      "opcode": 4,
+      "CID": 5,
+      "queue_id": 1,
+      "kind": "Delete CQ"
+    }
+  ],
+  "all_other_RAM_entries_and_boot_kernel_identical": true,
+  "complete_runtime_manifest_verified": true,
+  "gzip_CPIO_roundtrip_verified": true,
+  "source_snapshot_matches_build": true,
+  "host_validation": {
+    "ARM64_build": "PASS",
+    "host_tests_passed": 1919,
+    "HBPP_audit": "PASS",
+    "manifest_and_evidence": "PASS"
+  },
+  "physically_booted": false,
+  "storage_module_inserted": false,
+  "shutdown_fix_proven": false,
+  "NVM_read_available": false,
+  "NVM_write_available": false,
+  "DMA_release_authorized": false,
+  "fresh_attended_boot_required": true
+}
