@@ -18,7 +18,7 @@ class OriginalRequestFlagMaskTest(unittest.TestCase):
             struct.pack_into('<I', self.fake, pos, word)
 
     def test_all_original_instruction_fingerprints_fail_closed(self):
-        self.assertGreaterEqual(len(MASK.MASK_SOURCE_WORDS), 76)
+        self.assertGreaterEqual(len(MASK.MASK_SOURCE_WORDS), 110)
         MASK.verify_instructions(bytes(self.fake))
         for at in MASK.MASK_SOURCE_WORDS:
             with self.subTest(original_instruction=hex(at)):

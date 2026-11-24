@@ -16,6 +16,43 @@ import n71_s8000_original_ionvme_read_prp_gate as FLOW
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # Original embedded controller: acquire three indexed mappers.
+    0x12B8: 0xF9408400,
+    0x12BC: 0x52800001,
+    0x12C0: 0x9401066F,
+    0x12C4: 0xF903FA60,  # index 0 -> controller +2032
+    0x12C8: 0xB40001E0,
+    0x12CC: 0xF9408660,
+    0x12D0: 0x52800021,
+    0x12D4: 0x9401066A,
+    0x12D8: 0xF9040260,  # index 1 -> controller +2048
+    0x12DC: 0xB40002A0,
+    0x12E0: 0xF9408660,
+    0x12E4: 0x52800041,
+    0x12E8: 0x94010665,
+    0x12EC: 0xF903FE60,  # index 2 -> controller +2040
+    0x12F0: 0xB4000360,
+    # The input argument bit3 below is NOT yet proven identical to
+    # the internal request flag bit3 used by the PRP helper.
+    0x67E0: 0xAA0103F4,  # save incoming request selector
+    0x6914: 0x371800B4,
+    0x6918: 0xF943FA61,  # select index 0 mapper
+    0x691C: 0xAA1603E0,
+    0x6920: 0x52800002,
+    0x6924: 0x14000004,
+    0x6928: 0xF943FE61,  # select index 2 mapper
+    0x692C: 0xAA1603E0,
+    0x6930: 0x52800022,
+    0x6934: 0x9400BB01,
+    0x35550: 0xF9402008,
+    0x35584: 0xF9002275,  # request +64 mapper storage
+    0x35588: 0xB940BA68,
+    0x3558C: 0x7100029F,
+    0x35590: 0x52800209,  # separate flag bit4
+    0x35594: 0x1A9F1129,
+    0x35598: 0x121B7908,
+    0x3559C: 0x2A090108,
+    0x355A0: 0xB900BA68,
     # Explicit lifecycle stores of the auxiliary object and its input.
     0x257F8: 0xAA0103F4, # preserve incoming object
     0x257FC: 0xAA0003F3, # preserve controller
@@ -108,7 +145,9 @@ def verify_instructions(code: bytes) -> None:
                          (0x278, 0x228C0), (0x680, 0x228C0),
                          (0x22B6C, 0x228C0), (0x22940, 0x229F0),
                          (0x271F8, 0x5F8), (0x2725C, 0x22AE4),
-                         (0x27284, 0x1F0), (0x26B0C, 0x42C7C)):
+                         (0x27284, 0x1F0), (0x26B0C, 0x42C7C),
+                         (0x12C0, 0x42C7C), (0x12D4, 0x42C7C),
+                         (0x12E8, 0x42C7C), (0x6934, 0x35538)):
         if FLOW.arm64_bl_target(call, struct.unpack_from('<I', code, call)[0]) != target:
             raise ValueError('Original Apple request pool branch differs')
 
@@ -163,6 +202,17 @@ def verify_mapper_import(blob: bytes, code: bytes) -> None:
     base = nested['__TEXT_EXEC']['sections']['__text']['vm']
     target = ctor.ctor_stub_callee(blob, main, nested, base+0x26B0C,
                                   struct.unpack_from('<I', code, 0x26B0C)[0])
+    for call in (0x12C0, 0x12D4, 0x12E8):
+        if ctor.ctor_stub_callee(blob, main, nested, base+call,
+                                struct.unpack_from('<I', code, call)[0]) != target:
+            raise ValueError('Indexed mapper import target differs')
+    vp = ctor.adrp_add_str_vptr(base+0xaa8, *struct.unpack_from('<3I', code, 0xaa8))
+    cconst = nested['__DATA_CONST']['sections']['__const']
+    if not cconst['vm'] <= vp <= cconst['vm']+cconst['size']-1872:
+        raise ValueError('Embedded mapper vtable outside own const section')
+    for slot, method in ((1408, 0x67c0), (1864, 0x12a8)):
+        if ctor.read_data_pointer(blob, main, vp+slot) != base+method:
+            raise ValueError('Embedded mapper virtual method differs')
     kernel = main['__TEXT_EXEC']
     if target != kernel['vm']+0x5E8E90 or target+320 > kernel['vm']+kernel['filesize']:
         raise ValueError('Mapper target differs from original kernel')
@@ -231,6 +281,9 @@ def main() -> int:
     print('AUXILIARY_CLEANUP=NULL_CHECK_VIRTUAL_CALL_AND_ZERO')
     print('MAPPER_SELECTION_PROPERTY=iommu-parent')
     print('MAPPER_INDEXED_DATA_CELL_WIDTH=4')
+    print('EMBEDDED_INDEXED_MAPPERS=0_1_2')
+    print('EMBEDDED_INPUT_BIT3_SELECTS_MAPPER_INDEX_2_OTHERWISE_0')
+    print('EMBEDDED_INPUT_BIT3_EQUALS_INTERNAL_PRP_BIT3=UNVERIFIED')
     print('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED')
     print('ACTIVE_N71_CONTROLLER_BINDING=UNVERIFIED')
     print('COMMAND_BIT13_AFTER_FILTER=CONDITIONAL')
