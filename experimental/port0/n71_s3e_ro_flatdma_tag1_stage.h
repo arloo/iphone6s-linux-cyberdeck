@@ -12,9 +12,12 @@
  * The candidate transfer direction and TCB fields are patterned on the
  * successful one-page, device-to-host Identify. Their use for NVM READ
  * remains UNQUALIFIED against original IONVMeFamily I/O semantics.
- * No physical NVMMU TCB is modified, no cache sync, no register write,
- * and no DMA submission occurs in the current driver. Never run this
- * after the first bus-master epoch, or against an inherited TCB table.
+ * This pure helper modifies only CPU-owned shadow views. The explicit
+ * LBA0 trial separately validates/publishes them before BME, matching
+ * the successful Identify descriptor as an experimental Read hypothesis.
+ * This helper performs no cache sync, no register write or submission.
+ * It performs no MMIO. Never run it
+ * against a live/device-owned or inherited TCB table.
  */
 #include "n71_s3e_ro_io_dart_map.h"
 

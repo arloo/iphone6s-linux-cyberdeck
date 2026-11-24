@@ -10,9 +10,9 @@
 #include "n71_s3e_admin_protocol_accounting.h"
 #include "n71_s3e_admin_cqe_validate.h"
 #include "n71_s3e_late_dma_observer.h"
-/* Dormant I/O-queue and 4-KiB READ wire encoders only; no submission. */
+/* Pure queue/Read encoders; live paths require separate explicit opt-ins. */
 #include "n71_s3e_read_only_io_plan.h"
-/* Inert DART0 four-stream L2[18/19] transaction preflight; no call site. */
+/* Pure four-stream L2 staging, used by explicit owned queue preparation. */
 #include "n71_s3e_ro_io_dart_map.h"
 #define N71_ADMIN_SQ_IOVA 0x80010000U
 #define N71_ADMIN_CQ_IOVA 0x80011000U
@@ -289,6 +289,7 @@ static int n71_admin_prepare(void *ctx)
     BUILD_BUG_ON(offsetof(struct nvme_create_sq, sqid)!=40);
     BUILD_BUG_ON(offsetof(struct nvme_delete_queue, qid)!=40);
     BUILD_BUG_ON(nvme_admin_delete_sq!=0x00 || nvme_admin_delete_cq!=0x04);
+    BUILD_BUG_ON(nvme_cmd_read!=0x02);
     BUILD_BUG_ON(offsetof(struct nvme_create_sq, cqid)!=46);
     BUILD_BUG_ON(N71_RO_HOST_FRAME_BYTES!=SZ_16K);
     BUILD_BUG_ON(N71_RO_DART_STREAMS!=4);

@@ -37,8 +37,9 @@ static inline int n71_io_queue_delete_cqe_valid(unsigned int observed,
         v->status==observed && v->command_id==cid &&
         v->sq_id==0U && v->sq_head==cid;
 }
-/* The caller can prove empty queues because this mode has no NVM/I/O
- * command submission path. Both Create completions must already validate.
+/* The caller must prove empty queues: either no I/O submission, or the
+ * sole Read has a validated/acknowledged CQE and independent data witness.
+ * Both Create completions must already validate.
  * This mirrors native Linux's SQ-before-CQ order, NOT its memory release. */
 static inline int n71_io_queue_delete_once_core(
         const struct n71_io_queue_once_ops *o, void *ctx,

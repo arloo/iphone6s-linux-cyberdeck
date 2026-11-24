@@ -15,6 +15,7 @@ static struct {
     bool delete_attempted, sq_delete_posted, sq_deleted;
     bool cq_delete_posted, cq_deleted;
 } n71_io_queue_memory;
+static int n71_lba0_read_prepare(void *ctx);
 static int n71_io_queue_capable(void)
 {
     return n71_io_queue_capability_valid(n71_admin_reg(0),
@@ -112,6 +113,7 @@ out:
         /* Only private CPU shadow pages, never mapped for device DMA. */
         if (shadow[sid]) free_page((unsigned long)shadow[sid]);
     }
+    if (!rc && ans_lba0_read_once) rc=n71_lba0_read_prepare(ctx);
     return rc;
 }
 /* Ownership checks shared in meaning with pre-start HMB preparation,
@@ -177,6 +179,7 @@ static int n71_io_queue_qualified(void *ctx)
             !(rejected&N71_IO_LIVE_HMB));
     return !rejected;
 }
+#include "n71_s3e_lba0_read_runtime.h"
 static int n71_io_queue_command_allowed(const unsigned char *command,
         unsigned int cid)
 {
@@ -267,8 +270,9 @@ static int n71_io_queue_delete_once(void *ctx)
         return -EPERM;
     n71_io_queue_memory.delete_attempted=true;
     rc=n71_io_queue_delete_once_core(&ops,ctx,ans_io_queue_flags,
-            n71_io_queue_memory.cq_created && n71_io_queue_memory.sq_created,&r);
-    pr_info("n71-s3e-p0: IO_QUEUE_DELETE_ONCE rc=%d sq_attempted=%u sq_posted=%u sq_valid=%u cq_attempted=%u cq_posted=%u cq_valid=%u command_flags=%u no_NVM_io=YES all_backing_retained=YES dma_release_authorized=NO\n",
+            n71_io_queue_memory.cq_created && n71_io_queue_memory.sq_created &&
+            (!ans_lba0_read_once || n71_lba0_completed_safely()),&r);
+    pr_info("n71-s3e-p0: IO_QUEUE_DELETE_ONCE rc=%d sq_attempted=%u sq_posted=%u sq_valid=%u cq_attempted=%u cq_posted=%u cq_valid=%u command_flags=%u no_NVM_io_in_delete_phase=YES all_backing_retained=YES dma_release_authorized=NO\n",
         rc,r.sq_attempted,n71_io_queue_memory.sq_delete_posted,r.sq_validated,
         r.cq_attempted,n71_io_queue_memory.cq_delete_posted,r.cq_validated,
         ans_io_queue_flags);
@@ -284,9 +288,10 @@ static int n71_io_queue_create_once(void *ctx)
     if (!ans_io_queue_once || n71_io_queue_memory.attempted) return -EPERM;
     n71_io_queue_memory.attempted = true;
     rc = n71_io_queue_once_core(&ops, ctx, &n71_io_layout, ans_io_queue_flags, &r);
-    pr_info("n71-s3e-p0: IO_QUEUE_ONCE rc=%d cq_attempted=%u cq_posted=%u cq_valid=%u sq_attempted=%u sq_posted=%u sq_valid=%u command_flags=%u nvm_read_submitted=NO nvm_write_submitted=NO dma_release_authorized=NO\n",
+    pr_info("n71-s3e-p0: IO_QUEUE_ONCE rc=%d cq_attempted=%u cq_posted=%u cq_valid=%u sq_attempted=%u sq_posted=%u sq_valid=%u command_flags=%u scope=CREATE_SETUP nvm_read_submitted=NO nvm_write_submitted=NO dma_release_authorized=NO\n",
             rc,r.cq_attempted,n71_io_queue_memory.cq_posted,r.cq_validated,
             r.sq_attempted,n71_io_queue_memory.sq_posted,r.sq_validated,ans_io_queue_flags);
+    if (!rc && ans_lba0_read_once) rc=n71_lba0_read_once(ctx);
     if (!rc && ans_io_queue_delete_once) rc=n71_io_queue_delete_once(ctx);
     return rc;
 }

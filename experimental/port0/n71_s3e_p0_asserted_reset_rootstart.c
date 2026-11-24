@@ -24,7 +24,8 @@
  * QID0 with a separately selected command-flag hypothesis. All backing
  * remains retained. A further explicit delete opt-in removes the empty
  * SQ then CQ contexts before shutdown, retaining every DMA allocation.
- * No block I/O or NAND host-write opcode is available.
+ * Explicit ans_lba0_read_once adds one guarded 4-KiB Read after CQ/SQ
+ * creation and before deletion. No NAND write or block-device interface.
  */
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -107,12 +108,19 @@ static bool ans_hmb_ro;
 static bool ans_hmb_owned;
 static bool ans_identify_once;
 static bool ans_io_queue_once;
+static bool ans_lba0_read_once;
+static unsigned int ans_lba0_read_flags = ~0U;
+module_param(ans_lba0_read_once, bool, 0400);
+MODULE_PARM_DESC(ans_lba0_read_once, "explicit single 4096-byte NVM Read of NS1 LBA0 after accepted CQ/SQ setup; all backing retained and payload never exported");
+module_param(ans_lba0_read_flags, uint, 0400);
+MODULE_PARM_DESC(ans_lba0_read_flags, "Read transport must explicitly select 32 (working Identify FlatDMA convention); default unselected; no alternative retry");
+
 static bool ans_io_queue_delete_once;
 module_param(ans_io_queue_delete_once, bool, 0400);
 MODULE_PARM_DESC(ans_io_queue_delete_once, "explicitly delete the unused I/O SQ then CQ before shutdown, only after both Create completions; retain all DMA backing");
 static unsigned int ans_io_queue_flags = ~0U;
 module_param(ans_io_queue_once, bool, 0400);
-MODULE_PARM_DESC(ans_io_queue_once, "explicit one-shot admin Create CQ/SQ after Identify setup; no NVM reads/writes; all backing retained until reboot");
+MODULE_PARM_DESC(ans_io_queue_once, "explicit admin Create CQ/SQ setup; separate opt-ins may add a single LBA0 Read and empty-queue deletion; all backing retained until reboot");
 module_param(ans_io_queue_flags, uint, 0400);
 MODULE_PARM_DESC(ans_io_queue_flags, "experimental queue command byte1: explicitly select 0 or 32; default unselected and refused when queue trial armed");
 /* Conservative latch: set before an admin BME write; never clear on error,
@@ -1013,6 +1021,9 @@ static int __init n71_port0_init(void)
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
         return -EPERM;
     if (ans_io_queue_delete_once && !ans_io_queue_once) return -EPERM;
+    if (!n71_lba0_mode_valid(ans_lba0_read_once,ans_lba0_read_flags,
+            ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,
+            ans_io_queue_flags)) return -EPERM;
     if (!n71_io_queue_mode_valid(ans_io_queue_once, ans_identify_once,
             ans_io_queue_flags, ans_queue_retire_probe, ans_late_dma_probe_ro))
         return -EPERM;

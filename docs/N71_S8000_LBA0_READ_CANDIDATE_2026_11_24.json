@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-24",
+  "scope": "Explicit one-shot experimental NVM Read of NS1 LBA0 only",
+  "module_sha256": "7b8c8bbee6d64f6d051918ab431b4c048c9d7e7fbc805e2a3e6a4af203cdbef4",
+  "module_bytes": 825056,
+  "kernel_vermagic": "7.3.0-rc1-n71-batt2-g68aadac820d0-dirty SMP preempt mod_unload aarch64",
+  "RAM_image_sha256": "2153c285ebc87b297464161ba4b8e3de2940cd755b17f0d3d8dbada4d3155ff9",
+  "RAM_image_bytes": 27966201,
+  "runtime_module_path": "/usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko",
+  "planned_parameters": {
+    "ans_io_queue_once": 1,
+    "ans_io_queue_flags": 0,
+    "ans_io_queue_delete_once": 1,
+    "ans_lba0_read_once": 1,
+    "ans_lba0_read_flags": 32
+  },
+  "NVM_command": {
+    "opcode": 2,
+    "queue": 1,
+    "CID": 1,
+    "NSID": 1,
+    "SLBA": 0,
+    "NLB_field": 0,
+    "bytes": 4096,
+    "PRP1_FlatDMA_tag": 1
+  },
+  "transport_basis": "Working Identify uses flags32/tag0. This Read explicitly tests the same owned device-to-host descriptor convention at disjoint source-verified tag1; it does not establish original iOS runtime flag policy.",
+  "all_publication_before_BME": true,
+  "tag0_preserved": true,
+  "TCB_page_count_published_last": true,
+  "NVMMU_invalidate_phase_allows_only_0_or_bit16": true,
+  "data_word_witnesses": 512,
+  "guard_bytes": 12288,
+  "independent_CQE_and_payload_required": true,
+  "delete_requires_completed_Read": true,
+  "all_backing_retained": true,
+  "DMA_drain_proven": false,
+  "NVM_write_available": false,
+  "arbitrary_LBA_or_length_parameter": false,
+  "raw_payload_or_payload_hash_exported": false,
+  "host_validation": {
+    "ARM64_build": "PASS",
+    "host_tests_passed": 1923,
+    "HBPP_audit": "PASS",
+    "manifest_and_evidence": "PASS"
+  },
+  "RAM_packaging": {
+    "all_other_entries_identical": true,
+    "entire_boot_kernel_prefix_identical": true,
+    "complete_runtime_manifest_verified": true,
+    "gzip_CPIO_roundtrip_verified": true,
+    "storage_autoload": false
+  },
+  "physically_booted": false,
+  "module_inserted": false,
+  "NVM_Read_attempted": false,
+  "NVM_Read_accepted": false,
+  "fresh_attended_boot_required": true
+}
