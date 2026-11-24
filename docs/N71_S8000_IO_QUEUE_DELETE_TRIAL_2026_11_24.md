@@ -27,6 +27,20 @@ If deletion succeeds but shutdown still raises CFS, the lifecycle hypothesis is 
 
 ## Host validation
 
-The portable C harness checks independent wire bytes, SQ-before-CQ ordering, failure/qualification stops, invalid arguments, all 16-bit completion status values, and single-bit command mutations. Source checks cover early opt-in rejection, both-Create prerequisites, one-shot latching, validation before acknowledgement, Admin-only doorbells and absence of backing release. The exact-kernel ARM64 build and complete suite are recorded after validation; this candidate has not been physically loaded.
+The portable C harness checks independent wire bytes, SQ-before-CQ ordering, failure/qualification stops, invalid arguments, all 16-bit completion status values, and single-bit command mutations. Source checks cover early opt-in rejection, both-Create prerequisites, one-shot latching, validation before acknowledgement, Admin-only doorbells and absence of backing release. The exact-kernel ARM64 build and complete suite are recorded after validation; this host checkpoint preceded the successful physical trial recorded below.
 
-The exact-kernel ARM64 build and all **1,919** host tests pass, followed by the HBPP audit and evidence validator. The private RAM image embeds module `a88fe1d4d46fd249779f5767e03419ccaa02ca9d4c26e94db21c9b0a12028f75`, inert at boot; image SHA-256 is `818cd3dd8ec2daeef1095b7536e70c01fb1d485dd02bed84c28f9864c5aa3d0f`. Only the storage module and runtime hash manifest differ from the physically booted reference; the charger, remaining rootfs and entire boot/kernel prefix are unchanged. [Sanitized candidate metadata](N71_S8000_IO_QUEUE_DELETE_CANDIDATE_2026_11_24.json) records the boundaries. The updated attended launcher is ready; this image has not been physically booted.
+The exact-kernel ARM64 build and all **1,919** host tests pass, followed by the HBPP audit and evidence validator. The private RAM image embeds module `a88fe1d4d46fd249779f5767e03419ccaa02ca9d4c26e94db21c9b0a12028f75`, inert at boot; image SHA-256 is `818cd3dd8ec2daeef1095b7536e70c01fb1d485dd02bed84c28f9864c5aa3d0f`. Only the storage module and runtime hash manifest differ from the physically booted reference; the charger, remaining rootfs and entire boot/kernel prefix are unchanged. [Sanitized candidate metadata](N71_S8000_IO_QUEUE_DELETE_CANDIDATE_2026_11_24.json) records the boundaries. The updated attended launcher is ready; this image was subsequently physically booted and tested as recorded below.
+
+## Physical acceptance: one complete empty-queue lifecycle
+
+The owner booted the prepared RAM image. A new directly attached N71/S8000 session, exact kernel/module hashes, completed encrypted backup metadata, and the complete runtime hash manifest were verified. Eight fresh electrical samples showed 57% reserve, 33.3 C, mean net current +49.625 mA, median +69 mA and VBUS 4.875 V; charger input stayed 300 mA under the existing finite kernel lease. Exactly one storage-module insertion was performed.
+
+All four Admin commands validated with phase/status 0001, SQID 0 and exact head/CID 2,3,4,5: Create CQ, Create SQ, Delete SQ, Delete CQ. Normal shutdown then completed with rc 0/CSTS 9 after 579 polls; controller disable completed with rc 0/CSTS 0 after 2 polls; both bus-master bits were readback-verified off. The prior create-only CFS 0x7 was not observed in this shutdown trace.
+
+This supports SQ-before-CQ deletion as the working teardown sequence for **this measured empty-queue cycle**. It does not prove repeated stability or uniquely identify every cause of the earlier failure. Identify and creation were setup/regression for the new deletion/shutdown question.
+
+The whole-pilot rc=-3 is expected under the unchanged retention policy: the legacy post-disable HMB qualifier remains false and no independent DMA-drain proof exists. Every I/O/admin/HMB/DART/NVMMU allocation and original owner remains pinned. Do not force-unload, reuse the epoch or release backing because queue deletion or controller stop succeeded.
+
+No NVM Read/Write, I/O data transfer, internal block device or filesystem operation was attempted. The next unresolved hardware target is one qualified 4096-byte namespace block Read, not another standalone capacity Identify. The separately recorded source/transport requirements still apply.
+
+[Sanitized physical lifecycle acceptance](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json).

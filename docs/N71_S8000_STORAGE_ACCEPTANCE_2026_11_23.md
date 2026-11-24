@@ -2,6 +2,12 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
+## Current physical checkpoint: empty I/O queue lifecycle accepted
+
+One physical trial completed Create CQ, Create SQ, Delete SQ, Delete CQ, normal controller shutdown (CSTS 0x9), disable (CSTS 0) and readback-verified BME-off. All four exact Admin CQEs validated with status 0001 and the expected CID/SQID/head. This extends the earlier creation-only acceptance; the previous shutdown CFS was not observed in this new trace. All DMA backing/ownership remains retained, and only one such lifecycle is recorded.
+
+**The next unresolved hardware milestone is a qualified namespace block-data NVM Read. No LBA0/data Read, NVM Write, internal block device or NAND-backed Linux is established.** Reuse accepted Identify/64 GB and queue lifecycle evidence. Detailed [physical teardown report](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md#physical-acceptance-one-complete-empty-queue-lifecycle) and [sanitized acceptance](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json).
+
 ## 2026-11-24 historical test reconciliation — reuse completed milestones
 
 The physical storage milestone is already accepted: **the real ANS/S3E controller completed Identify Namespace 1 and transferred namespace metadata through DMA**. The next unresolved hardware target must be called **namespace block-data NVM Read**, rather than the first data received from storage. The owner independently confirmed the nominal 64 GB internal capacity on 24 November.
@@ -31,7 +37,8 @@ The physical storage milestone is already accepted: **the real ANS/S3E controlle
 - [x] Controlled controller shutdown, disable and endpoint BME-off observed; previous DMA resources **still quarantined**.
 - [ ] Independent proof that every outstanding DMA transaction has drained; none is currently available.
 - [x] Physical Admin Create I/O CQ and SQ for QID1/depth16 accepted with exact valid completions on 24 November; the subsequent shutdown raised CFS.
-- [ ] Physical NVMe NVM Read of LBA0 and stable queue/controller teardown; **not yet done**.
+- [x] Delete unused SQ then CQ and normal shutdown/disable/BME-off observed in one complete physical cycle on 24 November; all backing retained.
+- [ ] Physical NVMe NVM Read of LBA0 and repeated/sustained I/O data stability; **not yet done**.
 - [ ] Read-only Linux block device or persistent NAND-backed Linux; **not yet done**.
 
 ## 2026-11-23 live low-reserve physical read-only preflight

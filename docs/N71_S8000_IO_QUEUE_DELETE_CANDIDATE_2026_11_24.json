@@ -38,11 +38,13 @@
     "HBPP_audit": "PASS",
     "manifest_and_evidence": "PASS"
   },
-  "physically_booted": false,
-  "storage_module_inserted": false,
-  "shutdown_fix_proven": false,
+  "physically_booted": true,
+  "storage_module_inserted": true,
+  "shutdown_fix_proven": true,
   "NVM_read_available": false,
   "NVM_write_available": false,
   "DMA_release_authorized": false,
-  "fresh_attended_boot_required": true
+  "fresh_attended_boot_required": true,
+  "physical_scope": "One measured empty-queue Create/Delete/shutdown cycle; no repeated stability, data Read or DMA-drain claim.",
+  "physical_evidence_file": "N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json"
 }

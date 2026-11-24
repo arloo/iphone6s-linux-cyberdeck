@@ -1,5 +1,7 @@
 # N71/S8000 one-shot I/O queue runtime — 2026-11-24
 
+**Latest physical checkpoint:** the subsequent explicitly armed empty-SQ/CQ deletion trial completed all four Create/Delete commands and normal shutdown/disable/BME-off in one measured cycle. All DMA backing is still retained; NVM block Read remains unperformed. See [physical empty-queue lifecycle](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md#physical-acceptance-one-complete-empty-queue-lifecycle).
+
 ## Scope and acceptance
 
 This change connects the previously host-only DMA allocator and queue encoders to an explicitly armed kernel path. Its new physical question is whether the S8000 controller accepts **Admin Create I/O CQ followed by Admin Create I/O SQ**, QID 1, depth 16, polling only. Identify Namespace1 is required setup within this new experiment; the already accepted 64 GB geometry is not a new milestone.
@@ -81,3 +83,5 @@ The tested kernel's native `drivers/nvme/host/pci.c` uses `nvme_delete_io_queues
 Sanitized physical evidence: [first corrected queue acceptance](N71_S8000_IO_QUEUE_ACCEPTANCE_2026_11_24.json).
 
 The subsequent default-off empty-SQ/CQ deletion candidate is now ARM64-built, passes all 1,919 host tests and is packaged in a verified inert RAM image. It has not been physically tested. See [deletion trial and acceptance criteria](N71_S8000_IO_QUEUE_DELETE_TRIAL_2026_11_24.md).
+
+The empty-queue deletion candidate was subsequently physically accepted for one complete Create/Delete/shutdown cycle. See [sanitized lifecycle evidence](N71_S8000_IO_QUEUE_DELETE_ACCEPTANCE_2026_11_24.json). No independent DMA retirement or NVM data Read follows from this result.
