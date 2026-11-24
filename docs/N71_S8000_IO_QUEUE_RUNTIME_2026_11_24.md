@@ -61,3 +61,9 @@ The current boot keeps the original storage pilot pinned. Do not unload or repla
 Sanitized machine-readable evidence: [physical queue-only result](N71_S8000_IO_QUEUE_PHYSICAL_2026_11_24.json).
 
 The corrected candidate passes all **1,917** host tests, the synthetic HBPP audit, manifest/evidence validation and the exact-kernel ARM64 build. These are host-side validations, not physical queue acceptance.
+
+## Owner-attended RAM payload prepared
+
+A new private RAM image packages the corrected storage module at `/usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko` without loading it automatically. Its SHA-256 is `1921795d5c31e84fc5a6e7f41c8d2a8395e8fb928d08b95d87ef300ad1e142fa` (27949306 bytes). The charger module is updated from the older binary to the already physically observed phase-diagnostic binary `b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7`; the finite 300 mA startup profile and guards are preserved. The complete runtime hash manifest, gzip/CPIO roundtrip, module ABI, and byte-identical remaining rootfs entries are verified. Bootloader, bootargs, DTBs and compressed kernel are byte-identical to the reference.
+
+The attended launcher validates image hash/size, preserves a still-running Linux session, and otherwise uses the existing owner-assisted DFU/Pongo workflow. The image remains private because it contains owner credentials and device assets. It has not yet been physically booted; no new hardware command was sent during packaging.
