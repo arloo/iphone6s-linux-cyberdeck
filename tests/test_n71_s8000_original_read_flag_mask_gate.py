@@ -44,6 +44,21 @@ class OriginalRequestFlagMaskTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MASK.effective_request_bit0(*invalid)
 
+    def test_mapper_symbol_must_match_resolved_address(self):
+        name = b'\0__ZN8IOMapper28copyMapperForDeviceWithIndexEP9IOServicej\0'
+        entry = struct.pack('<IBBHQ', 1, 0x0f, 1, 0, 0x1000)
+        blob = entry + name
+        MASK.verify_mapper_symbol(blob, 0x1000, 0, 1, 16, len(name))
+        with self.assertRaises(ValueError):
+            MASK.verify_mapper_symbol(blob, 0x1004, 0, 1, 16, len(name))
+        with self.assertRaises(ValueError):
+            MASK.verify_mapper_symbol(entry + name.replace(b'IOMapper',b'XXMapper'),
+                                      0x1000, 0, 1, 16, len(name))
+        with self.assertRaises(ValueError):
+            MASK.verify_mapper_symbol(blob[:-1], 0x1000, 0, 1, 16, len(name)-1)
+        with self.assertRaises(ValueError):
+            MASK.verify_mapper_symbol(blob, 0x1000, 0, 2, 16, len(name)+1)
+
     def test_no_runtime_hardware_claims_or_nand_execution(self):
         source = (ROOT/'tools/n71_s8000_original_read_flag_mask_gate.py').read_text()
         self.assertIn('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED',source)

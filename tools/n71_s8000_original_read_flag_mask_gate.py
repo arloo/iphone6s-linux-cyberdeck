@@ -8,6 +8,8 @@ auxiliary argument, dynamic class, final PRP wiring or DMA are proven live.
 import argparse
 from pathlib import Path
 import struct
+import hashlib
+import xml.etree.ElementTree as ET
 import n71_s8000_original_ionvme_read_source_gate as READ
 import n71_s8000_original_ionvme_read_prp_gate as FLOW
 
@@ -123,10 +125,72 @@ def effective_request_bit0(controller_bit: int, lookup_predicate: int,
     return controller_bit & (lookup_predicate | auxiliary_nonzero)
 
 
+def verify_mapper_symbol(blob: bytes, target: int, symoff: int, count: int,
+                         stroff: int, strsize: int) -> None:
+    if not (0 < count <= 100000 and 0 <= symoff <= len(blob)-16*count
+            and 0 < strsize <= len(blob) and 0 <= stroff <= len(blob)-strsize):
+        raise ValueError('Invalid kernel symbol table extent')
+    expected = b'__ZN8IOMapper28copyMapperForDeviceWithIndexEP9IOServicej'
+    names = []
+    for i in range(count):
+        idx, typ, sec, desc, value = struct.unpack_from('<IBBHQ', blob, symoff+16*i)
+        if value != target:
+            continue
+        if not 0 <= idx < strsize:
+            raise ValueError('Invalid symbol string index')
+        end = blob.find(b'\0', stroff+idx, stroff+strsize)
+        if end < 0:
+            raise ValueError('Unterminated symbol name')
+        names.append(blob[stroff+idx:end])
+    if expected not in names:
+        raise ValueError('Mapper symbol not found at resolved stub destination')
+
+
+def verify_mapper_import(blob: bytes, code: bytes) -> None:
+    ctor = READ.GATE
+    main = ctor.KMAP.macho_segments(blob, 0)
+    pre, info = main['__PRELINK_TEXT'], main['__PRELINK_INFO']
+    raw = blob[info['offset']:info['offset']+info['filesize']].rstrip(b'\0')
+    root = ET.fromstring(b'<plist>'+raw+b'</plist>')
+    entries = [ctor.KMAP.pairs(n) for n in root.iter('dict')]
+    entries = [e for e in entries if e.get('CFBundleIdentifier') is not None
+               and e['CFBundleIdentifier'].text == READ.BUNDLE
+               and e.get('_PrelinkExecutableLoadAddr') is not None]
+    if len(entries) != 1:
+        raise ValueError('Mapper import KEXT not unique')
+    load = int(entries[0]['_PrelinkExecutableLoadAddr'].text, 0)
+    nested = ctor.KMAP.macho_segments(blob, pre['offset']+load-pre['vm'])
+    base = nested['__TEXT_EXEC']['sections']['__text']['vm']
+    target = ctor.ctor_stub_callee(blob, main, nested, base+0x26B0C,
+                                  struct.unpack_from('<I', code, 0x26B0C)[0])
+    kernel = main['__TEXT_EXEC']
+    if target != kernel['vm']+0x5E8E90 or target+320 > kernel['vm']+kernel['filesize']:
+        raise ValueError('Mapper target differs from original kernel')
+    off = kernel['offset']+target-kernel['vm']
+    if hashlib.sha256(blob[off:off+320]).hexdigest() != 'e7b2e0ff45cb4b5e2b3ed1e82ec197cad0548a00449d67755ddc683b149ff3e2':
+        raise ValueError('Mapper target fingerprint differs')
+    count, size = struct.unpack_from('<II', blob, 16)
+    pos, end = 32, 32+size
+    tables = []
+    for _ in range(count):
+        cmd, length = struct.unpack_from('<II', blob, pos)
+        if length < 8 or pos+length > end:
+            raise ValueError('Invalid kernel load command')
+        if cmd == 2:
+            if length != 24:
+                raise ValueError('Invalid LC_SYMTAB')
+            tables.append(struct.unpack_from('<4I', blob, pos+8))
+        pos += length
+    if len(tables) != 1 or pos != end:
+        raise ValueError('Kernel symbol table not unique')
+    verify_mapper_symbol(blob, target, *tables[0])
+
+
 def verify_original(kernelcache: bytes) -> None:
     code, _ = READ.extract_original_ionvme(kernelcache)
     FLOW.verify_transport_instruction_flow(code)
     verify_instructions(code)
+    verify_mapper_import(kernelcache, code)
 
 
 def main() -> int:
@@ -143,6 +207,7 @@ def main() -> int:
     print('PROVEN_BOOLEAN_BIT0=controller_bit AND (lookup_predicate OR auxiliary_nonzero)')
     print('AUXILIARY_SOURCE=CONTROLLER_FIELD_680_VIA_ALL_THREE_STACK_ROUTES')
     print('AUXILIARY_INITIALIZATION=EXTERNAL_CALL_RESULT_FROM_CONTROLLER_FIELD_264')
+    print('AUXILIARY_IMPORT=IOMapper_copyMapperForDeviceWithIndex_INDEX_0')
     print('AUXILIARY_CLEANUP=NULL_CHECK_VIRTUAL_CALL_AND_ZERO')
     print('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED')
     print('ACTIVE_N71_CONTROLLER_BINDING=UNVERIFIED')
