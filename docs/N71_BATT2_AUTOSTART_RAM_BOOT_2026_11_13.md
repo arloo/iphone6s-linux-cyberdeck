@@ -31,3 +31,7 @@ Validation: ARM64 kernel and three matching modules built; configuration delta c
 
 
 Session stop: stages15/16/18 completed bounded controller/reset tests, but link status bit0 remained clear; stage17 rejected its register readback. Stage19 is compiled only and untested, with private calibration retained locally. See the port1 report's stop checkpoint before resuming.
+
+## 2026-11-24 corrective next-boot candidate (offline only)
+
+The original early SN2400 autostart subsequently demonstrated a physical boot-enumeration race: it applied 300 mA at uptime 2.177 seconds, detected VBUS=0 and restored the original current limit at 6.319 seconds, while the USB gadget rebound at 28.052 seconds. A new two-phase, nonblocking boot/charge-worker design now defers its single guarded 300 mA lease until 45 seconds of uptime and 15 consecutive configured USB readings; an owner-private next-boot RAM image preserves all original runtime files except this startup script and its SHA-256 manifest entry. **It is built and verified offline, not physically booted, and has not been deployed to the active phone.** See [N71 USB charge boot race and corrective acceptance](N71_S8000_USB_CHARGE_BOOT_RACE_2026_11_24.md). The older historical physical charging success at 55–57% must not be interpreted as continuous charging or as physical acceptance of this new image.

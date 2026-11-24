@@ -1,59 +1,27 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
-# N71 batt2 RAM boot: hash-pinned PMIC/Bluetooth startup, guarded charge.
-# Delaying SN2400 protects the initial DWC2 USB re-enumeration window.
+# N71/S8000 batt2 RAM boot: nonblocking PMIC and Bluetooth initialization.
+# Only a detached, one-shot worker may arm a bounded SN2400 input trial.
+# The independent kernel VBUS/thermal/lease rollback is never bypassed.
 set -u
-case "$(uname -r)" in 7.3.0-rc1-n71-batt2-*) ;; *) echo SKIP_KERNEL; exit 0;; esac
+MODE=${1:---boot}
+case "$MODE" in --boot|--charge-worker) : ;; *) echo UNSUPPORTED_STARTUP_MODE; exit 2 ;; esac
+case "$(uname -r)" in 7.3.0-rc1-n71-batt2-*) : ;; *) echo SKIP_KERNEL; exit 0 ;; esac
 [ -r /proc/device-tree/compatible ] || { echo SKIP_BOARD; exit 0; }
 for board in apple,n71 apple,s8000; do
     tr '\000' '\n' </proc/device-tree/compatible | grep -qx "$board" || exit 1
 done
 UDC=/sys/class/udc/20c100000.usbdev/state
 BAT=/sys/class/power_supply/bq27540-0
-# Keep /init nonblocking: worker checks USB and battery independently.
-if [ "${1:-}" != "--charge-worker" ]; then
-[ ! -e /run/n71_runtime_attempted ] || { echo ALREADY_ATTEMPTED; exit 1; }
-: >/run/n71_runtime_attempted
-sha256sum -c /usr/lib/cyberdeck/n71-runtime.sha256 > /run/n71_runtime_hashes.log 2>&1 || {
-    echo HASH_CHECK_FAILED; exit 1
-}
-# Basic enumeration check precedes any hardware module loading.
-i=0
-while [ "$(cat "$UDC" 2>/dev/null)" != configured ]; do
-    i=$((i + 1))
-    [ "$i" -lt 15 ] || { echo USB_NOT_CONFIGURED; exit 1; }
-    sleep 1
-done
-if /usr/bin/n71-module-once /usr/lib/cyberdeck/gpio-apple-pmic.ko; then
-    echo PMIC_GPIO_LOAD_RC=0
-else
-    echo PMIC_GPIO_LOAD_FAILED_SKIP_CHARGER
-    exit 1
-fi
-# Bluetooth works independently of the charger; do not block it on a charge gate.
-i=0
-while ! dmesg | grep -q 'BCM4350C5 (003.006.007) build 0825'; do
-    i=$((i + 1))
-    [ "$i" -lt 20 ] || break
-    sleep 1
-done
-if [ -d /sys/class/bluetooth/hci0 ]; then
-    /usr/bin/n71-hci-probe up
-else
-    echo HCI_NOT_PRESENT
-fi
-/usr/bin/n71-battery-status
-/bin/sh /usr/bin/n71-runtime-autostart --charge-worker \
-    > /run/n71_charge_monitor.log 2>&1 < /dev/null &
-echo CHARGER_WORKER_SPAWNED
-echo RUNTIME_STARTUP_FINISHED_PCIE_NOT_ACTIVATED
-exit 0
-fi
-# Reject duplicate workers and require a prior validated startup.
-[ -e /run/n71_runtime_attempted ] || { echo STARTUP_NOT_CONFIRMED_SKIP_CHARGER; exit 1; }
-mkdir /run/n71_charge_worker_started 2>/dev/null || { echo CHARGER_WORKER_ALREADY_ATTEMPTED; exit 0; }
-sha256sum -c /usr/lib/cyberdeck/n71-runtime.sha256 \
-    > /run/n71_charge_hashes.log 2>&1 || { echo WORKER_HASH_CHECK_FAILED; exit 1; }
+if [ "$MODE" = --charge-worker ]; then
+    [ -e /run/n71_runtime_attempted ] || { echo STARTUP_NOT_CONFIRMED_SKIP_CHARGER; exit 1; }
+    mkdir /run/n71_charge_worker_started 2>/dev/null || {
+        echo CHARGER_WORKER_ALREADY_ATTEMPTED; exit 0;
+    }
+    sha256sum -c /usr/lib/cyberdeck/n71-runtime.sha256 \
+        > /run/n71_charge_hashes.log 2>&1 || {
+        echo WORKER_HASH_CHECK_FAILED; exit 1;
+    }
 # The previously observed USB gadget was rebound at boot uptime ~28 seconds.
 # Require >=45 seconds total uptime plus 15 consecutive configured samples.
 # A disconnect resets stability. Maximum 120 attempts; never bypass VBUS guard.
@@ -72,8 +40,7 @@ while [ "$i" -lt 120 ] && [ "$stable" -lt 15 ]; do
 done
 if [ "$stable" -lt 15 ]; then
     echo USB_STABILITY_TIMEOUT_SKIP_CHARGER
-    echo RUNTIME_STARTUP_FINISHED_PCIE_NOT_ACTIVATED
-    exit 0
+        exit 0
 fi
 echo USB_POST_ENUMERATION_STABILITY_CONFIRMED
 # Independent guards are stricter than the kernel's 10%-to-4.2V emergency
@@ -125,5 +92,45 @@ if /usr/bin/n71-module-once /usr/lib/cyberdeck/n71-sn2400-input-trial.ko \
 else
     echo CHARGER_LOAD_FAILED_NO_RETRY
     exit 1
+fi
+    exit 0
+fi
+# Main /init path must return promptly. The 20-minute high-SOC observation
+# belongs only to the detached worker and never blocks touch/USB/UI setup.
+[ ! -e /run/n71_runtime_attempted ] || { echo ALREADY_ATTEMPTED; exit 1; }
+: > /run/n71_runtime_attempted
+sha256sum -c /usr/lib/cyberdeck/n71-runtime.sha256 \
+    > /run/n71_runtime_hashes.log 2>&1 || { echo HASH_CHECK_FAILED; exit 1; }
+i=0
+while [ "$(cat "$UDC" 2>/dev/null)" != configured ]; do
+    i=$((i + 1))
+    [ "$i" -lt 15 ] || { echo USB_NOT_CONFIGURED; exit 1; }
+    sleep 1
+done
+if /usr/bin/n71-module-once /usr/lib/cyberdeck/gpio-apple-pmic.ko; then
+    echo PMIC_GPIO_LOAD_RC=0
+else
+    echo PMIC_GPIO_LOAD_FAILED_SKIP_CHARGER
+    exit 1
+fi
+# Bluetooth startup is independent of the charging preflight.
+i=0
+while ! dmesg | grep -q 'BCM4350C5 (003.006.007) build 0825'; do
+    i=$((i + 1))
+    [ "$i" -lt 20 ] || break
+    sleep 1
+done
+if [ -d /sys/class/bluetooth/hci0 ]; then
+    /usr/bin/n71-hci-probe up
+else
+    echo HCI_NOT_PRESENT
+fi
+/usr/bin/n71-battery-status
+if [ ! -x /usr/bin/nohup ] || [ ! -x /usr/bin/setsid ]; then
+    echo DETACHED_CHARGE_RUNNER_UNAVAILABLE_SKIP_CHARGER
+else
+    /usr/bin/nohup /usr/bin/setsid /bin/sh /usr/bin/n71-runtime-autostart --charge-worker \
+    > /run/n71_charge_monitor.log 2>&1 < /dev/null &
+    echo CHARGER_WORKER_SPAWNED
 fi
 echo RUNTIME_STARTUP_FINISHED_PCIE_NOT_ACTIVATED

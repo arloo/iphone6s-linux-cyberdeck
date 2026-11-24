@@ -39,6 +39,8 @@ class N71RAMBootChargerRaceTests(unittest.TestCase):
         self._make('dmesg', 'echo "BCM4350C5 (003.006.007) build 0825"')
         self._make('sha256sum', 'echo "mocked fixture: OK"')
         self._make('sleep', ':')
+        self._make('nohup', 'exec "$@"')
+        self._make('setsid', 'exec "$@"')
         for f in ('module-once','hci-probe','battery-status'):
             self._make(f, 'echo "$0 $*" >> "$MOCK_LOADS"')
         updates = {
@@ -58,15 +60,19 @@ class N71RAMBootChargerRaceTests(unittest.TestCase):
             '/usr/bin/n71-hci-probe': str(self.bin/'hci-probe'),
             '/usr/bin/n71-battery-status': str(self.bin/'battery-status'),
             '/usr/bin/n71-runtime-autostart': str(self.root/'worker-binary'),
+            '/usr/bin/nohup': str(self.bin/'nohup'),
+            '/usr/bin/setsid': str(self.bin/'setsid'),
         }
         self.script = SOURCE
         for old,new in updates.items():
             self.assertIn(old, self.script)
             self.script = self.script.replace(old,new)
         # Mock the detached child launch for deterministic, host-only checks.
-        spawn='/bin/sh /usr/bin/n71-runtime-autostart --charge-worker \\'
+        spawn='/usr/bin/nohup /usr/bin/setsid /bin/sh /usr/bin/n71-runtime-autostart --charge-worker \\'
         # Replacement of the absolute executable path happened above.
         spawn=spawn.replace('/usr/bin/n71-runtime-autostart', str(self.root/'worker-binary'))
+        spawn=spawn.replace('/usr/bin/nohup', str(self.bin/'nohup'))
+        spawn=spawn.replace('/usr/bin/setsid', str(self.bin/'setsid'))
         # The production script still contains an actual detached launch.
         original=spawn+'\n    > '+str(self.root/'charge-monitor.log')+' 2>&1 < /dev/null &'
         assert original in self.script, 'Charge worker launch must remain explicit'

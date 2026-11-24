@@ -199,3 +199,5 @@ The owner confirmed initial touch typing works and requested larger keys. [Keybo
 ### Typography follow-up
 
 [Typography 0.4](docs/N71_TYPOGRAPHY_04_2026_11_16.md) uses IBM Plex Mono Medium TrueType with baseline-aligned grayscale antialiasing and larger console text. The approved portrait keyboard geometry remains unchanged. The local font generator and source are public; font assets and binaries remain private. Earlier resource measurements apply to their dated revision, not a new typography benchmark.
+
+**24 Nov 2026 power checkpoint:** A USB/charger boot-order race was measured on the real N71 (SN2400 rolled back at 6.319s; DWC2 rebound at 28s). A guarded detached charge worker and **private, unbooted RAM-only** next-boot candidate are ready for owner-attended acceptance. See [USB charging boot race evidence](docs/N71_S8000_USB_CHARGE_BOOT_RACE_2026_11_24.md). This is not yet a claim of reliable Linux charging or internal NAND access.
