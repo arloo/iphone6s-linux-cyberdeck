@@ -25,7 +25,7 @@ SHIM = r"""
 #define module_exit(...)
 #define pr_info(...) do {} while (0)
 #define pr_info_ratelimited(...) do {} while (0)
-#define pr_err(...) do {} while (0)
+#define pr_err(...) fprintf(stderr, __VA_ARGS__)
 struct device_node {int unused;};
 struct device {struct device_node *of_node;};
 struct regmap {int unused;};
@@ -184,7 +184,13 @@ class TrialTests(unittest.TestCase):
                      'droop','detach','hot-monitor','healthy-monitor','unload','adc-idle-selector','adc-unknown','lease-invalid',
                      'high-voltage-monitor','zero-vbus-monitor']:
             with self.subTest(case=case):
-                subprocess.run([str(self.exe),case],check=True,capture_output=True,text=True)
+                result = subprocess.run([str(self.exe),case],check=True,capture_output=True,text=True)
+                if case == 'high-voltage-monitor':
+                    self.assertIn('BATTERY_GUARD', result.stderr)
+                    self.assertIn('phase=battery', result.stderr)
+                elif case == 'zero-vbus-monitor':
+                    self.assertIn('phase=vbus-bounds', result.stderr)
+                    self.assertNotIn('BATTERY_GUARD', result.stderr)
 
 if __name__ == '__main__':
     unittest.main()
