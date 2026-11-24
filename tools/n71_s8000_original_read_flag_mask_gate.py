@@ -51,6 +51,35 @@ DMA_KERNEL_SYMBOLS = {
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # Owner initialization: x2 -> byte +496 after successful virtual init;
+    # provider x1 -> safeMetaCast result -> pointer +464.
+    0x12B78: 0xAA0403F6,
+    0x12B7C: 0xAA0303F5,
+    0x12B80: 0xAA0203F4,
+    0x12B84: 0xAA0003F7,
+    0x12B88: 0xF9400008,
+    0x12B8C: 0xF9430108,
+    0x12B90: 0xD63F0100,
+    0x12B94: 0xAA0003F3,
+    0x12B98: 0x36000140,
+    0x12B9C: 0x390762F6,
+    0x12BA0: 0x3907CAF5,
+    0x12BA4: 0x3907C2F4,
+    0x12C08: 0xAA0103F3,
+    0x12C0C: 0xAA0003F4,
+    0x12C38: 0xB0003428,
+    0x12C3C: 0x913E4108,
+    0x12C40: 0xF9400101,
+    0x12C44: 0xAA1303E0,
+    0x12C48: 0x9400BFA4,
+    0x12C4C: 0xF900E680,
+    0x12C50: 0xB40004E0,
+    0x12C54: 0xF0003428,
+    0x12C58: 0x913C6108,
+    0x12C5C: 0xF9400101,
+    0x12C60: 0xAA1303E0,
+    0x12C64: 0x9400BF9D,
+    0x12C68: 0xF900EA80,
     # Shared Read/Write handler: selectors start at 0 or 4; set bit3
     # only when owner byte +496 == 1 and owner pointer +464 is null.
     # Then acquire the request and invoke inherited descriptor/prepare.
@@ -376,6 +405,13 @@ def verify_mapper_import(blob: bytes, code: bytes) -> None:
     if len(tables) != 1 or pos != end:
         raise ValueError('Kernel symbol table not unique')
     verify_mapper_symbol(blob, target, *tables[0])
+    for call in (0x12C48, 0x12C64):
+        actual = ctor.ctor_stub_callee(blob, main, nested, base+call,
+                                       struct.unpack_from('<I', code, call)[0])
+        if actual != kernel['vm']+0x557600:
+            raise ValueError('Owner provider cast import target differs')
+        verify_mapper_symbol(blob, actual, *tables[0],
+                             expected=b'__ZN15OSMetaClassBase12safeMetaCastEPKS_PK11OSMetaClass')
     # The request itself is the original kernel IODMACommand receiver.
     for call, method in ((0x34E10, 'constructor'), (0x34E54, 'constructor'),
                          (0x355F0, 'generator')):
@@ -429,6 +465,9 @@ def main() -> int:
     print('EMBEDDED_INDEXED_MAPPERS=0_1_2')
     print('EMBEDDED_INPUT_BIT3_SELECTS_MAPPER_INDEX_2_OTHERWISE_0')
     print('READ_WRITE_SELECTOR_BIT3_SOURCE=OWNER_BYTE496_EQ_1_AND_OWNER_FIELD464_NULL')
+    print('OWNER_BYTE496_WRITER=INITIALIZER_X2_AFTER_VIRTUAL_INIT_SUCCESS')
+    print('OWNER_FIELD464_WRITER=SAFE_METACAST_OF_PROVIDER_ARGUMENT')
+    print('OWNER_FIELD464_CAST_TYPE_AND_LIVE_RESULT=UNVERIFIED')
     print('READ_WRITE_OWNER_FIELDS_RUNTIME_VALUES=UNVERIFIED')
     print('EMBEDDED_INPUT_BIT3_EQUALS_INTERNAL_PRP_BIT3=UNVERIFIED')
     print('REQUEST_PARENT=ORIGINAL_KERNEL_IODMACommand')
