@@ -82,3 +82,10 @@ until power margin is physically qualified under the intended workload.
 
 Sanitized physical evidence:
 [phase-aware boot and battery observations](../results/2026-11-24-n71-sn2400-phase-boot.json).
+
+
+## Read-only USB reconnection and idle charge recheck
+
+The resumed Dell session initially selected an older November 19 host-key pin. The phone presented the already verified current-boot November 24 phase-aware host key; the client reference was corrected to that existing pin while retaining strict host checking and the original authorized client key. Authenticated USB telemetry then succeeded. No new host key was trusted.
+
+A subsequent read-only 13-sample BQ27540 observation over 50.25 seconds recorded 54% SOC throughout, 32.5 C throughout, all health=Good and USB=configured. Net cell current ranged from 0 to +92 mA, with an arithmetic mean of +54.31 mA (12 positive samples, one zero, no negative sample). Reported remaining charge increased from 692 to 693 mAh. The existing 300 mA input-limit monitor continued through uptime 1047.456 seconds at 4.875 V VBUS, with no stop or restoration event visible in this boot. Native WLAN, Bluetooth presence and the UI were also observed. No charger programming, module rearm, storage module or NAND access was performed. This strengthens the idle charge-balance evidence; it does not qualify power margin under storage activity or continuous operation beyond the finite lease.
