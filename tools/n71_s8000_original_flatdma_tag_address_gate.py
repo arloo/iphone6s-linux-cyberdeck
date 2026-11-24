@@ -19,6 +19,34 @@ import n71_s8000_nvmmu_owned_table_source_gate as NV
 # The preceding load at +0x32c4 sources the owner's 32-bit virtual base.
 # The following ORR and STR form and return the resulting FlatDMA address.
 ORIGINAL_S800X_TAG_WORDS = {
+    # Original segment callback and descriptor construction.
+    0x2ef8: 0xf2402c5f,  # require 4 KiB aligned start
+    0x2f00: 0xf2402c7f,  # require 4 KiB aligned length
+    0x2f0c: 0xd34cfc68,  # page count from length
+    0x2f14: 0xd34cfc4a,  # page number from start
+    0x2f20: 0x6b0c017f,  # compare SGL index to capacity
+    0x2f24: 0x54000162,  # stop at capacity
+    0x2f28: 0x0b09014c,  # consecutive page number
+    0x2f30: 0xb82b59ac,  # store 32-bit SGL entry
+    0x2f40: 0xb900102b,  # advance entry count
+    0x2f44: 0x6b09011f,  # compare generated page count
+    0x2fb8: 0xf9405508,  # descriptor virtual method slot 168
+    0x2fc0: 0xd63f0100,
+    0x2fd4: 0xaa0003f8,  # preserve direction selector
+    0x3134: 0xb9000b88,  # first page number -> TCB +8
+    0x3138: 0xb9402be8,  # load generated page count
+    0x313c: 0x34000068,  # no SGL pointer store if count zero
+    0x3144: 0xf9000b88,  # SGL pointer -> TCB +16
+    0x3148: 0x7100071f,  # selector 1
+    0x314c: 0x540000a0,
+    0x3150: 0x71000b1f,  # selector 2
+    0x3154: 0x54001021,  # reject other selector
+    0x3158: 0x52802008,  # selector 2 -> 0x100
+    0x3160: 0x52804008,  # selector 1 -> 0x200
+    0x3164: 0xb9000388,  # control -> TCB +0
+    0x3228: 0xd5033bbf,  # DMB ISH before count publication
+    0x322c: 0xb9402be8,
+    0x3230: 0xb9000788,  # publish count at TCB +4
     0x30b4: 0x79009aa9,  # selected 16-bit tag index -> object +76
     0x324c: 0x8b091d08,  # TCB address += slot << 7 (128-byte TCB)
     0x3270: 0x79409aa8,  # selected 16-bit tag index for TCB
@@ -85,6 +113,9 @@ def main() -> int:
     print("IDENTIFY_TAG0_BASE=0x40000000")
     print("PREVIOUS_0x40001000_IS_TAG1=NO")
     print("NEXT_DISTINCT_TAG1_CANDIDATE=0x40800000")
+    print("ORIGINAL_TCB_DIRECTION_SELECTOR_1=0x200 SELECTOR_2=0x100")
+    print("ORIGINAL_SGL_PAGE_NUMBER_WIDTH=32 PAGE_SHIFT=12")
+    print("ORIGINAL_TCB_PAGE_COUNT_AFTER_DMB_ISH=YES")
     print("NVM_READ_VENDOR_FLAGS_OR_SGL_QUALIFIED=NO")
     print("DEVICE_DMA_OR_NAND_ACCESSED=NO")
     return 0

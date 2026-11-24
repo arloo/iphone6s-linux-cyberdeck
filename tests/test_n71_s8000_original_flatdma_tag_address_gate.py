@@ -14,6 +14,7 @@ HEADER = (ROOT / "experimental/port0/n71_s3e_read_only_io_plan.h").read_text()
 
 class N71OriginalFlatDMATagTests(unittest.TestCase):
     def test_original_instruction_fingerprints_and_each_mutation(self):
+        self.assertGreaterEqual(len(G.ORIGINAL_S800X_TAG_WORDS), 36)
         content = bytearray(0x3308)
         for offset, word in G.ORIGINAL_S800X_TAG_WORDS.items():
             struct.pack_into("<I", content, offset, word)
