@@ -14,6 +14,32 @@ import n71_s8000_original_ionvme_read_prp_gate as FLOW
 # Source byte offsets are relative to genuine original __TEXT_EXEC.__text.
 # These are source instruction fingerprints, not the original executable.
 MASK_SOURCE_WORDS = {
+    # All three wrappers preserve the incoming stack argument and forward
+    # it through the constructor's second outgoing stack slot to helper x5.
+    0x20C: 0x9101C3FD, # wrapper 1 frame base
+    0x24C: 0xF9400BA8, # load incoming stack argument
+    0x250: 0xF90007E8, # forward to constructor stack slot +8
+    0x278: 0x94008992,
+    0x614: 0x9101C3FD, # wrapper 2 frame base
+    0x654: 0xF9400BA8,
+    0x658: 0xF90007E8,
+    0x680: 0x94008890,
+    0x22B00: 0x9101C3FD, # wrapper 3 frame base
+    0x22B40: 0xF9400BA8,
+    0x22B44: 0xF90007E8,
+    0x22B6C: 0x97FFFF55,
+    0x228D4: 0x910103FD, # constructor frame base
+    0x22904: 0xF9400FA5, # constructor loads forwarded stack arg into x5
+    0x22940: 0x9400002C, # invokes pool helper
+    0x27168: 0xAA0003F3, # controller this saved in x19
+    0x271D0: 0xF9415668, # controller field +680 loaded into x8
+    0x271D8: 0xF90003E8, # route 1 passes field on stack
+    0x271F8: 0x97FF6500,
+    0x27238: 0xF9415668, # route 2 loads same field
+    0x2723C: 0xF90003E8,
+    0x2725C: 0x97FFEE22,
+    0x27264: 0xF90003E8, # route 3 passes same x8 on stack
+    0x27284: 0x97FF63DB,
     0x22A08: 0xAA0503F4, # incoming helper x5 saved in x20
     0x22A10: 0xAA0303F9, # incoming controller-derived flag x3 saved in x25
     0x22A20: 0x9400363F, # predicate helper 0x3031c
@@ -52,7 +78,11 @@ def verify_instructions(code: bytes) -> None:
     for at, expected in MASK_SOURCE_WORDS.items():
         if struct.unpack_from('<I', code, at)[0] != expected:
             raise ValueError('Original Apple I/O flag masking flow differs')
-    for call, target in ((0x22A20, 0x3031C), (0x22A78, 0x22DE4)):
+    for call, target in ((0x22A20, 0x3031C), (0x22A78, 0x22DE4),
+                         (0x278, 0x228C0), (0x680, 0x228C0),
+                         (0x22B6C, 0x228C0), (0x22940, 0x229F0),
+                         (0x271F8, 0x5F8), (0x2725C, 0x22AE4),
+                         (0x27284, 0x1F0)):
         if FLOW.arm64_bl_target(call, struct.unpack_from('<I', code, call)[0]) != target:
             raise ValueError('Original Apple request pool branch differs')
 
@@ -87,6 +117,7 @@ def main() -> int:
     print('N71_ORIGINAL_READ_FLAG_MASK_GATE=PASS')
     print(f'PINNED_SOURCE_INSTRUCTION_WORDS={len(MASK_SOURCE_WORDS)}')
     print('PROVEN_BOOLEAN_BIT0=controller_bit AND (lookup_predicate OR auxiliary_nonzero)')
+    print('AUXILIARY_SOURCE=CONTROLLER_FIELD_680_VIA_ALL_THREE_STACK_ROUTES')
     print('LOOKUP_AND_AUXILIARY_RUNTIME_VALUES=UNVERIFIED')
     print('ACTIVE_N71_CONTROLLER_BINDING=UNVERIFIED')
     print('COMMAND_BIT13_AFTER_FILTER=CONDITIONAL')
