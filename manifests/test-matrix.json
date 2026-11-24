@@ -48,7 +48,9 @@
         "docs/PROJECT_STATE_2026_11_16.md",
         "docs/N71_SESSION_FINALIZATION_UI_POWER_2026_11_16.md",
         "docs/N71_USB_SSH_CUTOVER_2026_11_16.md",
-        "docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md"
+        "docs/COMPANION_BRIEFING_AND_STORAGE_2026_11_16.md",
+        "docs/N71_S8000_USB_CHARGE_BOOT_RACE_2026_11_24.md",
+        "docs/N71_SN2400_PHASE_BOOT_PHYSICAL_2026_11_24.json"
       ],
       "qualification_scope": {
         "touch_evdev_multitouch": "Physical single and simultaneous two-finger EVDEV; endurance/edge/latency unqualified",

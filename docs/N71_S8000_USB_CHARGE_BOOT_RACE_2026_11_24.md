@@ -81,7 +81,7 @@ The 500 mA source attestation remains pending. Storage remains blocked
 until power margin is physically qualified under the intended workload.
 
 Sanitized physical evidence:
-[phase-aware boot and battery observations](../results/2026-11-24-n71-sn2400-phase-boot.json).
+[phase-aware boot and battery observations](N71_SN2400_PHASE_BOOT_PHYSICAL_2026_11_24.json).
 
 
 ## Read-only USB reconnection and idle charge recheck
