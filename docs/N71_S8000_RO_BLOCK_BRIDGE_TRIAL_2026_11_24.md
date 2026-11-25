@@ -2,7 +2,7 @@
 
 ## Current status and scope
 
-The preceding physical sequence 0,1,0,1 is accepted and reused as the transport baseline. This new candidate is ARM64-built and host-tested but **has not been booted or inserted**. It tests a new integration boundary: four real Linux bios must cause the four hardware Reads and receive data only after the existing exact-CQE, independent data and guard checks. It does not serve a RAM-backed imitation of NAND or a Dell NBD disk.
+The preceding physical sequence 0,1,0,1 is accepted and reused as the transport baseline. This new candidate is ARM64-built and host-tested but **has booted; the block bridge has not been inserted**. It tests a new integration boundary: four real Linux bios must cause the four hardware Reads and receive data only after the existing exact-CQE, independent data and guard checks. It does not serve a RAM-backed imitation of NAND or a Dell NBD disk.
 
 This is a temporary, kernel-client-only qualification bridge, not a usable userspace disk. A gendisk named n71nand_ro advertises the Identify-derived 64,000,000,000 bytes with 4096-byte logical blocks, but its request policy admits only four trusted preallocated bios in the fixed sequence 0,1,0,1. The registration is removed after the trial. Whole-drive arbitrary access, mounting and persistent installation remain unqualified.
 
@@ -38,3 +38,7 @@ The private RAM image changes only the inert S3E module and its runtime hash ent
 The current successful-series boot is retained and cannot run this candidate. A fresh attended RAM boot, strict USB/SSH verification, completed encrypted-backup metadata, adequate reserve, Good health, finite guarded 300 mA input/VBUS and temperature margin below the owner's 38 C ceiling are required before the single attempt.
 
 [Candidate metadata](N71_S8000_RO_BLOCK_BRIDGE_CANDIDATE_2026_11_24.json), [accepted underlying four-Read evidence](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json) and [canonical storage ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md).
+
+## Fresh boot power gate — 2026-11-25
+
+The exact candidate boot is now authenticated, but reserve was only 21% and the automatic charger skipped startup below 35%. The bridge remains unattempted while a separately guarded, finite charge-only recovery restores reserve. The S3E epoch is unused. [Measured power gate and recovery](N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.md).

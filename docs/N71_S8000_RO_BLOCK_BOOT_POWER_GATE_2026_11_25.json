@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-25",
+  "source_commit": "ff02944a28d3794825504d650bde6456fdaa358f",
+  "RAM_image_sha256": "60004b42aec3f48afbedb798ff4d58ddf9dad2b99d1d4b9297ff0180ca8eb4c5",
+  "S3E_module_sha256": "4d0e0a1267b8f08dcfa92addaa9fa74739883e1c6b810823517abefc7d78bc7d",
+  "strict_direct_USB_SSH_and_all_runtime_hashes_verified": true,
+  "board_kernel_verified": true,
+  "encrypted_backup_finished": true,
+  "physically_booted": true,
+  "S3E_inserted": false,
+  "block_bridge_attempted": false,
+  "NVM_Reads_this_boot": 0,
+  "NVM_Writes_this_boot": 0,
+  "initial_power": {
+    "capacity_percent": 21,
+    "temp_deciC": 339,
+    "cell_uV": 3690000,
+    "net_current_uA": -274000,
+    "charging_module_loaded": false
+  },
+  "autostart_refusal": "BATTERY_GUARD_SKIP_CHARGER cap=21; automatic worker requires at least 35 percent",
+  "power_recovery": {
+    "scope": "Charge only; storage admission threshold unchanged",
+    "charger_module_sha256": "b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7",
+    "unchanged_native_capacity_floor_percent_exclusive": 10,
+    "short_300mA_trial_seconds": 30,
+    "short_300mA_VBUS_uV": 4900000,
+    "short_300mA_all_window_mean_net_uA": -4312,
+    "short_500mA_trial_seconds": 30,
+    "short_500mA_VBUS_uV": 4775000,
+    "short_500mA_all_window_mean_net_uA": 216875,
+    "both_short_trials_restored_original_input_rc": 0,
+    "current_finite_input_limit_uA": 500000,
+    "direct_USB_configured_limit_uA": 500000,
+    "cpu_governor": "powersave",
+    "cpu_frequency_kHz": 300000,
+    "backlight_previous": 1023,
+    "backlight_temporary": 614,
+    "backlight_maximum": 2047,
+    "all_native_guards_and_voltage_charge_current_setpoints_unchanged": true,
+    "additional_local_owner_guard_temp_stop_deciC": 375,
+    "additional_local_VBUS_bounds_uV": [
+      4750000,
+      5500000
+    ],
+    "additional_local_cell_bounds_uV": [
+      3600000,
+      4100000
+    ],
+    "original_recovery_window_max_seconds": 3600,
+    "automatic_renewal": false,
+    "storage_auto_start": false,
+    "current_sample": {
+      "capacity": 20,
+      "temp": 330,
+      "voltage_now": 3955000,
+      "current_now": 278000
+    }
+  },
+  "current_disposition": "Keep this unused S3E epoch while recovering reserve; block test deferred until fresh sufficient-reserve/VBUS/thermal/lease preflight",
+  "privacy": {
+    "device_identifiers_published": false,
+    "sector_bytes_or_hashes_exported": false,
+    "keys_or_original_firmware_published": false
+  }
+}

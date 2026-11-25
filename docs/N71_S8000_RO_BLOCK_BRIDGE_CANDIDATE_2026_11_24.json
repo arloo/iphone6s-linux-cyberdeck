@@ -59,9 +59,12 @@
     "gzip_CPIO_roundtrip_verified": true,
     "storage_autoload": false
   },
-  "physically_booted": false,
+  "physically_booted": true,
   "module_inserted": false,
   "block_bridge_attempted": false,
   "block_bridge_accepted": false,
-  "fresh_attended_boot_required": true
+  "fresh_attended_boot_required": false,
+  "boot_power_followup": "N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.json",
+  "current_blocker": "Insufficient reserve; charge-only recovery active; S3E remains inert",
+  "fresh_verified_unused_epoch_available": true
 }

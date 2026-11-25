@@ -1,0 +1,15 @@
+# N71/S8000 block-bridge RAM boot: power gate and charge-only recovery — 2026-11-25
+
+The owner-attended image from source ff02944a28d3794825504d650bde6456fdaa358f has now booted. Direct USB ancestry, strict newly pinned SSH, board/kernel, all runtime hashes, the exact S3E candidate and completed encrypted-backup metadata passed. The earlier Pongo interruption was before any Linux payload/bridge test; this new Linux session is independently verified.
+
+**The block bridge has not been inserted or attempted.** Initial reserve was 21%, Good health, 33.9 C, cell 3.690 V and net discharge -274 mA. The automatic charger worker logged BATTERY_GUARD_SKIP_CHARGER because its startup policy requires 35% reserve. The native charging module was absent. Storage acceptance remains the preceding four physical Reads from 24 November; capacity/first Read are reused, not repeated as discovery.
+
+CPU powersave reduced the selected frequency to 300 MHz. A charge-only 30-second 300 mA input pilot used the existing exact-hash phase-diagnostic module and unchanged native guards; VBUS stayed 4.900 V and the original 90 mA input restored with rc0. Across the complete observation, including gauge lag/expiry, mean net current was approximately -4 mA, so sustainable recovery was not established at that input setting.
+
+The directly attached USB configuration specifies 500 mA, consistent with the previously qualified Dell source/profile. Backlight was explicitly reduced to 30% of its actual maximum. A separate 30-second 500 mA pilot then held VBUS 4.775 V, observed positive net charging (complete-window mean approximately +217 mA, including expiry samples), and verified automatic baseline restoration rc0. Subsequent finite recovery samples observed approximately +190 to +283 mA around 33.0–33.2 C. These are sampled charging observations, not long-term stability or a recharge-time guarantee.
+
+The charge-only recovery stays within the unchanged module's battery guard (>10%), native two-second VBUS/battery/input monitor, rollback and maximum 3600-second lease. No charge-current or cell-voltage regulator setting was changed. A local phone worker additionally stops at 37.5 C, low reserve, unhealthy battery, lost USB, stale native monitoring or VBUS/cell bounds; it closes at the original finite recovery deadline and never automatically renews or starts storage. An explicit worker correction verified healthy module-exit restoration before restarting its owned charging module, retaining the original recovery deadline. No native fault was overridden.
+
+The separate storage reserve gate has not been lowered. No S3E module, block registration, NVM command, partition scan, filesystem mount or installation took place in this boot. The epoch remains unused, so it can receive its one planned bridge test after sufficient reserve and fresh electrical/hash/lease checks, without a reboot solely for this deferral.
+
+[Sanitized measurements](N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.json), [bridge scope and acceptance](N71_S8000_RO_BLOCK_BRIDGE_TRIAL_2026_11_24.md), [accepted preceding four-Read evidence](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json).
