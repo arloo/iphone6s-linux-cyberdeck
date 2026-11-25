@@ -7,7 +7,8 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 
 - [Physical four-Read repeatability: same-LBA equality, guarded buffers and bounded observation — 2026-11-24](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md)
 - [Sanitized four-Read acceptance](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json)
-- [Prepared temporary read-only Linux block bridge, not physically tested — 2026-11-24](N71_S8000_RO_BLOCK_BRIDGE_TRIAL_2026_11_24.md)
+- [Physical temporary Linux block bridge: four real NAND bios accepted — 2026-11-25](N71_S8000_RO_BLOCK_BRIDGE_TRIAL_2026_11_24.md)
+- [Sanitized Linux block-path acceptance](N71_S8000_RO_BLOCK_BRIDGE_ACCEPTANCE_2026_11_25.json)
 - [Block-bridge image booted; reserve gate and charge-only recovery — 2026-11-25](N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.md)
 - [External5V input-limit cause, physical charging recovery and gauge limits — 2026-11-25](N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.md)
 

@@ -49,7 +49,7 @@
     "exact_kernel_ARM64_build": "PASS warning-free",
     "new_tests": 5,
     "full_suite_required_count": 1933,
-    "physical_testing": false
+    "physical_testing": true
   },
   "RAM_packaging": {
     "base_image_sha256": "1efec7542fabc129b2aaa8c8d52be68dd332eb18c2846aac8a6c10763085c18b",
@@ -60,13 +60,13 @@
     "storage_autoload": false
   },
   "physically_booted": true,
-  "module_inserted": false,
-  "block_bridge_attempted": false,
-  "block_bridge_accepted": false,
-  "fresh_attended_boot_required": false,
+  "module_inserted": true,
+  "block_bridge_attempted": true,
+  "block_bridge_accepted": true,
+  "fresh_attended_boot_required": true,
   "boot_power_followup": "N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.json",
-  "current_blocker": "Stable reserve/counter and fresh electrical qualification; external500mA recovery observed; S3E remains inert",
-  "fresh_verified_unused_epoch_available": true,
+  "current_blocker": "Bounded kernel block path accepted; arbitrary/userspace service, reuse/ring wrap and DMA retirement remain unqualified",
+  "fresh_verified_unused_epoch_available": false,
   "qualified_power_alternatives": [
     {
       "source": "Dell direct USB",
@@ -77,5 +77,7 @@
       "input_limit_uA": 500000,
       "evidence": "N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.json"
     }
-  ]
+  ],
+  "all_backing_retained_current_boot": true,
+  "physical_acceptance_evidence": "N71_S8000_RO_BLOCK_BRIDGE_ACCEPTANCE_2026_11_25.json"
 }

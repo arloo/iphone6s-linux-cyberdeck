@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-25",
+  "milestone": "First physical Linux block-layer bio path over real N71/S8000 NAND, bounded private kernel client",
+  "module_source_commit": "ff02944a28d3794825504d650bde6456fdaa358f",
+  "qualified_power_protocol_commit": "1b825463852a487d4356c371c34061aeeb45369a",
+  "module_sha256": "4d0e0a1267b8f08dcfa92addaa9fa74739883e1c6b810823517abefc7d78bc7d",
+  "RAM_image_sha256": "60004b42aec3f48afbedb798ff4d58ddf9dad2b99d1d4b9297ff0180ca8eb4c5",
+  "physical_insertions_this_boot": 1,
+  "physical_block_bridge_trials_this_boot": 1,
+  "authentication": "Same initial USB-verified boot and strict pinned key-only temporary WiFi SSH; no host-key/password downgrade",
+  "backup": "Finished encrypted owner backup metadata verified",
+  "temporary_disk": {
+    "name": "n71nand_ro",
+    "Identify_derived_capacity_bytes": 64000000000,
+    "logical_block_bytes": 4096,
+    "registered": true,
+    "read_only": true,
+    "partition_scan_enabled": false,
+    "userspace_opens_enabled": false,
+    "request_budget": 4,
+    "removed_after_trial": true,
+    "usable_userspace_disk": false
+  },
+  "Linux_bios": {
+    "admitted": 4,
+    "delivered": 4,
+    "client_completed": 4,
+    "client_rc": 0,
+    "private_same_LBA_full_bytewise_pairs_equal": true,
+    "client_target_guards_intact": true,
+    "rejected": 0,
+    "bridge_rc": 0,
+    "target_frames_CPU_only_never_DMA_mapped": true
+  },
+  "reads": [
+    {
+      "index": 0,
+      "LBA": 0,
+      "CID": 1,
+      "SQ_head": 1,
+      "tag": 1,
+      "bytes": 4096,
+      "status": "0x0001",
+      "exact_CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_512_word_data_arrival": true,
+      "guard_12KiB_intact": true,
+      "Linux_bio_delivered": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    },
+    {
+      "index": 1,
+      "LBA": 1,
+      "CID": 2,
+      "SQ_head": 2,
+      "tag": 2,
+      "bytes": 4096,
+      "status": "0x0001",
+      "exact_CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_512_word_data_arrival": true,
+      "guard_12KiB_intact": true,
+      "Linux_bio_delivered": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    },
+    {
+      "index": 2,
+      "LBA": 0,
+      "CID": 3,
+      "SQ_head": 3,
+      "tag": 3,
+      "bytes": 4096,
+      "status": "0x0001",
+      "exact_CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_512_word_data_arrival": true,
+      "guard_12KiB_intact": true,
+      "Linux_bio_delivered": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    },
+    {
+      "index": 3,
+      "LBA": 1,
+      "CID": 4,
+      "SQ_head": 4,
+      "tag": 4,
+      "bytes": 4096,
+      "status": "0x0001",
+      "exact_CQE_valid": true,
+      "CQ_acknowledged": true,
+      "independent_512_word_data_arrival": true,
+      "guard_12KiB_intact": true,
+      "Linux_bio_delivered": true,
+      "CQ_polls": 2,
+      "data_polls": 1
+    }
+  ],
+  "NVMe": {
+    "namespace_id": 1,
+    "IO_QID": 1,
+    "Read_opcode": 2,
+    "Read_command_flags": 32,
+    "Read_bytes_each": 4096,
+    "Read_submission_count": 4,
+    "Read_accepted_count": 4,
+    "total_bytes_transferred": 16384,
+    "queue_depth": 16,
+    "queue_flags": 0,
+    "ring_wrap": false,
+    "tag_buffer_descriptor_or_queue_slot_reuse": false,
+    "NVM_Write_submitted": false
+  },
+  "private_snapshots_and_observation": {
+    "snapshots": 4,
+    "core_stability_checks": 5,
+    "prior_completed_buffers_unchanged": true,
+    "LBA0_equal": true,
+    "LBA1_equal": true,
+    "retained_RAM_checks": 5,
+    "retained_interval_us": 50000,
+    "bounded_observed_window_us": 200000,
+    "retained_buffers_unchanged": true,
+    "independent_DMA_drain_proven": false
+  },
+  "setup": "Historical Identify/64GB reused as required setup; Create CQ/SQ exact completions passed",
+  "teardown": {
+    "Delete_SQ_exact_completion": true,
+    "Delete_CQ_exact_completion": true,
+    "normal_shutdown_rc": 0,
+    "shutdown_CSTS": "0x00000009",
+    "shutdown_polls": 940,
+    "disable_rc": 0,
+    "disable_CSTS": "0x00000000",
+    "BME_off": true,
+    "legacy_post_disable_qualified": false,
+    "whole_pilot_rc": -3,
+    "all_DMA_snapshots_targets_and_original_owners_retained": true,
+    "module_still_pinned": true,
+    "forced_unload_or_same_boot_retry": false
+  },
+  "power_preflight": {
+    "samples": 8,
+    "capacity_range_percent": [
+      51,
+      51
+    ],
+    "counter_range_percent": [
+      50.32,
+      50.4
+    ],
+    "temp_range_deciC": [
+      319,
+      319
+    ],
+    "cell_range_uV": [
+      4017000,
+      4025000
+    ],
+    "VBUS_range_uV": [
+      5100000,
+      5125000
+    ],
+    "input_limit_uA": 500000,
+    "source": "qualified external 5V, capped at 500mA",
+    "current_range_uA": [
+      221000,
+      286000
+    ],
+    "lease_remaining_last_s": 2857.746,
+    "last_uptime": 6591.39,
+    "all_native_and_owner_guards_unchanged": true,
+    "gauge_percent_not_used_alone": true,
+    "immediate_sample": {
+      "capacity": 51,
+      "current_now": 241000,
+      "temp": 320,
+      "voltage_now": 4031000,
+      "charge_now": 641000,
+      "charge_full": 1260000
+    },
+    "immediate_uptime": 6671.75
+  },
+  "post_trial_power": {
+    "capacity": 52,
+    "current_now": 176000,
+    "temp": 321,
+    "voltage_now": 4014000,
+    "charge_now": 645000,
+    "charge_full": 1260000
+  },
+  "internal_filesystem_mounted": false,
+  "persistent_internal_Linux_installed": false,
+  "arbitrary_LBA_long_duration_ring_reuse_or_error_recovery_qualified": false,
+  "original_live_iOS_factory_policy_proven": false,
+  "privacy": {
+    "sector_payload_or_hash_exported": false,
+    "private_keys_device_IDs_or_original_firmware_published": false
+  },
+  "accepted_scope": "One temporary read-only Linux gendisk and exactly four authenticated kernel bios causing real hardware Reads and validated CPU-target completions; temporary software disk removed, every DMA owner retained",
+  "continuation_rule": "Keep this held epoch. No new insertion/Read, forced rmmod, DMA/root/owner release or reuse in this boot. Prepare subsequent broader request/lifetime/ring qualification on the host, then use a fresh owner-attended epoch."
+}

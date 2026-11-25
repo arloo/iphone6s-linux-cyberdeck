@@ -2,7 +2,7 @@
 
 ## Current status and scope
 
-The preceding physical sequence 0,1,0,1 is accepted and reused as the transport baseline. This new candidate is ARM64-built and host-tested but **has booted; the block bridge has not been inserted**. It tests a new integration boundary: four real Linux bios must cause the four hardware Reads and receive data only after the existing exact-CQE, independent data and guard checks. It does not serve a RAM-backed imitation of NAND or a Dell NBD disk.
+The preceding physical sequence 0,1,0,1 is accepted and reused as the transport baseline. This new candidate is ARM64-built and host-tested but **has physically passed one fresh-boot kernel block-bridge trial**. It tests a new integration boundary: four real Linux bios must cause the four hardware Reads and receive data only after the existing exact-CQE, independent data and guard checks. It does not serve a RAM-backed imitation of NAND or a Dell NBD disk.
 
 This is a temporary, kernel-client-only qualification bridge, not a usable userspace disk. A gendisk named n71nand_ro advertises the Identify-derived 64,000,000,000 bytes with 4096-byte logical blocks, but its request policy admits only four trusted preallocated bios in the fixed sequence 0,1,0,1. The registration is removed after the trial. Whole-drive arbitrary access, mounting and persistent installation remain unqualified.
 
@@ -46,3 +46,26 @@ The exact candidate boot is now authenticated, but reserve was only 21% and the 
 ## Qualified external-power continuation — 2026-11-25
 
 The source-specific external 5 V pilot and finite 500 mA monitor are now physically qualified as documented in [external-source acceptance](N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.md). This is an allowed source/profile alternative to the earlier Dell 300 mA preparation condition; it does not alter the module, any voltage/thermal guard or namespace request budget. The initial USB-attended boot remains the authenticated unused epoch. Temporary WiFi control must use the same pinned host key and exact boot identity; no password or host-key checking downgrade is permitted. A volatile percentage alone cannot open the storage gate: require stable reserve, Remaining/Full Charge consistency, fresh healthy native monitor, qualified VBUS/cell/temperature, exact unchanged binary and no prior S3E attempt.
+
+## Physical acceptance: four Linux bios over real NVMe
+
+On 25 November, the exact candidate from source ff02944a28d3794825504d650bde6456fdaa358f was inserted once in the authenticated, previously unused S3E epoch. Source, runtime/module/image hashes, board/kernel, encrypted-backup metadata and strict same-key/boot identity passed. The external 5 V source was qualified separately before storage. Eight fresh samples showed 51% reported reserve, RC/FCC 50.32–50.40%, 31.9 C, cell 4.017–4.025 V and VBUS 5.100–5.125 V on the finite 500 mA lease. The immediate counter ratio was 50.87%; reported percentage was not used alone.
+
+The temporary n71nand_ro disk registered the Identify-derived 64,000,000,000 bytes with 4096-byte logical blocks, read-only mode, partition scan disabled and every userspace open denied. The private kernel client then completed exactly four bios:
+
+| Index | LBA | Tag / CID / SQ head | Exact status | Validated data and Linux completion |
+|---|---|---|---|---|
+| 0 | 0 | 1 / 1 / 1 | 0001 | 512-word arrival, intact 12 KiB guard, bio delivered |
+| 1 | 1 | 2 / 2 / 2 | 0001 | 512-word arrival, intact 12 KiB guard, bio delivered |
+| 2 | 0 | 3 / 3 / 3 | 0001 | 512-word arrival, intact 12 KiB guard, bio delivered |
+| 3 | 1 | 4 / 4 / 4 | 0001 | 512-word arrival, intact 12 KiB guard, bio delivered |
+
+Each Read needed two CQ polls and one data poll. Both complete same-LBA comparisons passed in the private snapshots and in the kernel client's returned targets. The bridge recorded rc0, registered1, removed1, admitted4, delivered4, client_completed4, client_rc0, private_pair_equality1 and rejected0. This is actual Linux block-layer bio submission/completion over real hardware, not a RAM-backed reply or a Dell NBD disk. Identify ran only as established setup, not new capacity discovery.
+
+All five core stability checks and five additional RAM-only samples at 50 ms intervals observed unchanged completed buffers. Exact Delete SQ/CQ passed. Normal shutdown returned 0/CSTS 9 after 940 polls; disable returned 0/CSTS 0 and BME-off passed. Whole-pilot rc-3 and legacy post-disable qualification0 remain expected quarantine: no independent DMA drain is proved. All DMA, snapshots, CPU targets and original power/reset/table owners remain retained, and the module stays pinned. Only the temporary software disk/bios/major were removed after the client joined. No forced unload, same-boot retry, Write, filesystem or persistence followed.
+
+Postflight confirmed one retained S3E module, one bridge attempt, no n71nand/NVMe block node, block-only mode enabled and the standalone single/series modes disabled. Power remained Good/Charging at reported 52%, 32.1 C, cell 4.014 V and +176 mA, with VBUS 5.100–5.125 V. The external charger and authenticated WiFi control coexisted with the bounded storage trial.
+
+This accepts the temporary private kernel path and its four fixed requests. It does not provide a generally openable/mountable disk, arbitrary-LBA service, ring wrap, descriptor/data-buffer reuse, long-duration/error recovery or independent DMA retirement. The current held epoch cannot be recycled for another test. Next qualify explicit broader request/lifetime and ring policy before exposing read-only userspace access.
+
+[Sanitized physical acceptance](N71_S8000_RO_BLOCK_BRIDGE_ACCEPTANCE_2026_11_25.json).

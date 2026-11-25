@@ -2,7 +2,15 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: bounded four-Read repeatability accepted
+## Current physical checkpoint: first bounded Linux block-layer path accepted — 2026-11-25
+
+One authenticated fresh-boot insertion completed four real Linux bios through a temporary read-only n71nand_ro gendisk, advertising the accepted 64 GB/4 KiB geometry while admitting only the fixed 0,1,0,1 kernel-client sequence. All four exact CQEs, guarded independent data arrivals, private snapshot/client equalities and completed bios passed. No ring/tag/data-buffer reuse occurred. The software disk was removed after client join; all DMA, snapshots, targets and original owners remain retained.
+
+The eight-sample power/counter gate passed at reported 51%, RC/FCC 50.32–50.40%, 31.9 C, cell 4.017–4.025 V and VBUS 5.100–5.125 V on the separately qualified external 500 mA profile. Exact Create/Delete SQ/CQ, normal shutdown/CSTS9, disable/CSTS0 and BME-off passed. Whole-pilot rc-3 still preserves quarantine, not DMA release. Postflight confirms one pinned module/trial and no surviving block node. No Write, mount, persistence, forced unload or same-boot retry occurred.
+
+This is the first accepted Linux bio path over the real NAND, extending the earlier direct-Read/capacity milestones. Userspace/arbitrary-LBA service, ring/reuse/error policy and independent DMA retirement remain open; the current held epoch cannot be retested. [Physical report](N71_S8000_RO_BLOCK_BRIDGE_TRIAL_2026_11_24.md#physical-acceptance-four-linux-bios-over-real-nvme) and [sanitized acceptance](N71_S8000_RO_BLOCK_BRIDGE_ACCEPTANCE_2026_11_25.json).
+
+## Earlier physical checkpoint: bounded four-Read repeatability accepted
 
 One fresh owner-attended RAM boot completed exactly four 4096-byte NVM Reads of NS1 in the sequence 0,1,0,1, with distinct tags/CIDs/heads 1..4 and no ring wrap or descriptor/buffer reuse. Each exact status 0001 CQE validated before ACK; every independent 512-word witness changed with the 12 KiB guard intact. Both private same-LBA full-sector comparisons passed. Five core stability checks and five additional RAM-only samples at 50 ms intervals observed unchanged completed buffers.
 
@@ -18,7 +26,7 @@ A physical snapshot on the external 5 V source confirmed VBUS but a 90 mA input 
 
 The exact ff02944 candidate has booted and passed USB/SSH/runtime/binary/board/kernel/backup checks. Its 21% reserve and skipped automatic charger prevent the planned storage test. CPU/backlight power reduction and separately bounded 300/500 mA charge-only pilots established monitored positive charging at 500 mA; all native guards and the separate storage reserve gate remain unchanged. S3E stays unloaded and no NVM command has run. The unused epoch can be tested after reserve recovery and fresh checks. [Power gate and measured recovery](N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.md).
 
-## Next candidate: temporary Linux block bridge prepared, not physically tested
+## Historical preparation: temporary Linux block bridge before its physical test
 
 The accepted four-Read transport now has a separate default-off Linux gendisk/bio qualification mode. Four trusted kernel bios in sequence 0,1,0,1 are admitted individually; exact CQE/data/guard/snapshot stability precedes their CPU-only target copy and completion. The kernel client privately compares the returned sectors. Geometry is the accepted 64 GB/4 KiB, but the trial permits only four bios, disables partition scanning and denies all userspace opens. It is not an unrestricted or mountable storage service.
 
@@ -249,8 +257,8 @@ A separate default-off `ans_io_queue_delete_once` mode implements bounded Admin 
 1. **Original Apple policy and the bounded Linux trial remain distinct:** the original Read wire builder, PRP/IOVM generator, mapper alternatives and conditional CDW0-bit13 source flow are qualified as documented; live iOS provider/predicate/factory values remain unobserved. Do not claim those runtime values from a PCI personality or accepted queue commands. The first explicit Linux Read has now physically accepted the fixed flags32 FlatDMA configuration, disjoint source-verified tag1, known Identify-derived device-to-host descriptor pattern, all owned/pre-BME publication gates, and the already accepted queue lifecycle. Its exact I/O CQE and independent guarded data arrival are accepted for one Read; Identify alone was not that evidence. Future reads must retain this explicit configuration and their own completion/data proof. The original iOS-policy investigation remains open and is not silently marked complete. See [the explicit Read trial](N71_S8000_LBA0_READ_TRIAL_2026_11_24.md).
 2. **Independent DMA lifetime:** identify a transaction-drain/fence mechanism or retain all mapped pages and driver ownership through the entire experimental boot. `CSTS`, CC, BME-off and DART bit31-clear **do not prove quiescence**.
 3. **Owner-attended hardware preflight:** stable battery reserve preferably at least 50%, physically qualified bounded charger and temperature below the owner's maximum 38°C, healthy VBUS, fresh clean S3E epoch. Do not loosen the user's temperature ceiling or silently alter brightness.
-4. **Bounded repeatability accepted, further transport remains gated:** four physical Reads 0,1,0,1 passed exact completion/data guards, private same-LBA equality and the bounded RAM window. Do not repeat them as first access or capacity discovery. Next implement read-only transport with a finite command/tag/buffer ownership budget and explicit error/stop behavior. Ring wrap, reused descriptors/buffers, longer runs, wider-LBA or multisector work require their own completion/data evidence. Keep payload bytes/hashes private and do not reuse the currently held epoch.
-5. **Read-only block device:** bounded repeatability is now accepted; a usable block interface still requires explicit ownership/lifetime and request-admission rules. Disable automount and fail writes closed. NAND writes, formatting or installing Linux on the internal media require separate explicit approval, backup and recovery plan.
+4. **Bounded Linux block path accepted, broader service remains gated:** four trusted Linux bios and their real hardware Reads passed. Reuse that evidence rather than first-access/capacity discovery. Next explicitly qualify broader admission, ring phase/wrap, lifetime/reuse and error behavior before exposing a usable read-only service. Keep payload bytes/hashes private and do not reuse this held epoch.
+5. **Usable read-only block device:** the temporary private kernel gendisk path is accepted; a generally openable/arbitrary-request interface still requires qualified admission/lifetime/error rules. Disable automount and fail writes closed. NAND writes, formatting or installing Linux internally require separate explicit approval, backup and recovery planning.
 
 ## GitHub issue coordination
 
