@@ -2,7 +2,15 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: first bounded Linux block-layer path accepted — 2026-11-25
+## Current physical checkpoint: final-two-LBA Linux block path accepted — 2026-11-25
+
+The exact c62020af8ea8026d9303ddb908c9d8bbcce75a77 candidate completed four actual Linux bios over LBAs15624998,15624999,15624998,15624999 in a separate fresh authenticated epoch. Both private full-sector pair equalities passed, with exact CQEs, independent512-word arrivals, intact12KiB guards, five core stability checks and five unchanged retained-RAM samples. The temporary software disk was removed after four client completions. This extends the initial-LBA block acceptance below; it does not rediscover capacity or qualify all intervening sectors.
+
+The direct Dell USB finite300mA lease showed eight healthy native4.900V samples at reported52%, RC/FCC51.27–51.35% and30.3C. Six gauge-current samples were positive and two zero, with none negative; the immediate insertion gate was positive. Exact Delete SQ/CQ, normal shutdown/CSTS9, disable/CSTS0 and BME-off passed. Whole-pilot rc-3 retains every DMA/original owner because independent DMA drain remains unproved. Postflight confirms one pinned S3E module, one trial, no block node, Good health and reported52%.
+
+The current held epoch cannot be retried or forcibly unloaded. Next qualify broader request admission and ring/buffer lifetime/error handling before userspace read-only service. No Write, mount or persistent Linux is authorized by this result. [Physical report](N71_S8000_RO_BLOCK_TAIL_PAIR_TRIAL_2026_11_25.md#physical-acceptance-last-two-lba-linux-bios) and [sanitized acceptance](N71_S8000_RO_BLOCK_TAIL_PAIR_ACCEPTANCE_2026_11_25.json).
+
+## Earlier physical checkpoint: first bounded Linux block-layer path accepted — 2026-11-25
 
 One authenticated fresh-boot insertion completed four real Linux bios through a temporary read-only n71nand_ro gendisk, advertising the accepted 64 GB/4 KiB geometry while admitting only the fixed 0,1,0,1 kernel-client sequence. All four exact CQEs, guarded independent data arrivals, private snapshot/client equalities and completed bios passed. No ring/tag/data-buffer reuse occurred. The software disk was removed after client join; all DMA, snapshots, targets and original owners remain retained.
 

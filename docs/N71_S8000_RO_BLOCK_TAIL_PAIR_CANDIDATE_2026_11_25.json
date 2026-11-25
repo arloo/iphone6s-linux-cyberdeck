@@ -12,14 +12,17 @@
   "runtime_hash_count_verified": 10,
   "gzip_CPIO_roundtrip_verified": true,
   "storage_autoload": false,
-  "physically_booted": false,
-  "hardware_loaded": false,
-  "tail_pair_physically_accepted": false,
+  "physically_booted": true,
+  "hardware_loaded": true,
+  "tail_pair_physically_accepted": true,
   "planned_lbas": [
     15624998,
     15624999,
     15624998,
     15624999
   ],
-  "fresh_attended_boot_required": true
+  "fresh_attended_boot_required": true,
+  "source_commit": "c62020af8ea8026d9303ddb908c9d8bbcce75a77",
+  "physical_acceptance": "N71_S8000_RO_BLOCK_TAIL_PAIR_ACCEPTANCE_2026_11_25.json",
+  "current_epoch_held": true
 }

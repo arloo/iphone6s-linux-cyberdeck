@@ -174,4 +174,6 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [README_BEFORE_2026_11_16_REFRESH](history/README_BEFORE_2026_11_16_REFRESH.md)
 - [ROADMAP_BEFORE_2026_11_16_REFRESH](history/ROADMAP_BEFORE_2026_11_16_REFRESH.md)
 
-- [N71 last-two-LBA block candidate (built/tested; not physically accepted)](N71_S8000_RO_BLOCK_TAIL_PAIR_TRIAL_2026_11_25.md)
+- [N71 last-two-LBA Linux block path (physically accepted, bounded)](N71_S8000_RO_BLOCK_TAIL_PAIR_TRIAL_2026_11_25.md)
+
+- [N71 final-sector block physical acceptance](N71_S8000_RO_BLOCK_TAIL_PAIR_ACCEPTANCE_2026_11_25.json)
