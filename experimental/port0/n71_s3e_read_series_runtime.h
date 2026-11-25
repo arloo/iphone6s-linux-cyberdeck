@@ -175,8 +175,8 @@ static int n71_read_series_submit(void *ctx,unsigned int step,
     struct nvme_completion *cq;
     bool foreign;
     if (!n71_read_series_qualified(ctx,step) ||
-        !n71_read_series_command_valid(command,step,&n71_io_layout,
-             n71_admin_memory.nsze,n71_admin_memory.lba_bytes,n71_series_flags()))
+        !n71_read_pair_command_valid(command,step,&n71_io_layout,
+             n71_admin_memory.nsze,n71_admin_memory.lba_bytes,n71_series_flags(),n71_series_base()))
         return -EPERM;
     sq=(u8 *)n71_ro_io_dma_memory.page[0]+step*64U;
     cq=(struct nvme_completion *)n71_ro_io_dma_memory.page[1]+step;
@@ -269,7 +269,7 @@ static int n71_read_series_snapshot(void *ctx,unsigned int step)
     n71_read_series_memory.snapshot_valid[step]=true;
     n71_read_series_memory.completed=step+1U;
     pr_info("n71-s3e-p0: READ_SERIES_STEP index=%u lba=%u tag=%u cid=%u sqid=1 head=%u status=%04x cqe_valid=1 data_arrived=1 guard_ok=1 changed_words=%u snapshot_private=YES payload_redacted=YES\n",
-        step,n71_read_series_lba(step),step+1U,step+1U,step+1U,
+        step,n71_read_pair_lba(n71_series_base(),step),step+1U,step+1U,step+1U,
         n71_read_series_memory.status[step],n71_read_series_memory.changed[step]);
     return 0;
 }
@@ -330,12 +330,12 @@ static int n71_read_series_once(void *ctx)
     unsigned int i;
     if (!n71_series_enabled() || n71_read_series_memory.attempted) return -EPERM;
     n71_read_series_memory.attempted=true;
-    rc=n71_read_series_core(&ops,ctx,&n71_io_layout,n71_admin_memory.nsze,
-            n71_admin_memory.lba_bytes,n71_series_flags(),&r);
+    rc=n71_read_pair_core(&ops,ctx,&n71_io_layout,n71_admin_memory.nsze,
+            n71_admin_memory.lba_bytes,n71_series_flags(),&r,n71_series_base());
     n71_read_series_memory.series_ok=!rc;
     for (i=0;i<n71_read_series_memory.issued && i<4U;i++)
         pr_info("n71-s3e-p0: READ_SERIES_STATUS index=%u lba=%u tag=%u cqe_seen=%u status=%04x cqe_valid=%u cq_acked=%u data_arrived=%u guard_ok=%u changed_words=%u cq_polls=%u data_polls=%u payload_redacted=YES\n",
-            i,n71_read_series_lba(i),i+1U,n71_read_series_memory.seen[i],
+            i,n71_read_pair_lba(n71_series_base(),i),i+1U,n71_read_series_memory.seen[i],
             n71_read_series_memory.status[i],n71_read_series_memory.valid[i],
             n71_read_series_memory.acked[i],n71_read_series_memory.data_arrived[i],
             n71_read_series_memory.guard_ok[i],n71_read_series_memory.changed[i],

@@ -6,6 +6,15 @@
 #define N71_READ_SERIES_COUNT 4U
 #define N71_READ_SERIES_DMA_PAGES 8U
 #define N71_READ_SERIES_PAGES 12U
+/* Only two fixed pairs are admitted; no arbitrary runtime LBA selection. */
+static inline int n71_read_pair_base_valid(unsigned int base)
+{
+    return base==0U || base==N71_RO_PHYSICAL_NSZE-2U;
+}
+static inline unsigned int n71_read_pair_lba(unsigned int base,unsigned int step)
+{
+    return base+(step&1U);
+}
 static inline unsigned int n71_read_series_lba(unsigned int step)
 {
     return step & 1U; /* fixed 0,1,0,1; caller must bound step */
@@ -24,34 +33,48 @@ static inline int n71_read_series_mode_valid(unsigned int enabled,
         delete_queues && queue_flags==0U && !single_read :
         flags==N71_IO_QUEUE_FLAGS_UNSELECTED;
 }
-static inline int n71_read_series_command(unsigned char *out,unsigned int step,
+static inline int n71_read_pair_command(unsigned char *out,unsigned int step,
         const struct n71_s3e_ro_io_layout *layout,
-        unsigned long long nsze,unsigned int lba_bytes,unsigned int flags)
+        unsigned long long nsze,unsigned int lba_bytes,unsigned int flags,
+        unsigned int base)
 {
     unsigned char command[N71_RO_CMD_BYTES];
     unsigned int i;
-    if (!out || step>=N71_READ_SERIES_COUNT || flags!=N71_LBA0_READ_FLAGS ||
+    if (!n71_read_pair_base_valid(base) || !out || step>=N71_READ_SERIES_COUNT || flags!=N71_LBA0_READ_FLAGS ||
         n71_s3e_ro_verify_queue_iova(layout) ||
         nsze!=N71_RO_PHYSICAL_NSZE || lba_bytes!=N71_RO_BLOCK_BYTES)
         return -1;
     if (n71_s3e_ro_encode_one_sector(command,layout,nsze,lba_bytes,
-                                    n71_read_series_lba(step))) return -1;
+                                    n71_read_pair_lba(base,step))) return -1;
     command[1]=(unsigned char)flags;
     n71_ro_le16(command+2,step+1U);
     n71_ro_le64(command+24,n71_read_series_tag(step));
     for (i=0;i<N71_RO_CMD_BYTES;i++) out[i]=command[i];
     return 0;
 }
+static inline int n71_read_series_command(unsigned char *out,unsigned int step,
+        const struct n71_s3e_ro_io_layout *layout,
+        unsigned long long nsze,unsigned int lba_bytes,unsigned int flags)
+{
+    return n71_read_pair_command(out,step,layout,nsze,lba_bytes,flags,0U);
+}
+static inline int n71_read_pair_command_valid(const unsigned char *b,
+        unsigned int step,const struct n71_s3e_ro_io_layout *layout,
+        unsigned long long nsze,unsigned int lba_bytes,unsigned int flags,
+        unsigned int base)
+{
+    unsigned char expected[N71_RO_CMD_BYTES];
+    unsigned int i;
+    if (!b || n71_read_pair_command(expected,step,layout,nsze,lba_bytes,flags,base))
+        return 0;
+    for (i=0;i<N71_RO_CMD_BYTES;i++) if (b[i]!=expected[i]) return 0;
+    return 1;
+}
 static inline int n71_read_series_command_valid(const unsigned char *b,
         unsigned int step,const struct n71_s3e_ro_io_layout *layout,
         unsigned long long nsze,unsigned int lba_bytes,unsigned int flags)
 {
-    unsigned char expected[N71_RO_CMD_BYTES];
-    unsigned int i;
-    if (!b || n71_read_series_command(expected,step,layout,nsze,lba_bytes,flags))
-        return 0;
-    for (i=0;i<N71_RO_CMD_BYTES;i++) if (b[i]!=expected[i]) return 0;
-    return 1;
+    return n71_read_pair_command_valid(b,step,layout,nsze,lba_bytes,flags,0U);
 }
 static inline int n71_read_series_cqe_valid(unsigned int observed,
         const struct n71_s3e_admin_cqe_fields *v,unsigned int step)
@@ -138,10 +161,10 @@ struct n71_read_series_result {
 };
 /* Four single-sector Reads, four fresh SQ/CQ slots and four distinct
  * tag/data/SGL pairs. No ring wrap, buffer reuse, write or export. */
-static inline int n71_read_series_core(const struct n71_read_series_ops *o,
+static inline int n71_read_pair_core(const struct n71_read_series_ops *o,
         void *ctx,const struct n71_s3e_ro_io_layout *layout,
         unsigned long long nsze,unsigned int lba_bytes,unsigned int flags,
-        struct n71_read_series_result *r)
+        struct n71_read_series_result *r,unsigned int base)
 {
     unsigned char command[64];
     unsigned int i,observed;
@@ -149,11 +172,11 @@ static inline int n71_read_series_core(const struct n71_read_series_ops *o,
     int rc;
     if (!r) return -1;
     r->submitted=r->accepted=r->snapshotted=r->stability_checks=r->pairs_valid=0;
-    if (!o || !o->qualified || !o->submit || !o->wait_cqe || !o->ack_cq ||
+    if (!n71_read_pair_base_valid(base) || !o || !o->qualified || !o->submit || !o->wait_cqe || !o->ack_cq ||
         !o->wait_data || !o->snapshot || !o->stable || !o->compare_pairs)
         return -1;
     for (i=0;i<N71_READ_SERIES_COUNT;i++) {
-        if (n71_read_series_command(command,i,layout,nsze,lba_bytes,flags) ||
+        if (n71_read_pair_command(command,i,layout,nsze,lba_bytes,flags,base) ||
             !o->qualified(ctx,i)) return -1;
         rc=o->submit(ctx,i,command);
         if (rc) return rc;
@@ -181,5 +204,12 @@ static inline int n71_read_series_core(const struct n71_read_series_ops *o,
     if (rc) return rc;
     r->stability_checks++;
     return 0;
+}
+static inline int n71_read_series_core(const struct n71_read_series_ops *o,
+        void *ctx,const struct n71_s3e_ro_io_layout *layout,
+        unsigned long long nsze,unsigned int lba_bytes,unsigned int flags,
+        struct n71_read_series_result *r)
+{
+    return n71_read_pair_core(o,ctx,layout,nsze,lba_bytes,flags,r,0U);
 }
 #endif

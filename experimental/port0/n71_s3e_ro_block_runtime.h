@@ -39,7 +39,7 @@ static void n71_ro_block_submit_bio(struct bio *bio)
         }
     }
     if (!n71_ro_block_memory.pending_bio &&
-        !n71_ro_block_admit(&n71_ro_block_memory.flow,&r)) {
+        !n71_ro_block_pair_admit(&n71_ro_block_memory.flow,&r,n71_series_base())) {
         n71_ro_block_memory.pending_bio=bio;accepted=true;
     } else n71_ro_block_memory.rejected++;
     spin_unlock_irqrestore(&n71_ro_block_memory.lock,irq);
@@ -134,7 +134,7 @@ static int n71_ro_block_prepare(void *ctx)
                                  REQ_OP_READ|REQ_SYNC,GFP_KERNEL);
         if (!bio) {rc=-ENOMEM;goto fail;}
         n71_ro_block_memory.bio[i]=bio;
-        bio->bi_iter.bi_sector=8ULL*n71_read_series_lba(i);
+        bio->bi_iter.bi_sector=8ULL*n71_read_pair_lba(n71_series_base(),i);
         if (bio_add_page(bio,virt_to_page(n71_ro_block_memory.target[i]),
                          4096,0)!=4096) {rc=-EINVAL;goto fail;}
     }
@@ -221,7 +221,7 @@ static int n71_ro_block_stable(void *ctx,unsigned int count)
     if (rc) return -EPROTO;
     bio_endio(bio);
     pr_info("n71-s3e-p0: RO_BLOCK_DELIVERED index=%u lba=%u bytes=4096 CQE_data_guard_validated=YES CPU_snapshot_only=YES payload_and_hashes_redacted=YES\n",
-            step,n71_read_series_lba(step));
+            step,n71_read_pair_lba(n71_series_base(),step));
     return 0;
 }
 static int n71_ro_block_completed_safely(void)
@@ -242,6 +242,8 @@ static int n71_ro_block_once(void *ctx)
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     n71_ro_block_memory.flow.active=1;
     spin_unlock_irqrestore(&n71_ro_block_memory.lock,irq);
+    pr_info("n71-s3e-p0: RO_BLOCK_PAIR base_lba=%u pair_count=2 requests=4 tail_selected=%u\n",
+        n71_series_base(),ans_ro_block_tail_once);
     pr_info("n71-s3e-p0: RO_BLOCK_REGISTERED name=n71nand_ro capacity_bytes=64000000000 logical_block_bytes=4096 read_only=1 partition_scan=DISABLED userspace_open=DENIED request_budget=4\n");
     n71_ro_block_memory.client=kthread_run(n71_ro_block_client,NULL,"n71-ro-client");
     if (IS_ERR(n71_ro_block_memory.client)) {

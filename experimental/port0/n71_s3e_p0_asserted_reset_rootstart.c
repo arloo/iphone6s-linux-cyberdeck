@@ -121,6 +121,13 @@ static bool ans_io_queue_once;
 static bool ans_lba0_read_once;
 static bool ans_read_series_once;
 static unsigned int ans_read_series_flags = ~0U;
+static bool ans_ro_block_tail_once;
+module_param(ans_ro_block_tail_once, bool, 0400);
+MODULE_PARM_DESC(ans_ro_block_tail_once, "explicit last-two-LBA pair qualification; requires block-only mode; four fresh buffers, no reuse or writes");
+static inline unsigned int n71_series_base(void)
+{
+    return ans_ro_block_tail_once ? 15624998U : 0U;
+}
 static bool ans_ro_block_once;
 static unsigned int ans_ro_block_flags = ~0U;
 module_param(ans_ro_block_once, bool, 0400);
@@ -1053,6 +1060,7 @@ static int __init n71_port0_init(void)
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
         return -EPERM;
     if (ans_io_queue_delete_once && !ans_io_queue_once) return -EPERM;
+    if (ans_ro_block_tail_once && !ans_ro_block_once) return -EPERM;
     if (!n71_ro_block_mode_valid(ans_ro_block_once,ans_ro_block_flags,
             ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,
             ans_io_queue_flags,ans_lba0_read_once,ans_read_series_once)) return -EPERM;

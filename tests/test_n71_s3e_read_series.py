@@ -229,7 +229,7 @@ class ReadSeriesTests(unittest.TestCase):
         ack=s[s.index('static int n71_read_series_ack'):s.index('static int n71_read_series_wait_data')]
         self.assertLess(ack.index('n71_read_series_cqe_valid('),ack.index('n71_admin_write(0x100c,step+1U)'))
         submit=s[s.index('static int n71_read_series_submit'):s.index('static int n71_read_series_wait_cqe')]
-        self.assertLess(submit.index('n71_read_series_command_valid('),submit.index('memcpy(sq,command,64)'))
+        self.assertLess(submit.index('n71_read_pair_command_valid('),submit.index('memcpy(sq,command,64)'))
         self.assertLess(submit.index('n71_read_series_memory.issued++'),submit.index('n71_admin_write(0x1008,step+1U)'))
         compare=s[s.index('static int n71_read_series_compare'):s.index('static int n71_read_series_completed_safely')]
         self.assertIn('page[8]',compare);self.assertIn('page[10]',compare)

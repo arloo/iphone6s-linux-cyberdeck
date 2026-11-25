@@ -100,7 +100,7 @@ class ROBlockTests(unittest.TestCase):
         callback=s[s.index('static void n71_ro_block_submit_bio'):s.index('static int n71_ro_block_open')]
         self.assertIn('bio_op(bio)==REQ_OP_READ',callback)
         self.assertIn('bio==n71_ro_block_memory.bio[step]',callback)
-        self.assertIn('n71_ro_block_admit(',callback)
+        self.assertIn('n71_ro_block_pair_admit(',callback)
         for forbidden in ['n71_admin_write','writel(','n71_read_series_submit','usleep','wait_for_completion','mutex_lock']:
             self.assertNotIn(forbidden,callback)
         opened=s[s.index('static int n71_ro_block_open'):s.index('static const struct block_device_operations')]

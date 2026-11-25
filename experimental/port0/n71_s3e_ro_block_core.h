@@ -20,14 +20,26 @@ static inline int n71_ro_block_mode_valid(unsigned int enabled,
     return enabled ? flags==32U && identify && queues && delete_queues &&
         queue_flags==0U && !single && !series : flags==~0U;
 }
-static inline int n71_ro_block_admissible(const struct n71_ro_block_flow *f,
-        const struct n71_ro_block_request *r)
+static inline int n71_ro_block_pair_admissible(const struct n71_ro_block_flow *f,
+        const struct n71_ro_block_request *r,unsigned int base)
 {
-    return f && r && f->active==1U && !f->closed && !f->failed &&
+    return n71_read_pair_base_valid(base) && f && r && f->active==1U && !f->closed && !f->failed &&
         !f->pending && f->admitted<4U && f->delivered==f->admitted &&
         r->is_read==1U && r->bytes==4096U && r->segments==1U && !r->offset &&
         r->trusted_bio==1U && r->trusted_page==1U &&
-        r->sector==8ULL*(f->admitted&1U);
+        r->sector==8ULL*n71_read_pair_lba(base,f->admitted);
+}
+static inline int n71_ro_block_admissible(const struct n71_ro_block_flow *f,
+        const struct n71_ro_block_request *r)
+{
+    return n71_ro_block_pair_admissible(f,r,0U);
+}
+static inline int n71_ro_block_pair_admit(struct n71_ro_block_flow *f,
+        const struct n71_ro_block_request *r,unsigned int base)
+{
+    if (!n71_ro_block_pair_admissible(f,r,base)) return -1;
+    f->pending=1;f->admitted++;
+    return 0;
 }
 static inline int n71_ro_block_admit(struct n71_ro_block_flow *f,
         const struct n71_ro_block_request *r)
