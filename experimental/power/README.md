@@ -1,5 +1,9 @@
 # N71 SN2400 charging investigation
 
+**Current external-source checkpoint (2026-11-25):** a physical 5V wall-adapter snapshot confirmed a 90mA input cap despite present VBUS. The input-only 500mA pilot then produced measured positive net charging and verified rollback; a bounded recovery is active. The stock kernel still provides the HDQ mux rather than a full charger driver. Reported SOC jumped unexpectedly and is not used alone as reserve proof. [External-source evidence and limits](../../docs/N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.md).
+
+The following detailed observations are historical unless a later dated checkpoint supersedes them.
+
 Status: physical N71 before/during/after trial PASS. Increasing the input limit from 90 to 300 mA produces positive battery current; restoring 90 mA returns to discharge. A monitored session lease is active; automatic boot integration and full-charge durability remain pending.
 
 The N71 diagnostic kernel reads the BQ27540 gauge correctly, but its existing SN2400 driver only handles HDQ ownership. Across a 60-sample Dell/wall-supply observation the gauge reported net discharge throughout. Native PCIe/WLAN remains pending; PCIe tests are paused for charging work.

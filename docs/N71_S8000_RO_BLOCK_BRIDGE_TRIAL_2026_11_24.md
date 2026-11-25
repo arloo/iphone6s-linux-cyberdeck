@@ -35,10 +35,14 @@ The exact-kernel ARM64 build is warning-free. Five new tests compile the real po
 
 The private RAM image changes only the inert S3E module and its runtime hash entry from the accepted four-Read image. All other rootfs records, bootloader, bootargs, both DTBs, compressed kernel and finite guarded charger remain byte-identical. All ten runtime manifest entries and the gzip/CPIO roundtrip are verified. The image and credentials remain owner-private; storage is never auto-inserted.
 
-The current successful-series boot is retained and cannot run this candidate. A fresh attended RAM boot, strict USB/SSH verification, completed encrypted-backup metadata, adequate reserve, Good health, finite guarded 300 mA input/VBUS and temperature margin below the owner's 38 C ceiling are required before the single attempt.
+The current successful-series boot is retained and cannot run this candidate. A fresh attended RAM boot, strict USB/SSH verification, completed encrypted-backup metadata, adequate reserve, Good health, finite guarded input/VBUS from a physically qualified source and temperature margin below the owner's 38 C ceiling are required before the single attempt.
 
 [Candidate metadata](N71_S8000_RO_BLOCK_BRIDGE_CANDIDATE_2026_11_24.json), [accepted underlying four-Read evidence](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json) and [canonical storage ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md).
 
 ## Fresh boot power gate — 2026-11-25
 
 The exact candidate boot is now authenticated, but reserve was only 21% and the automatic charger skipped startup below 35%. The bridge remains unattempted while a separately guarded, finite charge-only recovery restores reserve. The S3E epoch is unused. [Measured power gate and recovery](N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.md).
+
+## Qualified external-power continuation — 2026-11-25
+
+The source-specific external 5 V pilot and finite 500 mA monitor are now physically qualified as documented in [external-source acceptance](N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.md). This is an allowed source/profile alternative to the earlier Dell 300 mA preparation condition; it does not alter the module, any voltage/thermal guard or namespace request budget. The initial USB-attended boot remains the authenticated unused epoch. Temporary WiFi control must use the same pinned host key and exact boot identity; no password or host-key checking downgrade is permitted. A volatile percentage alone cannot open the storage gate: require stable reserve, Remaining/Full Charge consistency, fresh healthy native monitor, qualified VBUS/cell/temperature, exact unchanged binary and no prior S3E attempt.

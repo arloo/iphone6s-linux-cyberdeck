@@ -10,6 +10,10 @@ Create/Delete SQ/CQ and normal controller shutdown (CSTS 0x9), disable (CSTS 0) 
 
 This extends the earlier first Read and 64 GB Identify evidence rather than repeating them as discovery. Ring wrap, reuse, long-duration transport, arbitrary-LBA access, independent DMA retirement and a usable Linux block interface remain open. [Physical report](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md#physical-acceptance-four-reads-with-private-pair-equality) and [sanitized acceptance](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json).
 
+## 2026-11-25 external source qualified; gauge jump requires independent reserve checks
+
+A physical snapshot on the external 5 V source confirmed VBUS but a 90 mA input cap and net discharge. The bounded 500 mA input-only pilot produced positive net cell current and verified rollback; a finite guarded continuation is active. The reported30-to-47 percent jump over 30 seconds is not accepted as actual energy gained. RC/FCC, stable voltage/current/reserve and the native monitor must support the future block test. S3E remains uninserted; this is a power milestone, not new NAND access. [External-source proof](N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.md).
+
 ## 2026-11-25 bridge image booted; storage attempt deferred for reserve
 
 The exact ff02944 candidate has booted and passed USB/SSH/runtime/binary/board/kernel/backup checks. Its 21% reserve and skipped automatic charger prevent the planned storage test. CPU/backlight power reduction and separately bounded 300/500 mA charge-only pilots established monitored positive charging at 500 mA; all native guards and the separate storage reserve gate remain unchanged. S3E stays unloaded and no NVM command has run. The unused epoch can be tested after reserve recovery and fresh checks. [Power gate and measured recovery](N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.md).

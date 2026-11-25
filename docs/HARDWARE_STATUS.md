@@ -17,7 +17,7 @@ Physical target: **iPhone 6s N71, Samsung A9 / S8000**. Kernel: `7.3.0-rc1-n71-b
 | Radio coexistence | Wi-Fi remained WPA_COMPLETED and Internet traffic worked during Bluetooth transfer | PASS for the short concurrent trial; no endurance claim |
 | Bluetooth HID | No keyboard/mouse available | NOT TESTED; deferred until a peripheral is available |
 | Bluetooth audio | No playback/profile test | NOT TESTED |
-| Battery | Gauge telemetry; guarded 300 mA USB input lease; charging observed | PASS for monitored charging; lease is finite (3600 s) |
+| Battery | Gauge telemetry; external 5 V source has physically passed bounded 500 mA input-only charging/rollback; positive net current measured | Bounded charging PASS; full charger driver/durability and abrupt SOC transition remain open; reserve needs voltage/current/RC-FCC checks |
 | Internal storage | Four physical 4096-byte Reads 0,1,0,1; exact CQEs, guarded independent data, both private same-LBA equalities, unchanged bounded RAM window; teardown/stop passed | Bounded repeatability PASS; all DMA retained; ring/buffer reuse, block interface and persistence open |
 | Baseband | No qualification | Telephony unqualified |
 | Suspend/resume | No qualification | NOT TESTED |

@@ -65,6 +65,17 @@
   "block_bridge_accepted": false,
   "fresh_attended_boot_required": false,
   "boot_power_followup": "N71_S8000_RO_BLOCK_BOOT_POWER_GATE_2026_11_25.json",
-  "current_blocker": "Insufficient reserve; charge-only recovery active; S3E remains inert",
-  "fresh_verified_unused_epoch_available": true
+  "current_blocker": "Stable reserve/counter and fresh electrical qualification; external500mA recovery observed; S3E remains inert",
+  "fresh_verified_unused_epoch_available": true,
+  "qualified_power_alternatives": [
+    {
+      "source": "Dell direct USB",
+      "input_limit_uA": 300000
+    },
+    {
+      "source": "Source-qualified external5V",
+      "input_limit_uA": 500000,
+      "evidence": "N71_S8000_EXTERNAL_CHARGER_ACCEPTANCE_2026_11_25.json"
+    }
+  ]
 }

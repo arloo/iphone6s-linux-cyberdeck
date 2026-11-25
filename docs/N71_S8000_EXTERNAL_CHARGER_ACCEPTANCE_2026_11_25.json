@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-25",
+  "source_commit": "498dd0271303f7c4aeedcc934b523d3208b01ad8",
+  "board": "N71/S8000",
+  "kernel_vermagic": "7.3.0-rc1-n71-batt2-g68aadac820d0-dirty SMP preempt mod_unload aarch64",
+  "power_source": "Owner-attested external 5V adapter rated 30W overall; trial input limited to 500mA; no PD/30W negotiation claimed",
+  "Dell_USB_device_absent_during_observation": true,
+  "diagnostic_control": "Temporary address-specific key-only WiFi SSH; same independently pinned host key and authorized client key; password/forwarding disabled; finite listener lifetime",
+  "read_only_snapshot": {
+    "module_sha256": "cc3972adf6f0226e4e77f85c19483601600ee8ce15eb4e2223f9ffe8e9783306",
+    "source_sha256": "f33b89d3483f92303ea5e08d9642962bc84da167223141426994099fbe21a7ed",
+    "matching_kernel_build": true,
+    "load_and_unload_rc": 0,
+    "VBUS_status_asserted": true,
+    "hardware_charging_status_bit_asserted": true,
+    "input_register_0x09": 0,
+    "decoded_input_limit_uA": 90000,
+    "charge_current_voltage_and_HDQ_registers_unmodified": true
+  },
+  "baseline": {
+    "reported_capacity_percent": 30,
+    "health": "Good",
+    "net_current_uA": -208000,
+    "cell_uV": 3699000,
+    "temp_deciC": 309,
+    "USB_UDC_state": "configured despite absent Dell USB device; not accepted as charger-presence proof"
+  },
+  "external_500mA_pilot": {
+    "seconds": 30,
+    "charger_module_sha256": "b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7",
+    "baseline_VBUS_uV": 5250000,
+    "loaded_VBUS_range_uV": [
+      5100000,
+      5125000
+    ],
+    "steady_observed_net_current_range_uA": [
+      226000,
+      235000
+    ],
+    "steady_observed_mean_net_current_uA": 231143,
+    "temperature_range_deciC": [
+      305,
+      306
+    ],
+    "automatic_restore_original_input_rc": 0,
+    "native_monitor_fault_observed": false
+  },
+  "gauge_observation": {
+    "reported_SOC_start": 30,
+    "reported_SOC_end": 47,
+    "reported_SOC_jump_is_not_accepted_as_energy_recharged": true,
+    "reason": "The reported 30-to-47 percent jump over 30s is inconsistent with energy added at the measured current; cached/estimated gauge state or transport cause remains unresolved",
+    "voltage_current_RC_FCC_and_stability_required_before_storage": true
+  },
+  "current_finite_guard": {
+    "input_limit_uA": 500000,
+    "native_max_lease_seconds": 3600,
+    "native_two_second_guards_unchanged": true,
+    "local_temp_stop_deciC": 375,
+    "local_cell_bounds_uV": [
+      3600000,
+      4100000
+    ],
+    "local_VBUS_bounds_uV": [
+      4750000,
+      5500000
+    ],
+    "power_presence_proof": "Native SN2400 VBUS status/ADC and fresh monitor events, independent of USB data enumeration",
+    "auto_renewal": false,
+    "reserve_completion": "Repeated reported SOC plus Remaining/Full Charge agreement; never SOC alone",
+    "current_measured_sample": {
+      "capacity": 48,
+      "current_now": 224000,
+      "temp": 312,
+      "voltage_now": 3981000,
+      "charge_now": 593000,
+      "charge_full": 1260000
+    }
+  },
+  "native_full_charger_driver_integrated": false,
+  "stock_kernel_SN2400_role": "HDQ mux only; not a complete charger power_supply driver",
+  "S3E_or_block_bridge_attempted": false,
+  "NVM_Read_or_Write_this_boot": false,
+  "private_keys_device_identifiers_and_sector_payloads_exported": false
+}
