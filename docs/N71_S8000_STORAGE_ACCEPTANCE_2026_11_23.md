@@ -2,7 +2,17 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: actual GPT entry-prefix preads accepted — 2026-11-26
+## Current physical checkpoint: complete primary GPT entry array accepted — 2026-11-26
+
+Source020f31bd1f1cd312f84fb0f72ec2f05663735fdd ran once in a new direct-USB/key-only authenticated epoch with exact image/component/runtime hashes and encrypted-backup metadata verified. Five actual4096-byte NAND Reads1,2,3,4,5 passed via five trusted bios and local ARM64 user copies. Exact tags/CIDs/heads1..5/status0001, independent512-word arrivals/12KiB guards, six core stability checks and five later retained-RAM samples passed.
+
+The same-epoch native GPT header CRC/geometry and complete16KiB primary entry array CRC pass on kernel snapshots, CPU bio targets and user copies. All128 entries were examined; one used APFS-type partition has a valid range and all-entry/cross-page overlap checks pass. Device-specific coordinates remain private. Zero declared primary entries remain unseen; backup GPT and APFS superblock/filesystem remain unread.
+
+Exact Delete SQ/CQ, shutdownCSTS0x9/rc0 (1835 polls), disableCSTS0x0/rc0 and BME off passed. Interfaces were removed; the new full-GPT owner is ref1 Live/held with five commands and no retry/unload/backing release. Conservative whole-pilot rc-3 and unproven independent DMA retirement remain unchanged. No NAND Write, general block service, mount or persistence is accepted.
+
+The predeclared source-backed15%/150000uAh observer admitted eight positive samples at20–21%/19.953–20.031% RC/FCC, mean+256mA,33.1C and4.775V VBUS, with more than6957 seconds left on the native500mA/7200s lease. Final postflight was21%, Good/Charging,+185mA and33.2C. Native two-hour activation is observed; physical two-hour expiry remains untested. A next bounded APFS metadata pair is selected privately but needs a fresh epoch. [Physical report](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md), [sanitized acceptance](N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json) and [power contract](N71_S8000_TWO_HOUR_CHARGE_PROFILE_2026_11_26.md).
+
+## Earlier physical checkpoint: actual GPT entry-prefix preads accepted — 2026-11-26
 
 Candidate306284da0670ac9c299689e91fc496a9f73967f4 ran once in a new authenticated, unused RAM epoch after the predeclared3fe80d4e7426850e44169e8fa01b098c52e54848 power revision. Exactly four actual4096-byte NAND Reads over1,2,1,2 completed through trusted Linux bios and the ARM64 local userspace helper. Tags/CIDs/heads1..4, exact status0001, guarded independent arrivals, stability and both full-sector user comparisons passed. This extends sector/layout selection; capacity/first-Read milestones were not rerun as discovery.
 
@@ -12,7 +22,7 @@ Probe registration/node and temporary software disk were removed. Exact Delete S
 
 The finite native300mA source was unchanged. Eight samples at55% reported/54.779% RC/FCC averaged+44.75mA with nondecreasing RC, including one zero and one -8mA sample; the immediate -10mA sample was within the predeclared high-reserve bound. Final postflight was55%, Good/Charging,+52mA,33.4C, cell3.970V and VBUS4.900V. [Measured report](N71_S8000_GPT_PREFIX_PAIR_SUCCESS_2026_11_26.md), [sanitized acceptance](N71_S8000_GPT_PREFIX_PAIR_ACCEPTANCE_2026_11_26.json) and [trial/power contract](N71_S8000_GPT_PREFIX_PAIR_TRIAL_2026_11_26.md).
 
-## Next prepared candidate: complete GPT array, no new hardware claim
+## Historical preparation: complete GPT candidate, later physically accepted above
 
 A separate default-off module now fixes the plan to1,2,3,4,5 so a fresh header and all four entry-array pages can be checked in one epoch. The exact-kernel full/legacy modules and static ARM64 helper build without warnings; the complete1,974-test suite, HBPP audit and manifest/evidence/privacy checks pass. The final private RAM image has twelve valid runtime hashes, an explicit hashed500mA/two-hour charging profile and unchanged boot/kernel/DTBs/other CPIO records. The intervening storage-only image is superseded without boot. It has not booted or issued NAND I/O. Five independent slots/targets replace pair comparison with header/full-array CRC witnesses; all owners remain held. The previous accepted prefix epoch cannot be reused. A distinct old-native charging recovery qualified500mA at15% with +292.25mA mean and normal rollback; it leaves S3E Read count4 and all owners held. Before the new five-Read attempt, the named source-backed15%/150000uAh, cell/thermal/eight-positive-current/native-VBUS gates must pass. [Measured recovery and exact predeclared gates](N71_S8000_TWO_HOUR_CHARGE_PROFILE_2026_11_26.md). [Trial contract](N71_S8000_GPT_FULL_ARRAY_TRIAL_2026_11_26.md), [sanitized image metadata](N71_S8000_GPT_FULL_ARRAY_CANDIDATE_2026_11_26.json).
 

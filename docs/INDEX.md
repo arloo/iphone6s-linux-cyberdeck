@@ -196,7 +196,10 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 physical GPT entry-prefix acceptance and APFS type hint](N71_S8000_GPT_PREFIX_PAIR_SUCCESS_2026_11_26.md)
 - [N71 sanitized GPT entry-prefix measurements](N71_S8000_GPT_PREFIX_PAIR_ACCEPTANCE_2026_11_26.json)
 
-- [N71 complete GPT entry-array fixed five-Read trial (built; physical trial pending)](N71_S8000_GPT_FULL_ARRAY_TRIAL_2026_11_26.md)
+- [N71 complete GPT entry-array fixed five-Read contract (physically accepted)](N71_S8000_GPT_FULL_ARRAY_TRIAL_2026_11_26.md)
 - [N71 complete GPT array private-image sanitized candidate metadata](N71_S8000_GPT_FULL_ARRAY_CANDIDATE_2026_11_26.json)
 
 - [N71 measured native charging recovery and explicit two-hour RAM profile](N71_S8000_TWO_HOUR_CHARGE_PROFILE_2026_11_26.md)
+
+- [N71 complete primary GPT physical acceptance](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md)
+- [N71 sanitized complete GPT array measurements](N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json)

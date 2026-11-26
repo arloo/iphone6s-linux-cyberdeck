@@ -23,9 +23,9 @@
   "gzip_CPIO_roundtrip_verified": true,
   "storage_autoload": false,
   "helper_autostart": false,
-  "physically_booted": false,
-  "hardware_loaded": false,
-  "GPT_full_physically_accepted": false,
+  "physically_booted": true,
+  "hardware_loaded": true,
+  "GPT_full_physically_accepted": true,
   "fresh_attended_boot_required": true,
   "planned_lbas": [
     1,
@@ -47,7 +47,8 @@
     "startup_minimum_cell_uV": 3350000,
     "native_battery_VBUS_thermal_input_rollback_unchanged": true,
     "automatic_renewal": false,
-    "physical_two_hour_expiry_accepted": false
+    "physical_two_hour_expiry_accepted": false,
+    "physical_two_hour_activation_accepted": true
   },
   "host_tests_passed": 1974,
   "source_parent_commit": "0f85c9d152f6949b89be3c5566df841e9324ff3a",
@@ -66,7 +67,7 @@
   "minimum_selected_storage_charge_uAh": 150000,
   "minimum_selected_storage_cell_uV": 3600000,
   "selected_storage_source": "fresh direct USB500mA configuration, native500mA lease, eight positive-current samples plus immediate positive sample",
-  "physical_trial_pending": true,
+  "physical_trial_pending": false,
   "latest_old_epoch_charging": {
     "reported_percent": 17,
     "remaining_charge_uAh": 206000,
@@ -81,5 +82,10 @@
     "native_lease_seconds": 3600,
     "module_sha256": "b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7"
   },
-  "new_storage_attempts_after_prefix_acceptance": 0
+  "new_storage_attempts_after_prefix_acceptance": 1,
+  "physical_acceptance_report": "N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md",
+  "physical_acceptance_json": "N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json",
+  "next_hardware_attempt_requires_fresh_attended_epoch": true,
+  "source_commit": "020f31bd1f1cd312f84fb0f72ec2f05663735fdd",
+  "power_protocol_commit": "020f31bd1f1cd312f84fb0f72ec2f05663735fdd"
 }

@@ -37,3 +37,7 @@ Launch `--gpt-full` and the exact new module once. Acceptance requires five exac
 ## Pre-handoff physical status
 
 No new NAND attempt or candidate boot occurred. The initial read-only17%/3.402V result correctly deferred storage after normal one-hour lease expiry. The owner then explicitly requested continuing Linux work with charging beyond one hour. A separate unchanged-native500mA/30s recovery passed, and a finite500mA build-support session now charges the old held epoch. Later measured17%, Good/Charging,+289mA,33.2C, cell3.869V and VBUS4.775V. No iOS reboot is required for this recovery. The new image's two-hour profile remains a built/tested candidate; physical activation/expiry and the full GPT array trial are pending. Every original S3E owner remains held; fresh attended RAM boot is required for the next storage attempt.
+
+## Physical acceptance
+
+The exact final two-hour-profile image booted and passed the single five-Read trial: header/full-array CRC checks, all128 entries, one used APFS-type partition, all ranges/overlaps and five user copies pass. Exact queue deletion/shutdown/disable and retained stability passed. This epoch remains held with no further NAND trial authorized. The charging profile is active, while physical two-hour expiry remains pending. [Measured report](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md) and [acceptance JSON](N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json).
