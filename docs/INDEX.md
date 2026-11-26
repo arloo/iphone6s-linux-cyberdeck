@@ -188,3 +188,5 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 sanitized userspace pread acceptance](N71_S8000_USERSPACE_PREAD_ACCEPTANCE_2026_11_26.json)
 
 - [N71 CPU-only retained sector layout observer](N71_S8000_RETAINED_LAYOUT_CPU_OBSERVER_2026_11_26.md)
+
+- [N71 native primary GPT header from retained CPU targets (no new NAND I/O)](N71_S8000_RETAINED_GPT_HEADER_OBSERVATION_2026_11_26.json)
