@@ -2,7 +2,7 @@
 
 ## Starting evidence and named question
 
-The preceding accepted local userspace preads established the guarded kernel-to-user path. A separate CPU-only observation then validated the native4KiB primary GPT header and protective MBR from those retained copies, without another NAND Read. This candidate asks what the first GPT entry-array page contains, so the actual partition/type and later filesystem-sector selection can be based on parsed metadata. It is ARM64-built and host-tested, not physically booted or accepted.
+The preceding accepted local userspace preads established the guarded kernel-to-user path. A separate CPU-only observation then validated the native4KiB primary GPT header and protective MBR from those retained copies, without another NAND Read. This candidate asks what the first GPT entry-array page contains, so the actual partition/type and later filesystem-sector selection can be based on parsed metadata. Preparation originally stopped at ARM64 build/host tests. It has now passed a single fresh-epoch physical prefix trial; see [measured acceptance](N71_S8000_GPT_PREFIX_PAIR_SUCCESS_2026_11_26.md). The complete entry array remains unverified.
 
 ## Explicit bounded pair admission
 
@@ -41,3 +41,7 @@ Launch the helper and insert the module once with the explicit base1 plan. Requi
 The exact candidate boot is authenticated and unused. Reported55% agrees with RC/FCC54.54%; the native finite300mA lease remains healthy with VBUS4.875–4.900V, 33.7C and safe cell voltage. Eight samples contain five positive net-current values and three small negatives (-11 to -17mA), averaging +48.625mA, with Remaining Charge unchanged at679000uAh. The initial all-positive observer refused without any hardware storage action. Those negative samples are retained in evidence and are not described as uninterrupted positive charging.
 
 For this short four-read attempt with both reported and counter reserve at least50%, qualification may use a net-positive eight-sample window with nondecreasing Remaining Charge, instantaneous net draw no worse than -100mA, and the unchanged fresh native VBUS/input, health, cell, thermal and remaining-lease guards. A fresh immediate sample is still required. Below50%, the previously documented35% bounded path still requires the positive-current samples. This changes only the observer's reserve/current admission rule; it neither changes the module/helper/image nor increases input current, changes electrical/thermal bounds, renews the lease, expands the request budget or authorizes a retry. The battery reserve backs the brief bounded load while the current-limited source remains physically present.
+
+## Physical outcome
+
+The exact candidate was booted and attempted once after the documented high-reserve power revision. All four userspace Reads and prefix parsing passed:128 declared entries,32 examined, one used/APFS-type hint, array_complete0 and array_crc_checked0. Shutdown/disable passed, all owners remain held and this epoch cannot be retried. [Physical result and limits](N71_S8000_GPT_PREFIX_PAIR_SUCCESS_2026_11_26.md).

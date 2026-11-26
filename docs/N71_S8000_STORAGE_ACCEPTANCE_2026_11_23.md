@@ -2,7 +2,17 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: local userspace NAND preads accepted — 2026-11-26
+## Current physical checkpoint: actual GPT entry-prefix preads accepted — 2026-11-26
+
+Candidate306284da0670ac9c299689e91fc496a9f73967f4 ran once in a new authenticated, unused RAM epoch after the predeclared3fe80d4e7426850e44169e8fa01b098c52e54848 power revision. Exactly four actual4096-byte NAND Reads over1,2,1,2 completed through trusted Linux bios and the ARM64 local userspace helper. Tags/CIDs/heads1..4, exact status0001, guarded independent arrivals, stability and both full-sector user comparisons passed. This extends sector/layout selection; capacity/first-Read milestones were not rerun as discovery.
+
+The live GPT header passed native4KiB signature/CRC/geometry checks. It declares128 entries of128 bytes at LBA2, occupying four native pages. The first32 entries were examined: one used entry with an APFS partition-type hint and a valid bounded range. Its numeric coordinates remain private. The other96 entries, complete array CRC, backup GPT and filesystem superblocks remain unchecked; there is no mountability acceptance.
+
+Probe registration/node and temporary software disk were removed. Exact Delete SQ/CQ and shutdownCSTS0x9/disableCSTS0x0 returned0 with BME off; five later RAM samples stayed unchanged. Whole-pilot rc-3 remains conservative; every original owner/backing stays retained, independent DMA drain is unproven and no retry/unload is authorized in this epoch. No NAND Write, payload/sector-hash publication, general block service or persistence is accepted.
+
+The finite native300mA source was unchanged. Eight samples at55% reported/54.779% RC/FCC averaged+44.75mA with nondecreasing RC, including one zero and one -8mA sample; the immediate -10mA sample was within the predeclared high-reserve bound. Final postflight was55%, Good/Charging,+52mA,33.4C, cell3.970V and VBUS4.900V. [Measured report](N71_S8000_GPT_PREFIX_PAIR_SUCCESS_2026_11_26.md), [sanitized acceptance](N71_S8000_GPT_PREFIX_PAIR_ACCEPTANCE_2026_11_26.json) and [trial/power contract](N71_S8000_GPT_PREFIX_PAIR_TRIAL_2026_11_26.md).
+
+## Earlier physical checkpoint: local userspace NAND preads accepted — 2026-11-26
 
 The corrected 4247848b7cb2e871dffe887d3c8191c39d486e4a candidate ran once in a fresh authenticated epoch. A local ARM64 helper opened its root-only character node in /dev and completed four actual 4096-byte preads over0,1,0,1, triggering the accepted trusted kernel bios and real NAND commands. All exact CQEs, guarded independent arrivals, private snapshot/kernel-client/user full-sector pair equalities and four user copies passed. No payload bytes or sector hashes left private on-phone memory.
 

@@ -15,9 +15,9 @@
   "gzip_CPIO_roundtrip_verified": true,
   "storage_autoload": false,
   "helper_autostart": false,
-  "physically_booted": false,
-  "hardware_loaded": false,
-  "GPT_prefix_physically_accepted": false,
+  "physically_booted": true,
+  "hardware_loaded": true,
+  "GPT_prefix_physically_accepted": true,
   "fresh_attended_boot_required": true,
   "planned_pair_base": 1,
   "planned_lbas": [
@@ -30,9 +30,15 @@
   "source_parent_commit": "255078eccbc2775df7296ddf4ef6dd3e7c0d7a9c",
   "host_test_count_required": 1960,
   "partition_array_complete": false,
-  "partition_entries_physically_read": false,
+  "partition_entries_physically_read": true,
   "minimum_bounded_reserve_percent": 35,
   "NAND_writes": false,
   "general_block_service": false,
-  "host_test_count_passed": 1960
+  "host_test_count_passed": 1960,
+  "source_commit": "306284da0670ac9c299689e91fc496a9f73967f4",
+  "power_protocol_commit": "3fe80d4e7426850e44169e8fa01b098c52e54848",
+  "actual_trial_minimum_reserve_percent": 50,
+  "physical_acceptance_report": "N71_S8000_GPT_PREFIX_PAIR_SUCCESS_2026_11_26.md",
+  "physical_acceptance_json": "N71_S8000_GPT_PREFIX_PAIR_ACCEPTANCE_2026_11_26.json",
+  "next_hardware_trial_requires_fresh_attended_boot": true
 }
