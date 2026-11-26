@@ -83,6 +83,10 @@ class LayoutTests(unittest.TestCase):
         a=owner[owner.index('static struct {')+len('static struct {'):owner.index('} n71_ro_block_memory;')]
         b=observer[observer.index('struct n71_retained_owner {')+len('struct n71_retained_owner {'):observer.index('};',observer.index('struct n71_retained_owner {'))]
         normalize=lambda s:re.sub(r'\s+','',re.sub(r'/\*.*?\*/','',s,flags=re.S))
+        # The observer is pinned to the legacy four-target ABI, not the
+        # separately named five-target GPT module. Resolve its default plan.
+        a=subprocess.check_output(['cc','-E','-P','-x','c','-'],input=
+            '#define N71_GPT_FULL_PLAN 0\n#define N71_READ_SERIES_COUNT 4\n'+a,text=True)
         self.assertEqual(normalize(a),normalize(b))
         for bad in ['ioremap(', 'readl(', 'writel(', 'dma_map', 'dma_unmap', 'module_put(', 'print_hex_dump', 'filp_open(', 'register_blkdev(', 'copy_to_user(']:self.assertNotIn(bad,observer)
         self.assertLess(observer.index('!is_vmalloc_or_module_addr('),observer.index('vmalloc_to_page('))

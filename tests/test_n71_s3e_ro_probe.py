@@ -238,7 +238,7 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(s.index('if (copy_to_user('),s.index('WRITE_ONCE(n71_ro_probe.copied,step+1U)'))
     def test_finish_requires_all_user_copies_and_close_wakes_before_join(self):
         s=(PORT/'n71_s3e_ro_probe_runtime.h').read_text()
-        self.assertIn('READ_ONCE(n71_ro_probe.copied)!=4U',s)
+        self.assertIn('READ_ONCE(n71_ro_probe.copied)!=N71_READ_SERIES_COUNT',s)
         self.assertIn('msecs_to_jiffies(8000)',s)
         self.assertIn('complete(&n71_ro_probe.request)',s)
         self.assertIn('unregister_chrdev(',s)

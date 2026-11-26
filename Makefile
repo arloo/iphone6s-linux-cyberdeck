@@ -41,6 +41,6 @@ build/n71-nbd-client-aarch64: experimental/storage/n71-nbd-client.c
 	$(CC) $(CFLAGS) -Werror -o $@ $<
 
 # Root-only, RAM-node, four-pread hardware probe; never auto-run.
-build/n71-nand-private-probe-aarch64: experimental/storage/n71-nand-private-probe.c experimental/storage/n71-gpt-prefix-core.h experimental/storage/n71-retained-layout-core.h
+build/n71-nand-private-probe-aarch64: experimental/storage/n71-nand-private-probe.c experimental/storage/n71-gpt-prefix-core.h experimental/storage/n71-gpt-full-core.h experimental/storage/n71-retained-layout-core.h
 	mkdir -p build
 	$(CC) $(CFLAGS) -Werror -o $@ $<

@@ -127,6 +127,11 @@ static bool ans_io_queue_once;
 static bool ans_lba0_read_once;
 static bool ans_read_series_once;
 static unsigned int ans_read_series_flags = ~0U;
+#if N71_GPT_FULL_PLAN
+static bool ans_ro_gpt_full_once;
+module_param(ans_ro_gpt_full_once,bool,0400);
+MODULE_PARM_DESC(ans_ro_gpt_full_once,"explicit fixed five-Read GPT header/128-entry-array trial; five fresh tags/targets, CRC-gated private copies, no retry/reuse/write");
+#endif
 static bool ans_ro_probe_once;
 module_param(ans_ro_probe_once, bool, 0400);
 MODULE_PARM_DESC(ans_ro_probe_once, "explicit root-only four-pread character probe backed by trusted Linux bios; no writes, mmap, general block opens or DMA release");
@@ -141,7 +146,7 @@ module_param(ans_ro_block_tail_once, bool, 0400);
 MODULE_PARM_DESC(ans_ro_block_tail_once, "explicit last-two-LBA pair qualification; requires block-only mode; four fresh buffers, no reuse or writes");
 static inline unsigned int n71_series_base(void)
 {
-    return ans_ro_block_pair_once ? ans_ro_block_pair_base :
+    return N71_GPT_FULL_PLAN ? 1U : ans_ro_block_pair_once ? ans_ro_block_pair_base :
         ans_ro_block_tail_once ? 15624998U : 0U;
 }
 static bool ans_ro_block_once;
@@ -1068,6 +1073,11 @@ static int __init n71_port0_init(void)
         pr_info("n71-s3e-p0: UNARMED inert, no PMGR access\n");
         return 0;
     }
+#if N71_GPT_FULL_PLAN
+    if (!n71_gpt_full_mode_valid(ans_ro_gpt_full_once,ans_ro_block_once,
+            ans_ro_probe_once,ans_ro_block_pair_once,ans_ro_block_pair_base,
+            ans_ro_block_tail_once,ans_read_series_once,ans_lba0_read_once)) return -EPERM;
+#endif
     /* Keep observation and queue-write experiment mutually exclusive
      * and refuse before any PMGR/GPIO/NVMe access. */
     if (ans_late_dma_probe_ro && (!ans_identify_once ||

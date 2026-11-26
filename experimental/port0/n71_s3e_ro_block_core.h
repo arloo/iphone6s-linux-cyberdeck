@@ -26,11 +26,19 @@ static inline int n71_ro_block_pair_mode_valid(unsigned int selected,
     return selected ? block==1U && !tail && n71_read_pair_base_valid(base) :
         base==~0U;
 }
+static inline int n71_gpt_full_mode_valid(unsigned int selected,
+        unsigned int block,unsigned int probe,unsigned int pair,
+        unsigned int pair_base,unsigned int tail,unsigned int series,
+        unsigned int single)
+{
+    return selected==1U && block==1U && probe==1U && !pair &&
+        pair_base==~0U && !tail && !series && !single;
+}
 static inline int n71_ro_block_pair_admissible(const struct n71_ro_block_flow *f,
         const struct n71_ro_block_request *r,unsigned int base)
 {
     return n71_read_pair_base_valid(base) && f && r && f->active==1U && !f->closed && !f->failed &&
-        !f->pending && f->admitted<4U && f->delivered==f->admitted &&
+        !f->pending && f->admitted<N71_READ_SERIES_COUNT && f->delivered==f->admitted &&
         r->is_read==1U && r->bytes==4096U && r->segments==1U && !r->offset &&
         r->trusted_bio==1U && r->trusted_page==1U &&
         r->sector==8ULL*n71_read_pair_lba(base,f->admitted);
@@ -38,7 +46,7 @@ static inline int n71_ro_block_pair_admissible(const struct n71_ro_block_flow *f
 static inline int n71_ro_block_admissible(const struct n71_ro_block_flow *f,
         const struct n71_ro_block_request *r)
 {
-    return n71_ro_block_pair_admissible(f,r,0U);
+    return n71_ro_block_pair_admissible(f,r,N71_GPT_FULL_PLAN ? 1U : 0U);
 }
 static inline int n71_ro_block_pair_admit(struct n71_ro_block_flow *f,
         const struct n71_ro_block_request *r,unsigned int base)
@@ -58,7 +66,7 @@ static inline int n71_ro_block_deliver(struct n71_ro_block_flow *f,
         unsigned int step)
 {
     if (!f || !f->active || f->closed || f->failed || !f->pending ||
-        step>=4U || f->admitted!=step+1U || f->delivered!=step) return -1;
+        step>=N71_READ_SERIES_COUNT || f->admitted!=step+1U || f->delivered!=step) return -1;
     f->delivered++;f->pending=0;
     return 0;
 }
@@ -71,7 +79,7 @@ static inline void n71_ro_block_close(struct n71_ro_block_flow *f,int failed)
 static inline int n71_ro_block_flow_complete(const struct n71_ro_block_flow *f)
 {
     return f && f->closed && !f->active && !f->pending && !f->failed &&
-        f->admitted==4U && f->delivered==4U;
+        f->admitted==N71_READ_SERIES_COUNT && f->delivered==N71_READ_SERIES_COUNT;
 }
 /* CPU-only private probe admission; it cannot publish hardware commands. */
 static inline int n71_ro_probe_mode_valid(unsigned int enabled,unsigned int block)
@@ -82,7 +90,7 @@ static inline int n71_ro_probe_request_valid(unsigned int active,
         unsigned int failed,unsigned int step,unsigned int base,
         unsigned long long offset,unsigned long long bytes)
 {
-    return active==1U && !failed && step<4U &&
+    return active==1U && !failed && step<N71_READ_SERIES_COUNT &&
         n71_read_pair_base_valid(base) && bytes==4096ULL &&
         offset==4096ULL*n71_read_pair_lba(base,step);
 }

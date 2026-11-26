@@ -1,0 +1,25 @@
+# N71/S8000 explicit two-hour native charging candidate — 26 November 2026
+
+The owner requested continuing Linux work and charging beyond one hour. A read-only check found the old300mA/3600s input lease had expired normally:17% reported, cell3.402V and net discharge. This is an observed expired timer, not evidence that the new image can already charge for two hours.
+
+## Physical charging recovery, separate from storage
+
+The exact old native module/source was attested: SHA256 `b559145fd3c1c30ba3aea008544ffb2fcf7aa737b69773f53f1512b1d197eec7`, same source as the repository before the duration change, exact running kernel and native guards >10%,3.3–4.2V and10..<40C. The direct Apple USB configuration declared500mA. The prior expired native module had zero references and a confirmed input00/rc0 restore. The S3E prefix owner was already closed, shutdown/disabled/BME-off, held at ref1 with four Reads; none of its owners or frames was touched.
+
+A named native-only lower-reserve recovery exception required Good health, capacity at least12%, cell3.35..<4.1V and temperature10..<35C before activation. Only the expired charger module was normally unloaded; the same already-qualified500mA input selector was armed for30 seconds. Actual admission was15%,3.458V and33.2C. Eight samples were all positive, +240..+302mA with mean+292.25mA, cell3.751–3.807V, VBUS4.750V and temperature33.2C. The kernel restored baseline at30 seconds with rc0. S3E Read count stayed4 and its ref1 Live owner remained held.
+
+A following native-only500mA/3600s build-support worker initially hit a shell backreference/arithmetic formatting error; its EXIT cleanup removed the charger and positively restored input00/rc0. The corrected worker started only after confirming that baseline and kept the original native one-hour hard deadline, a local3540-second stop, two-second health/thermal/cell/fresh-native-VBUS checks and cleanup. It never renews or accesses S3E. Later samples showed17% reported, RC206000/FCC1283000uAh, Good/Charging,+289mA,33.2C, cell3.869V and VBUS4.775V. This supports monitored charging in the held epoch; it is not a new NAND result. The exact corrected [historical worker](../experimental/power/n71-charge-build-support-20261126.sh) is pinned to that old native binary.
+
+## New image opt-in
+
+The new native module changes only the permitted finite lease maximum from3600 to7200 seconds; default30 seconds, all battery/VBUS/droop/status/input guards, two-second monitor, original input-only register semantics, rollback and device-reference handling remain unchanged. No charge-current/cell-voltage regulation or unbounded renewal is added.
+
+Normal startup without an opt-in retains300mA/3600s and its35%/3.5V entry requirements. The private research image explicitly includes the root-owned hashed record `n71-owner-two-hour-500ma-v1`. That exact record selects500mA/7200s, with12%/3.35V charging-start admission, Good health,10..<37.5C, the existing99%/4.15V startup ceiling, manifest checks and post-USB stability. Unknown/symlink profiles refuse activation. The unchanged native >10%/3.3–4.2V/10..<40C and source guards remain independent throughout the lease. No automatic renewal follows the two-hour deadline.
+
+The500mA source/current selector has the separate short physical qualification above. **The new7200-second binary/profile has not booted, and a physical two-hour expiry is not yet accepted.** Tests execute the actual new driver beyond the first hour and at the two-hour deadline, and inject thermal/cell/VBUS/detach failures after one hour. Actual startup-script tests cover the default profile, exact low-reserve two-hour opt-in, unknown profile refusal, manifest/USB/thermal failures and duplicate activation. The complete1,974-test suite and HBPP/manifest audits pass; exact-kernel builds are warning-free.
+
+The full-GPT RAM candidate changes the inert storage module/helper, native charger, startup script and runtime hashes, and adds only the opt-in record. Its boot prefix, DTBs, compressed kernel and every other CPIO entry remain identical; all twelve runtime hashes and gzip/CPIO roundtrip pass. [Exact sanitized image metadata](N71_S8000_GPT_FULL_ARRAY_CANDIDATE_2026_11_26.json).
+
+## Distinct storage admission
+
+Charging admission is not permission to run storage. Before the fresh single five-Read full-GPT trial, both reported and RC/FCC reserve must be at least15%, Remaining Charge at least150000uAh, agreement within2 points, Good health, cell3.6..<4.1V and temperature10..<35C. Require eight fresh positive-current samples with nondecreasing RC and an immediate positive sample, physically attested direct USB500mA, native500mA input, VBUS4.75–5.5V/fresh monitor and at least120 seconds of finite lease remaining. This named source-backed lower-reserve observer revision is declared before the pending attempt, following the owner's explicit instruction and measured positive recovery. It keeps all electrical/thermal and single-attempt/no-Write/retained-owner guards; it does not retroactively relabel any earlier refused gate. [Full-array trial](N71_S8000_GPT_FULL_ARRAY_TRIAL_2026_11_26.md).

@@ -3,22 +3,28 @@
 #define N71_S3E_READ_SERIES_CORE_H
 #include "n71_s3e_lba0_read_once_core.h"
 #include "n71_s3e_ro_flatdma_tag1_stage.h"
-#define N71_READ_SERIES_COUNT 4U
-#define N71_READ_SERIES_DMA_PAGES 8U
-#define N71_READ_SERIES_PAGES 12U
+#ifndef N71_GPT_FULL_PLAN
+#define N71_GPT_FULL_PLAN 0
+#endif
+#if N71_GPT_FULL_PLAN != 0 && N71_GPT_FULL_PLAN != 1
+#error Unsupported read qualification plan
+#endif
+#define N71_READ_SERIES_COUNT (N71_GPT_FULL_PLAN ? 5U : 4U)
+#define N71_READ_SERIES_DMA_PAGES (2U*N71_READ_SERIES_COUNT)
+#define N71_READ_SERIES_PAGES (3U*N71_READ_SERIES_COUNT)
 /* One explicit consecutive pair per epoch, within the accepted namespace.
  * Legacy wrappers still bind base0; runtime separately gates new selection. */
 static inline int n71_read_pair_base_valid(unsigned int base)
 {
-    return base<=N71_RO_PHYSICAL_NSZE-2U;
+    return N71_GPT_FULL_PLAN ? base==1U : base<=N71_RO_PHYSICAL_NSZE-2U;
 }
 static inline unsigned int n71_read_pair_lba(unsigned int base,unsigned int step)
 {
-    return base+(step&1U);
+    return N71_GPT_FULL_PLAN ? base+step : base+(step&1U);
 }
 static inline unsigned int n71_read_series_lba(unsigned int step)
 {
-    return step & 1U; /* fixed 0,1,0,1; caller must bound step */
+    return N71_GPT_FULL_PLAN ? 1U+step : step & 1U;
 }
 static inline unsigned long long n71_read_series_tag(unsigned int step)
 {
@@ -57,7 +63,7 @@ static inline int n71_read_series_command(unsigned char *out,unsigned int step,
         const struct n71_s3e_ro_io_layout *layout,
         unsigned long long nsze,unsigned int lba_bytes,unsigned int flags)
 {
-    return n71_read_pair_command(out,step,layout,nsze,lba_bytes,flags,0U);
+    return n71_read_pair_command(out,step,layout,nsze,lba_bytes,flags,N71_GPT_FULL_PLAN ? 1U : 0U);
 }
 static inline int n71_read_pair_command_valid(const unsigned char *b,
         unsigned int step,const struct n71_s3e_ro_io_layout *layout,
@@ -75,7 +81,7 @@ static inline int n71_read_series_command_valid(const unsigned char *b,
         unsigned int step,const struct n71_s3e_ro_io_layout *layout,
         unsigned long long nsze,unsigned int lba_bytes,unsigned int flags)
 {
-    return n71_read_pair_command_valid(b,step,layout,nsze,lba_bytes,flags,0U);
+    return n71_read_pair_command_valid(b,step,layout,nsze,lba_bytes,flags,N71_GPT_FULL_PLAN ? 1U : 0U);
 }
 static inline int n71_read_series_cqe_valid(unsigned int observed,
         const struct n71_s3e_admin_cqe_fields *v,unsigned int step)
@@ -85,12 +91,13 @@ static inline int n71_read_series_cqe_valid(unsigned int observed,
         v->sq_id==1U && v->sq_head==step+1U;
 }
 struct n71_read_series_frames {
-    unsigned long long data[4],sgl[4];
+    unsigned long long data[N71_READ_SERIES_COUNT],sgl[N71_READ_SERIES_COUNT];
 };
 static inline unsigned long long n71_read_series_frame(
         const struct n71_read_series_frames *f,unsigned int i)
 {
-    return !f || i>=8U ? 0 : i<4U ? f->data[i] : f->sgl[i-4U];
+    return !f || i>=N71_READ_SERIES_DMA_PAGES ? 0 :
+        i<N71_READ_SERIES_COUNT ? f->data[i] : f->sgl[i-N71_READ_SERIES_COUNT];
 }
 static inline int n71_read_series_frames_valid(
         const struct n71_read_series_frames *f,
@@ -98,7 +105,7 @@ static inline int n71_read_series_frames_valid(
 {
     unsigned int i,j;
     if (!f || count>128U || (count&&!foreign)) return 0;
-    for (i=0;i<8;i++) {
+    for (i=0;i<N71_READ_SERIES_DMA_PAGES;i++) {
         unsigned long long pa=n71_read_series_frame(f,i);
         if (!n71_ro_valid_host_frame(pa)) return 0;
         for (j=0;j<i;j++) if (pa==n71_read_series_frame(f,j)) return 0;
@@ -111,17 +118,17 @@ static inline int n71_read_series_frames_valid(
     }
     return 1;
 }
-/* CPU-only all-or-nothing shadow staging. Tags1..4 are distinct; tag0 and
+/* CPU-only all-or-nothing shadow staging. Selected tags are distinct; tag0 and
  * every other slot remain unchanged. Runtime publishes page counts last. */
 static inline int n71_read_series_stage(unsigned char *tcb,
-        unsigned char *const sgl[4],const struct n71_read_series_frames *f,
+        unsigned char *const sgl[N71_READ_SERIES_COUNT],const struct n71_read_series_frames *f,
         const struct n71_s3e_ro_foreign_range *foreign,unsigned int count)
 {
     unsigned int i,j,k;
     if (!tcb || !sgl || !n71_read_series_frames_valid(f,foreign,count) ||
         n71_ro_get_le32(tcb)!=0x200U || n71_ro_get_le32(tcb+4)!=1U ||
         !n71_ro_get_le32(tcb+8) || !n71_ro_get_le64(tcb+16)) return -1;
-    for (i=0;i<4;i++) {
+    for (i=0;i<N71_READ_SERIES_COUNT;i++) {
         unsigned long a,b;
         if (!sgl[i]) return -1;
         a=(unsigned long)sgl[i];b=(unsigned long)tcb;
@@ -136,7 +143,7 @@ static inline int n71_read_series_stage(unsigned char *tcb,
             if (tcb[(i+1U)*N71_RO_TCB_BYTES+k]) return -1;
         for (k=0;k<N71_RO_HOST_FRAME_BYTES;k++) if (sgl[i][k]) return -1;
     }
-    for (i=0;i<4;i++) {
+    for (i=0;i<N71_READ_SERIES_COUNT;i++) {
         unsigned char *slot=tcb+(i+1U)*N71_RO_TCB_BYTES;
         n71_ro_le32(sgl[i],(unsigned int)(f->data[i]>>12));
         n71_ro_le32(slot,0x200U);
@@ -160,7 +167,7 @@ struct n71_read_series_ops {
 struct n71_read_series_result {
     unsigned int submitted,accepted,snapshotted,stability_checks,pairs_valid;
 };
-/* Four single-sector Reads, four fresh SQ/CQ slots and four distinct
+/* Compile-time bounded single-sector Reads, fresh SQ/CQ slots and distinct
  * tag/data/SGL pairs. No ring wrap, buffer reuse, write or export. */
 static inline int n71_read_pair_core(const struct n71_read_series_ops *o,
         void *ctx,const struct n71_s3e_ro_io_layout *layout,
@@ -211,6 +218,6 @@ static inline int n71_read_series_core(const struct n71_read_series_ops *o,
         unsigned long long nsze,unsigned int lba_bytes,unsigned int flags,
         struct n71_read_series_result *r)
 {
-    return n71_read_pair_core(o,ctx,layout,nsze,lba_bytes,flags,r,0U);
+    return n71_read_pair_core(o,ctx,layout,nsze,lba_bytes,flags,r,N71_GPT_FULL_PLAN ? 1U : 0U);
 }
 #endif

@@ -6,8 +6,8 @@
  * authenticates/queues one bio. No MMIO or sleeping in that callback. */
 static struct {
     struct gendisk *disk;
-    struct bio *bio[4],*pending_bio;
-    void *target[4]; /* pre-epoch CPU-only, never mapped or in any TCB/SGL */
+    struct bio *bio[N71_READ_SERIES_COUNT],*pending_bio;
+    void *target[N71_READ_SERIES_COUNT]; /* pre-epoch CPU-only, never mapped or in any TCB/SGL */
     struct task_struct *client;
     struct completion request_ready;
     spinlock_t lock;
@@ -15,7 +15,18 @@ static struct {
     unsigned int rejected,client_completed;
     int major,client_rc;
     bool prepared,registered,removed,pairs_equal,passed;
+#if N71_GPT_FULL_PLAN
+    bool gpt_crc_ok;
+#endif
 } n71_ro_block_memory;
+static bool n71_ro_block_content_valid(void)
+{
+#if N71_GPT_FULL_PLAN
+    return n71_ro_block_memory.gpt_crc_ok;
+#else
+    return n71_ro_block_memory.pairs_equal;
+#endif
+}
 #include "n71_s3e_ro_probe_runtime.h"
 static void n71_ro_block_submit_bio(struct bio *bio)
 {
@@ -30,12 +41,12 @@ static void n71_ro_block_submit_bio(struct bio *bio)
     bool accepted=false;
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     step=n71_ro_block_memory.flow.admitted;
-    r.trusted_bio=step<4U && bio==n71_ro_block_memory.bio[step];
+    r.trusted_bio=step<N71_READ_SERIES_COUNT && bio==n71_ro_block_memory.bio[step];
     bio_for_each_segment(v,bio,iter) {
         r.segments++;
         if (r.segments==1U) {
             r.offset=v.bv_offset;
-            r.trusted_page=step<4U && v.bv_len==4096U &&
+            r.trusted_page=step<N71_READ_SERIES_COUNT && v.bv_len==4096U &&
                 v.bv_page==virt_to_page(n71_ro_block_memory.target[step]);
         }
     }
@@ -60,7 +71,7 @@ static const struct block_device_operations n71_ro_block_fops={
 static void n71_ro_block_release_software(void)
 {
     unsigned int i;
-    for (i=0;i<4U;i++)
+    for (i=0;i<N71_READ_SERIES_COUNT;i++)
         if (n71_ro_block_memory.bio[i]) {
             bio_put(n71_ro_block_memory.bio[i]);
             n71_ro_block_memory.bio[i]=NULL;
@@ -103,7 +114,7 @@ static int n71_ro_block_prepare(void *ctx)
     for (i=0;i<2U;i++) foreign[count+4U+i]=(struct n71_s3e_ro_foreign_range){
         n71_admin_memory.dma[i],PAGE_SIZE};
     count+=6U;
-    for (i=0;i<4U;i++) {
+    for (i=0;i<N71_READ_SERIES_COUNT;i++) {
         u64 pa;
         n71_ro_block_memory.target[i]=(void *)__get_free_page(GFP_KERNEL);
         if (!n71_ro_block_memory.target[i]) {rc=-ENOMEM;goto fail;}
@@ -131,7 +142,7 @@ static int n71_ro_block_prepare(void *ctx)
     strscpy(n71_ro_block_memory.disk->disk_name,"n71nand_ro",DISK_NAME_LEN);
     set_capacity(n71_ro_block_memory.disk,(sector_t)N71_RO_PHYSICAL_NSZE*8ULL);
     set_disk_ro(n71_ro_block_memory.disk,true);
-    for (i=0;i<4U;i++) {
+    for (i=0;i<N71_READ_SERIES_COUNT;i++) {
         struct bio *bio=bio_alloc(n71_ro_block_memory.disk->part0,1,
                                  REQ_OP_READ|REQ_SYNC,GFP_KERNEL);
         if (!bio) {rc=-ENOMEM;goto fail;}
@@ -142,7 +153,7 @@ static int n71_ro_block_prepare(void *ctx)
     }
     if (!n71_io_pre_bme(ctx)) {rc=-EPERM;goto fail;}
     n71_ro_block_memory.prepared=true;
-    pr_info("n71-s3e-p0: RO_BLOCK_PREPARED capacity_bytes=64000000000 logical_block_bytes=4096 trusted_bios=4 CPU_only_targets=4 cc_off=1 bme_off=1 partition_scan=DISABLED userspace_open=DENIED all_target_frames_retained=YES\n");
+    pr_info("n71-s3e-p0: RO_BLOCK_PREPARED capacity_bytes=64000000000 logical_block_bytes=4096 trusted_bios=%u CPU_only_targets=%u cc_off=1 bme_off=1 partition_scan=DISABLED userspace_open=DENIED all_target_frames_retained=YES\n",N71_READ_SERIES_COUNT,N71_READ_SERIES_COUNT);
     return 0;
 fail:
     n71_ro_block_release_software();
@@ -155,7 +166,7 @@ static int n71_ro_block_client(void *unused)
     unsigned int i;
     int rc=0;
     (void)unused;
-    for (i=0;i<4U;i++) {
+    for (i=0;i<N71_READ_SERIES_COUNT;i++) {
         rc=n71_ro_probe_wait(i);
         if (rc) break;
         if (kthread_should_stop() || READ_ONCE(n71_ro_block_memory.flow.closed)) {
@@ -167,19 +178,32 @@ static int n71_ro_block_client(void *unused)
             rc=-EOVERFLOW;break;
         }
         n71_ro_block_memory.client_completed++;
+#if N71_GPT_FULL_PLAN
+        if(i==N71_READ_SERIES_COUNT-1U) {
+            const unsigned char *pages[4];unsigned j;
+            for(j=0;j<4;j++)pages[j]=n71_ro_block_memory.target[1U+j];
+            n71_ro_block_memory.gpt_crc_ok=n71_gpt_full_crc_valid(n71_ro_block_memory.target[0],pages);
+            if(!n71_ro_block_memory.gpt_crc_ok){rc=-EUCLEAN;break;}
+        }
+#else
         /* The last userspace reply also requires both full-sector pairs. */
         if (ans_ro_probe_once && i==3U &&
             (memcmp(n71_ro_block_memory.target[0],n71_ro_block_memory.target[2],4096) ||
              memcmp(n71_ro_block_memory.target[1],n71_ro_block_memory.target[3],4096))) {
             rc=-EUCLEAN;break;
         }
+#endif
         n71_ro_probe_reply(0);
     }
-    if (!rc && i==4U) {
+    if (!rc && i==N71_READ_SERIES_COUNT) {
+#if N71_GPT_FULL_PLAN
+        if(!n71_ro_block_content_valid())rc=-EUCLEAN;
+#else
         n71_ro_block_memory.pairs_equal=
             !memcmp(n71_ro_block_memory.target[0],n71_ro_block_memory.target[2],4096) &&
             !memcmp(n71_ro_block_memory.target[1],n71_ro_block_memory.target[3],4096);
         if (!n71_ro_block_memory.pairs_equal) rc=-EUCLEAN;
+#endif
     }
     rc=n71_ro_probe_finish(rc);
     WRITE_ONCE(n71_ro_block_memory.client_rc,rc);
@@ -191,7 +215,7 @@ static int n71_ro_block_qualified(void *ctx,unsigned int step)
 {
     unsigned long irq;
     bool valid;
-    if (step>=4U || !wait_for_completion_timeout(
+    if (step>=N71_READ_SERIES_COUNT || !wait_for_completion_timeout(
             &n71_ro_block_memory.request_ready,msecs_to_jiffies(8000))) return 0;
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     valid=n71_ro_block_memory.pending_bio==n71_ro_block_memory.bio[step] &&
@@ -208,7 +232,7 @@ static int n71_ro_block_stable(void *ctx,unsigned int count)
     unsigned long irq;
     unsigned int step=count-1U;
     int rc=n71_read_series_stable(ctx,count);
-    if (rc || !count || count>4U) return rc ? rc : -EPERM;
+    if (rc || !count || count>N71_READ_SERIES_COUNT) return rc ? rc : -EPERM;
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     /* The final all-buffer stability pass must not complete a bio twice. */
     if (n71_ro_block_memory.flow.delivered==count) {
@@ -225,7 +249,7 @@ static int n71_ro_block_stable(void *ctx,unsigned int count)
     if (memchr_inv(n71_ro_block_memory.target[step],0,PAGE_SIZE)) return -EUCLEAN;
     /* Only validated private CPU snapshot -> trusted CPU bio target.
      * The device never sees this target, nor any bio/request pointer. */
-    memcpy(n71_ro_block_memory.target[step],n71_read_series_memory.page[8+step],4096);
+    memcpy(n71_ro_block_memory.target[step],n71_read_series_memory.page[N71_READ_SERIES_DMA_PAGES+step],4096);
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     rc=n71_ro_block_deliver(&n71_ro_block_memory.flow,step);
     if (!rc) {bio=n71_ro_block_memory.pending_bio;n71_ro_block_memory.pending_bio=NULL;}
@@ -254,9 +278,13 @@ static int n71_ro_block_once(void *ctx)
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     n71_ro_block_memory.flow.active=1;
     spin_unlock_irqrestore(&n71_ro_block_memory.lock,irq);
+#if N71_GPT_FULL_PLAN
+    pr_info("n71-s3e-p0: RO_BLOCK_GPT_FULL lbas=1,2,3,4,5 requests=5 no_pair_comparison=YES\n");
+#else
     pr_info("n71-s3e-p0: RO_BLOCK_PAIR base_lba=%u pair_count=2 requests=4 tail_selected=%u\n",
         n71_series_base(),ans_ro_block_tail_once);
-    pr_info("n71-s3e-p0: RO_BLOCK_REGISTERED name=n71nand_ro capacity_bytes=64000000000 logical_block_bytes=4096 read_only=1 partition_scan=DISABLED userspace_open=DENIED request_budget=4\n");
+#endif
+    pr_info("n71-s3e-p0: RO_BLOCK_REGISTERED name=n71nand_ro capacity_bytes=64000000000 logical_block_bytes=4096 read_only=1 partition_scan=DISABLED userspace_open=DENIED request_budget=%u\n",N71_READ_SERIES_COUNT);
     rc=n71_ro_probe_start();
     if (rc) goto close;
     n71_ro_block_memory.client=kthread_run(n71_ro_block_client,NULL,"n71-ro-client");
@@ -274,8 +302,8 @@ close:
         client_rc=kthread_stop(n71_ro_block_memory.client);
         n71_ro_block_memory.client=NULL;
     }
-    if (!rc && (client_rc || n71_ro_block_memory.client_completed!=4U ||
-            !n71_ro_block_memory.pairs_equal ||
+    if (!rc && (client_rc || n71_ro_block_memory.client_completed!=N71_READ_SERIES_COUNT ||
+            !n71_ro_block_content_valid() ||
             !n71_ro_block_flow_complete(&n71_ro_block_memory.flow))) rc=-EIO;
     if (rc) n71_read_series_memory.series_ok=false;
     n71_ro_block_release_software();
@@ -285,6 +313,9 @@ close:
         n71_ro_block_memory.flow.admitted,n71_ro_block_memory.flow.delivered,
         n71_ro_block_memory.client_completed,client_rc,n71_ro_block_memory.pairs_equal,
         n71_ro_block_memory.rejected);
+#if N71_GPT_FULL_PLAN
+    pr_info("n71-s3e-p0: RO_BLOCK_GPT_CRC kernel_targets_valid=%u pair_equality_tested=NO\n",n71_ro_block_memory.gpt_crc_ok);
+#endif
     if (ans_ro_probe_once)
         pr_info("n71-s3e-p0: RO_PROBE_ONCE rc=%d requested=%u copied=%u char_removed=%u sector_payload_logged=NO writes=NO DMA_release=NO\n",
             rc,n71_ro_probe.requested,n71_ro_probe.copied,n71_ro_probe.removed);

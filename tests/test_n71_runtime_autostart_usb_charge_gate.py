@@ -48,6 +48,7 @@ class N71RAMBootChargerRaceTests(unittest.TestCase):
             '/run/n71_runtime_attempted': str(self.root/'attempted'),
             '/run/n71_charge_worker_started': str(self.root/'worker-attempted'),
             '/usr/lib/cyberdeck/n71-runtime.sha256': str(self.root/'hashes'),
+            '/usr/lib/cyberdeck/n71-charge-two-hour': str(self.root/'two-hour-profile'),
             '/run/n71_runtime_hashes.log': str(self.root/'hashes.log'),
             '/run/n71_charge_hashes.log': str(self.root/'charge-hashes.log'),
             '/run/n71_charge_monitor.log': str(self.root/'charge-monitor.log'),
@@ -194,13 +195,31 @@ class N71RAMBootChargerRaceTests(unittest.TestCase):
         self.assertIn('"$stable" -lt 15', SOURCE)
         self.assertIn('"$temp" -ge 375', SOURCE)
         self.assertIn('"$voltage" -lt 4150000', SOURCE)
-        self.assertIn('input_ua=300000 lease_seconds=3600', SOURCE)
+        self.assertIn('CHARGE_INPUT_UA=300000', SOURCE)
+        self.assertIn('CHARGE_LEASE_SECONDS=3600', SOURCE)
+        self.assertIn('input_ua=$CHARGE_INPUT_UA lease_seconds=$CHARGE_LEASE_SECONDS', SOURCE)
         self.assertNotIn('modprobe n71_s3e', SOURCE)
         self.assertNotIn('writel(', SOURCE)
         driver = (ROOT/'experimental/power/n71-sn2400-input-trial.c').read_text()
         self.assertIn('uv < 4400000 || uv > 5500000', driver)
         self.assertIn('restore_input("monitor-stop")', driver)
         self.assertIn('schedule_delayed_work(&monitor', driver)
+
+    def test_explicit_two_hour_profile_can_charge_low_reserve_without_lowering_native_guards(self):
+        (self.root/'two-hour-profile').write_text('n71-owner-two-hour-500ma-v1\n')
+        (self.bat/'capacity').write_text('12\n')
+        (self.bat/'voltage_now').write_text('3350000\n')
+        result,calls=self.run_boot()
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual(calls.count('n71-sn2400-input-trial.ko'),1)
+        self.assertIn('input_ua=500000 lease_seconds=7200',calls)
+
+    def test_unknown_two_hour_optin_refuses_every_module(self):
+        (self.root/'two-hour-profile').write_text('unqualified-profile\n')
+        result,calls=self.run_init()
+        self.assertEqual(result.returncode,2)
+        self.assertIn('UNKNOWN_CHARGE_PROFILE_REFUSED',result.stdout)
+        self.assertEqual(calls,'')
 
 if __name__ == '__main__':
     unittest.main()

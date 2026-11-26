@@ -105,7 +105,8 @@ int main(int argc, char **argv) {
     if(!strcmp(case_name,"restore-failure")){partial_input_fail=true;fail_restore=true;}
     if(!strcmp(case_name,"adc-idle-selector"))regs[0x11]=0x0a;
     if(!strcmp(case_name,"adc-unknown"))regs[0x11]=0x80;
-    if(!strcmp(case_name,"lease-invalid"))lease_seconds=3601;
+    if(!strcmp(case_name,"lease-invalid"))lease_seconds=7201;
+    if(!strncmp(case_name,"two-hour",8)){lease_seconds=7200;input_ua=500000;cap=15;voltage=3450000;}
     rc=trial_init();
     if(!strcmp(case_name,"low-battery") || !strcmp(case_name,"hot") || !strcmp(case_name,"cold") || !strcmp(case_name,"low-voltage")) {
         assert(rc==-ERANGE && writes==0 && device_refs==0 && battery_refs==0);return 0;
@@ -134,6 +135,20 @@ int main(int argc, char **argv) {
         trial_exit();
         assert(!changed && regs[9]==0 && device_refs==0 && battery_refs==0);
         return 0;
+    }
+    if(!strncmp(case_name,"two-hour",8)) {
+        assert(rc==0 && regs[9]==41 && scheduled==1 && changed);
+        jiffies=3601000;monitor_work(NULL);
+        assert(changed && regs[9]==41 && scheduled==2);
+        if(!strcmp(case_name,"two-hour-hot"))temperature=400;
+        else if(!strcmp(case_name,"two-hour-cell"))voltage=4201000;
+        else if(!strcmp(case_name,"two-hour-detach"))regs[7]&=~BIT(5);
+        else if(!strcmp(case_name,"two-hour-vbus"))vbus=0;
+        if(strcmp(case_name,"two-hour-deadline"))jiffies=3603000;
+        else jiffies=7200000;
+        monitor_work(NULL);
+        assert(!changed && regs[9]==0);
+        trial_exit();assert(device_refs==0 && battery_refs==0);return 0;
     }
     assert(rc==0 && regs[9]==21 && scheduled==1 && changed);
     if(!strcmp(case_name,"high-voltage-monitor") || !strcmp(case_name,"zero-vbus-monitor")) {
@@ -191,6 +206,14 @@ class TrialTests(unittest.TestCase):
                 elif case == 'zero-vbus-monitor':
                     self.assertIn('phase=vbus-bounds', result.stderr)
                     self.assertNotIn('BATTERY_GUARD', result.stderr)
+
+    def test_two_hour_500mA_remains_guarded_after_first_hour_and_restores_at_deadline(self):
+        subprocess.run([str(self.exe),'two-hour-deadline'],check=True,capture_output=True,text=True)
+
+    def test_two_hour_thermal_cell_detach_and_VBUS_failures_restore_after_first_hour(self):
+        for case in ['two-hour-hot','two-hour-cell','two-hour-detach','two-hour-vbus']:
+            with self.subTest(case=case):
+                subprocess.run([str(self.exe),case],check=True,capture_output=True,text=True)
 
 if __name__ == '__main__':
     unittest.main()

@@ -24,7 +24,7 @@ static bool armed;
 static unsigned int input_ua = 300000;
 static unsigned int lease_seconds = 30;
 module_param(lease_seconds, uint, 0400);
-MODULE_PARM_DESC(lease_seconds, "30..3600 seconds, then restore original input limit");
+MODULE_PARM_DESC(lease_seconds, "30..7200 seconds, then restore original input limit");
 module_param(armed, bool, 0400);
 module_param(input_ua, uint, 0400);
 static struct device *chip_dev;
@@ -118,7 +118,7 @@ static int __init trial_init(void)
     int ret;
     INIT_DELAYED_WORK(&monitor, monitor_work);
     if ((input_ua != 120000 && input_ua != 300000 && input_ua != 500000) ||
-        lease_seconds < 30 || lease_seconds > 3600) return -EINVAL;
+        lease_seconds < 30 || lease_seconds > 7200) return -EINVAL;
     if (!armed) {
         pr_info("n71-sn2400-trial: UNARMED no hardware access\n");
         return 0;

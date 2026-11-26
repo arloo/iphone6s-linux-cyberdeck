@@ -2,7 +2,7 @@
 #ifndef N71_S3E_RO_PROBE_RUNTIME_H
 #define N71_S3E_RO_PROBE_RUNTIME_H
 /* An opt-in char probe, NOT a userspace block disk. The kernel client owns
- * all bios. Userspace can trigger four trusted reads and receives only the
+ * all bios. Userspace can trigger only the compile-time bounded trusted reads and receives only the
  * validated CPU-only targets. Every target and this static state outlive
  * late/failed copy_to_user; neither can reference a freed bio or DMA page. */
 static struct {
@@ -50,7 +50,7 @@ static ssize_t n71_ro_probe_read(struct file *file,char __user *out,
     n71_ro_probe.next=step+1U;
     WRITE_ONCE(n71_ro_probe.copied,step+1U);
     *offset+=4096;
-    if (step==3U) complete(&n71_ro_probe.consumed);
+    if (step==N71_READ_SERIES_COUNT-1U) complete(&n71_ro_probe.consumed);
     rc=4096;goto out;
 fail:
     WRITE_ONCE(n71_ro_probe.failed,true);
@@ -81,7 +81,7 @@ static int n71_ro_probe_start(void)
     major=register_chrdev(0,"n71nand_probe",&n71_ro_probe_fops);
     if (major<0) {WRITE_ONCE(n71_ro_probe.active,false);return major;}
     n71_ro_probe.major=major;
-    pr_info("n71-s3e-p0: RO_PROBE_REGISTERED major=%d root_only=YES open_budget=1 pread_budget=4 payload_export=LOCAL_PRIVATE_USER_MEMORY_ONLY\n",major);
+    pr_info("n71-s3e-p0: RO_PROBE_REGISTERED major=%d root_only=YES open_budget=1 pread_budget=%u payload_export=LOCAL_PRIVATE_USER_MEMORY_ONLY\n",major,N71_READ_SERIES_COUNT);
     return 0;
 }
 static int n71_ro_probe_wait(unsigned int step)
@@ -106,7 +106,7 @@ static int n71_ro_probe_finish(int rc)
     if (!rc && (!wait_for_completion_timeout(&n71_ro_probe.consumed,
                                              msecs_to_jiffies(8000)) ||
                 READ_ONCE(n71_ro_probe.failed) ||
-                READ_ONCE(n71_ro_probe.copied)!=4U)) rc=-EIO;
+                READ_ONCE(n71_ro_probe.copied)!=N71_READ_SERIES_COUNT)) rc=-EIO;
     if (rc) {
         WRITE_ONCE(n71_ro_probe.failed,true);
         n71_ro_probe_reply(rc);

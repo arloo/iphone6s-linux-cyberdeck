@@ -4,6 +4,23 @@
 # Only a detached, one-shot worker may arm a bounded SN2400 input trial.
 # The independent kernel VBUS/thermal/lease rollback is never bypassed.
 set -u
+# Default profile stays at its established 300mA / one-hour admission.
+# The two-hour research RAM image explicitly carries a hashed opt-in record.
+CHARGE_INPUT_UA=300000
+CHARGE_LEASE_SECONDS=3600
+CHARGE_MIN_CAPACITY=35
+CHARGE_MIN_VOLTAGE_UV=3500000
+PROFILE=/usr/lib/cyberdeck/n71-charge-two-hour
+if [ -e "$PROFILE" ] || [ -L "$PROFILE" ]; then
+    if [ -L "$PROFILE" ] || [ "$(cat "$PROFILE" 2>/dev/null)" != n71-owner-two-hour-500ma-v1 ]; then
+        echo UNKNOWN_CHARGE_PROFILE_REFUSED
+        exit 2
+    fi
+    CHARGE_INPUT_UA=500000
+    CHARGE_LEASE_SECONDS=7200
+    CHARGE_MIN_CAPACITY=12
+    CHARGE_MIN_VOLTAGE_UV=3350000
+fi
 MODE=${1:---boot}
 case "$MODE" in --boot|--charge-worker) : ;; *) echo UNSUPPORTED_STARTUP_MODE; exit 2 ;; esac
 case "$(uname -r)" in 7.3.0-rc1-n71-batt2-*) : ;; *) echo SKIP_KERNEL; exit 0 ;; esac
@@ -61,8 +78,8 @@ while [ "$window_checks" -lt 40 ]; do
     case "$capacity:$temp:$voltage" in
         *[!0-9:]*|::*|*:|:*) echo BATTERY_GAUGE_INVALID_SKIP_CHARGER; exit 0 ;;
     esac
-    if [ "$capacity" -lt 35 ] || [ "$temp" -lt 100 ] || \
-       [ "$temp" -ge 375 ] || [ "$voltage" -lt 3500000 ] || \
+    if [ "$capacity" -lt "$CHARGE_MIN_CAPACITY" ] || [ "$temp" -lt 100 ] || \
+       [ "$temp" -ge 375 ] || [ "$voltage" -lt "$CHARGE_MIN_VOLTAGE_UV" ] || \
        [ "$health" != Good ]; then
         echo "BATTERY_GUARD_SKIP_CHARGER cap=$capacity temp_tenths=$temp voltage_uV=$voltage"
         exit 0
@@ -79,15 +96,15 @@ if [ "$window_checks" -ge 40 ]; then
     echo HIGH_SOC_WINDOW_TIMEOUT_SKIP_CHARGER
     exit 0
 fi
-# One 300 mA input-current lease, max 3600 seconds. This never implies
-# 300 mA net battery current. SN2400 retains its independent VBUS/thermal
+# One explicitly selected finite input-current lease. The two-hour opt-in
+# changes duration/input admission, never the cell regulator. SN2400 retains VBUS/thermal
 # monitoring and automatic restoration at the first bad sample.
 if grep -q '^n71_sn2400_input_trial ' /proc/modules; then
     echo CHARGER_MODULE_ALREADY_PRESENT_NO_REARM
     exit 0
 fi
 if /usr/bin/n71-module-once /usr/lib/cyberdeck/n71-sn2400-input-trial.ko \
-    'armed=1 input_ua=300000 lease_seconds=3600'; then
+    "armed=1 input_ua=$CHARGE_INPUT_UA lease_seconds=$CHARGE_LEASE_SECONDS"; then
     echo CHARGER_LOAD_RC=0
 else
     echo CHARGER_LOAD_FAILED_NO_RETRY
