@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-26",
+  "status": "built and host-tested; physical CPU-only observation pending",
+  "source_parent_commit": "57440dbbecbdea9f4b010bedea93b6f818252558",
+  "owner_module_sha256": "614de1abd5f733dccdb549a6923c308d51bcca763068d7e2f5d0c6df5252d6de",
+  "observer_module_sha256": "a75ee008297c6519a154c8153799b1fd02456e008da5da7975b91155201750c8",
+  "source_sha256": {
+    "experimental/storage/n71-apfs-checkpoint-core.h": "029347d875c4b1f85f6f353f729d35b3a7eb91833df67cb8fd8ef59f30c6107e",
+    "experimental/storage/n71-retained-apfs-checkpoint-ro.c": "6045b51afa6931f762ada873ce70c29db968caef4711ab7c4f87e8daf2d7c741",
+    "tests/test_n71_apfs_checkpoint.py": "a9f4805af5687218167311268ac8cc4db06f9672e02f841a76cad6539373b470"
+  },
+  "kernel": "7.3.0-rc1-n71-batt2-g68aadac820d0-dirty",
+  "owner_struct_bytes": 176,
+  "owner_target_offset": 48,
+  "retained_targets": 4,
+  "host_page_bytes": 16384,
+  "native_sector_bytes": 4096,
+  "CPU_samples": 2,
+  "sample_interval_ms": 50,
+  "host_tests_passed": 1992,
+  "warning_free_exact_kernel_build": true,
+  "default_armed": false,
+  "new_NAND_reads": 0,
+  "new_NVMe_commands": 0,
+  "original_target_writes": false,
+  "owner_release": false,
+  "additional_owner_reference_retained": true,
+  "latest_checkpoint_selected": false,
+  "complete_descriptor_scan": false,
+  "mount_or_persistence": false,
+  "runtime_addresses_and_partition_geometry_public": false,
+  "reference": "https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf"
+}
