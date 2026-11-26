@@ -68,5 +68,16 @@
     "S3E_modules": 0,
     "storage_attempt_marker": false
   },
-  "storage_gate": "Hold. Require at least 50% reported and RC/FCC reserve, consistent fresh qualified electrical/thermal/lease proof, source/module/helper identity and unused epoch before one attended attempt."
+  "storage_gate": "Hold. Require at least 50% reported and RC/FCC reserve, consistent fresh qualified electrical/thermal/lease proof, source/module/helper identity and unused epoch before one attended attempt.",
+  "bounded_probe_reserve_revision": {
+    "owner_requested_current_reserve_percent": 37,
+    "minimum_reported_and_RC_FCC_percent": 35,
+    "maximum_disagreement_percentage_points": 2,
+    "fresh_positive_samples": 8,
+    "immediate_positive_sample_required": true,
+    "minimum_remaining_lease_seconds": 120,
+    "electrical_thermal_native_guards_unchanged": true,
+    "request_budget": 4,
+    "general_disk_or_longer_workload_authorized": false
+  }
 }

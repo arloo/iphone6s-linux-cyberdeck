@@ -39,3 +39,11 @@ General read-only block service, arbitrary requests, ring wrap/reuse, long-durat
 ## Fresh boot follow-up
 
 The exact candidate has now booted and passed strict direct USB/SSH, board/kernel and all binary/runtime checks. At only 30% reserve the storage gate remains closed; no S3E insertion or userspace NAND pread has occurred. A separately qualified finite charge-only recovery is active with all native/owner guards retained. [Physical boot and power gate](N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.md). The final preparation-only wording above does not supersede this later boot result or qualify userspace I/O.
+
+## Bounded probe reserve revision — before the physical attempt
+
+The initial 50% floor was an operator-selected conservative reserve target, not a NAND controller requirement. The owner explicitly requested proceeding at the current 37% while charging. Fresh observation shows 37% reported, Remaining/Full Charge454000/1245000 uAh (36.47%), Good health, +303mA, 33.1C, cell4.018V and a fresh healthy500mA native lease with more than 40 minutes remaining. S3E and the userspace probe remain unused.
+
+For this sole four-pread qualification, reported and RC/FCC reserve may be at least35% with disagreement at most two percentage points. Require eight fresh positively charging samples plus an immediate positive sample, Good health, temperature10 to below35C, cell3.6 to below4.1V, qualified VBUS4.75 to5.5V and at least120 seconds left in the unchanged finite native/owner lease. VBUS is close to the existing floor; the floor is not lowered and any failed sample stops admission. Exact source/image/module/helper, strict USB identity, completed encrypted-backup metadata and unused-epoch gates remain mandatory. The four-read budget, all write restrictions, timeout/error handling and DMA retention are unchanged.
+
+This revises only the reserve admission criterion for the named bounded probe. It does not authorize general disk use, repeated attempts, a longer workload, charger renewal or any relaxed electrical/thermal guard. No hardware or charger-register change implements this revision; the tested binaries remain byte-identical. The following physical result, if any, must record actual reserve and this protocol revision separately from the original50% target.

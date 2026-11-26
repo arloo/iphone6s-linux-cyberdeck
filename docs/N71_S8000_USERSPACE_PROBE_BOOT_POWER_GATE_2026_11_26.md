@@ -13,3 +13,5 @@ The first continuation observation confirms Charging, reported 30%, +332 mA, 32.
 Keep this authenticated, unused epoch for the pending named userspace interface trial. Before its sole insertion, freshly verify at least 50% reported reserve and RC/FCC with agreement, Good health, cell/thermal margins, a qualified fresh native input/VBUS/finite-lease witness and all module/helper/source/backup identities. The finite charger may stop before that point; no NAND action is scheduled or implied. Do not reuse the held 25 November epoch or confuse this boot/power result with the already accepted initial/final-LBA Reads.
 
 [Sanitized measurement record](N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.json) and [userspace probe contract](N71_S8000_USERSPACE_PREAD_PROBE_TRIAL_2026_11_26.md). Private credentials, boot identities, images and raw logs stay outside Git.
+
+The initial 50% storage target above is superseded only for the named four-pread probe by the [bounded reserve revision](N71_S8000_USERSPACE_PREAD_PROBE_TRIAL_2026_11_26.md#bounded-probe-reserve-revision--before-the-physical-attempt). No electrical, thermal, lifetime or request-budget guard is relaxed.
