@@ -7,6 +7,7 @@
 struct n71_layout_result {
  unsigned int mbr_signature,protective_mbr,gpt_signature,gpt_crc_ok;
  unsigned int gpt_geometry_ok,gpt_primary_header_ok;
+ unsigned int gpt512_signature,gpt512_crc_ok,gpt512_geometry_ok,gpt512_primary_header_ok;
  unsigned int apfs_container_signature[2],apfs_volume_signature[2];
  unsigned int all_zero[2],all_ff[2],different_sectors;
 };
@@ -38,11 +39,27 @@ static inline int n71_cpu_range_inside(unsigned long long address,
  return base && size && bytes && size-1ULL<=~0ULL-base &&
         address>=base && bytes<=size && address-base<=size-bytes;
 }
+static inline int n71_layout_gpt_header(const unsigned char *b,unsigned bytes,
+ unsigned long long nsze,unsigned int *crc_ok,unsigned int *geometry_ok)
+{
+ unsigned hsize=n71_layout_le32(b+12),count=n71_layout_le32(b+80),esize=n71_layout_le32(b+84);
+ unsigned long long first=n71_layout_le64(b+40),last=n71_layout_le64(b+48);
+ unsigned long long table=n71_layout_le64(b+72),table_bytes=(unsigned long long)count*esize;
+ unsigned long long table_blocks=(table_bytes+bytes-1ULL)/bytes;
+ *crc_ok=0;
+ if(hsize>=92U&&hsize<=bytes)*crc_ok=n71_layout_gpt_crc(b,hsize)==n71_layout_le32(b+16);
+ *geometry_ok=n71_layout_le32(b+8)==0x10000U&&
+  hsize>=92U&&hsize<=bytes&&!n71_layout_le32(b+20)&&
+  n71_layout_le64(b+24)==1ULL&&n71_layout_le64(b+32)==nsze-1ULL&&
+  first>=2ULL&&first<=last&&last<nsze-1ULL&&count&&count<=4096U&&
+  esize==128U&&table>=2ULL&&table_blocks&&table_blocks<=nsze&&
+  table<=nsze-table_blocks&&table<=first&&table_blocks<=first-table;
+ return *crc_ok&&*geometry_ok;
+}
 static inline int n71_layout_classify(const unsigned char *a,const unsigned char *b,
  unsigned int bytes,unsigned long long nsze,struct n71_layout_result *out)
 {
- struct n71_layout_result v={0};unsigned i,j,hsize,count,esize;
- unsigned long long first,last,table,table_blocks,table_bytes;
+ struct n71_layout_result v={0};unsigned i,j;
  const unsigned char *p[2]={a,b};
  if(!a||!b||!out||bytes!=4096U||nsze!=15625000ULL)return -1;
  for(j=0;j<2;j++) {
@@ -56,22 +73,14 @@ static inline int n71_layout_classify(const unsigned char *a,const unsigned char
  if(v.mbr_signature)for(i=0;i<4;i++)if(a[446+16*i+4]==0xee&&
       n71_layout_le32(a+446+16*i+8)==1U)v.protective_mbr=1;
  v.gpt_signature=n71_layout_magic(b,"EFI PART",8);
- if(v.gpt_signature) {
-  hsize=n71_layout_le32(b+12);
-  if(hsize>=92U&&hsize<=bytes)
-   v.gpt_crc_ok=n71_layout_gpt_crc(b,hsize)==n71_layout_le32(b+16);
-  first=n71_layout_le64(b+40);last=n71_layout_le64(b+48);
-  table=n71_layout_le64(b+72);count=n71_layout_le32(b+80);esize=n71_layout_le32(b+84);
-  table_bytes=(unsigned long long)count*esize;
-  table_blocks=(table_bytes+4095ULL)/4096ULL;
-  v.gpt_geometry_ok=n71_layout_le32(b+8)==0x10000U&&
-   hsize>=92U&&hsize<=bytes&&!n71_layout_le32(b+20)&&
-   n71_layout_le64(b+24)==1ULL&&n71_layout_le64(b+32)==nsze-1ULL&&
-   first>=2ULL&&first<=last&&last<nsze-1ULL&&count&&count<=4096U&&
-   esize==128U&&table>=2ULL&&table_blocks&&table_blocks<=nsze&&
-   table<=nsze-table_blocks&&table<=first&&table_blocks<=first-table;
-  v.gpt_primary_header_ok=v.gpt_crc_ok&&v.gpt_geometry_ok;
- }
+ if(v.gpt_signature)
+  v.gpt_primary_header_ok=n71_layout_gpt_header(b,4096,nsze,&v.gpt_crc_ok,&v.gpt_geometry_ok);
+ /* A separate candidate view: metadata may use 512-byte logical sectors
+  * embedded in the first native 4KiB block. This does not alter NVMe LBADS. */
+ v.gpt512_signature=n71_layout_magic(a+512,"EFI PART",8);
+ if(v.gpt512_signature)
+  v.gpt512_primary_header_ok=n71_layout_gpt_header(a+512,512,nsze*8ULL,
+          &v.gpt512_crc_ok,&v.gpt512_geometry_ok);
  *out=v;return 0;
 }
 #endif

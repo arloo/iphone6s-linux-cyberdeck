@@ -46,7 +46,9 @@ MODULE_PARM_DESC(owner_hash_attested,"host verified exact retained owner module 
 static bool n71_module_ram(unsigned long addr,size_t bytes)
 {
  unsigned long at,end;
- if(!addr||!bytes||addr>ULONG_MAX-(bytes-1))return false;
+ if(!addr||!bytes||addr>ULONG_MAX-(bytes-1)||
+    !is_vmalloc_or_module_addr((void *)addr)||
+    !is_vmalloc_or_module_addr((void *)(addr+bytes-1)))return false;
  end=(addr+bytes-1)&PAGE_MASK;
  for(at=addr&PAGE_MASK;;at+=PAGE_SIZE) {
   struct page *p=vmalloc_to_page((void *)at);
@@ -119,6 +121,8 @@ static int __init n71_retained_layout_init(void)
  pr_info("n71-retained-layout: LAYOUT_FLAGS mbr_signature=%u protective_mbr=%u gpt_signature=%u gpt_crc_ok=%u gpt_geometry_ok=%u gpt_primary_header_ok=%u partition_entries_read=NO\n",
   layout.mbr_signature,layout.protective_mbr,layout.gpt_signature,
   layout.gpt_crc_ok,layout.gpt_geometry_ok,layout.gpt_primary_header_ok);
+ pr_info("n71-retained-layout: GPT512_FLAGS signature=%u crc_ok=%u geometry_ok=%u primary_header_ok=%u candidate_logical_view_bytes=512 native_NVMe_LBA_bytes=4096 partition_entries_read=NO\n",
+  layout.gpt512_signature,layout.gpt512_crc_ok,layout.gpt512_geometry_ok,layout.gpt512_primary_header_ok);
  pr_info("n71-retained-layout: FORMAT_HINTS lba0_NXSB=%u lba1_NXSB=%u lba0_APSB=%u lba1_APSB=%u signature_only=YES APFS_validated=NO\n",
   layout.apfs_container_signature[0],layout.apfs_container_signature[1],
   layout.apfs_volume_signature[0],layout.apfs_volume_signature[1]);

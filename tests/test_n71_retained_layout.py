@@ -10,7 +10,7 @@ import unittest
 import zlib
 ROOT=Path(__file__).resolve().parents[1]
 class Result(C.Structure):
-    _fields_=[(k,C.c_uint) for k in ['mbr_signature','protective_mbr','gpt_signature','gpt_crc_ok','gpt_geometry_ok','gpt_primary_header_ok']]+[(k,C.c_uint*2) for k in ['apfs_container_signature','apfs_volume_signature','all_zero','all_ff']]+[('different_sectors',C.c_uint)]
+    _fields_=[(k,C.c_uint) for k in ['mbr_signature','protective_mbr','gpt_signature','gpt_crc_ok','gpt_geometry_ok','gpt_primary_header_ok','gpt512_signature','gpt512_crc_ok','gpt512_geometry_ok','gpt512_primary_header_ok']]+[(k,C.c_uint*2) for k in ['apfs_container_signature','apfs_volume_signature','all_zero','all_ff']]+[('different_sectors',C.c_uint)]
 class LayoutTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -41,6 +41,19 @@ class LayoutTests(unittest.TestCase):
         a,b=self.gpt();o=self.run_layout(a,b)
         for k in ['mbr_signature','protective_mbr','gpt_signature','gpt_crc_ok','gpt_geometry_ok','gpt_primary_header_ok','different_sectors']:self.assertEqual(getattr(o,k),1,k)
         self.assertEqual(list(o.all_zero),[0,0])
+    def test_embedded_512_byte_view_is_separate_from_native_geometry(self):
+        a=bytearray(4096);b=bytearray(4096);h=bytearray(512)
+        h[:8]=b'EFI PART';struct.pack_into('<II',h,8,0x10000,92)
+        struct.pack_into('<QQQQ',h,24,1,124999999,34,124999966)
+        struct.pack_into('<QII',h,72,2,128,128);self.crc(h);a[512:1024]=h
+        o=self.run_layout(a,b)
+        self.assertTrue(o.gpt512_signature and o.gpt512_crc_ok and o.gpt512_geometry_ok and o.gpt512_primary_header_ok)
+        self.assertFalse(o.gpt_signature or o.gpt_primary_header_ok)
+        for off in [0,12,16,24,32,40,48,72,80,84]:
+            bad=bytearray(a);bad[512+off]^=1
+            self.assertFalse(self.run_layout(bad,b).gpt512_primary_header_ok)
+        struct.pack_into('<I',h,12,513);self.crc(h);a[512:1024]=h
+        self.assertFalse(self.run_layout(a,b).gpt512_primary_header_ok)
     def test_all_header_bit_corruptions_fail_crc_or_signature(self):
         a,b=self.gpt()
         for bit in range(92*8):
@@ -72,6 +85,7 @@ class LayoutTests(unittest.TestCase):
         normalize=lambda s:re.sub(r'\s+','',re.sub(r'/\*.*?\*/','',s,flags=re.S))
         self.assertEqual(normalize(a),normalize(b))
         for bad in ['ioremap(', 'readl(', 'writel(', 'dma_map', 'dma_unmap', 'module_put(', 'print_hex_dump', 'filp_open(', 'register_blkdev(', 'copy_to_user(']:self.assertNotIn(bad,observer)
+        self.assertLess(observer.index('!is_vmalloc_or_module_addr('),observer.index('vmalloc_to_page('))
         self.assertIn('sizeof(struct n71_retained_owner)!=176',observer);self.assertIn('offsetof(struct n71_retained_owner,target)!=48',observer)
         self.assertLess(observer.index('!owner_hash_attested'),observer.index('copy_from_kernel_nofault(meta'))
         self.assertIn('memzero_explicit(copies,8*PAGE_SIZE)',observer)
