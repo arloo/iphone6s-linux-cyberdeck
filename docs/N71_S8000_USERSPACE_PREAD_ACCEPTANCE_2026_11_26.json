@@ -1,0 +1,157 @@
+{
+  "date": "2026-11-26",
+  "target": "N71 / Samsung S8000",
+  "status": "PASS: actual local userspace pread over the guarded real NAND block path",
+  "source_commit": "4247848b7cb2e871dffe887d3c8191c39d486e4a",
+  "power_protocol_commit": "2fa870c862005eed7ac34134cdcb4da89325842d",
+  "module_sha256": "7a28e2b600356213a765ea7f93d1b66f034e1f94110c08e60bed92acdf240dcc",
+  "helper_sha256": "e1ccabccdb9712bb9d929c2685d0c6ddef33d4b98717247cbbe67fe9935c5c2a",
+  "image_sha256": "93a36694efb9cb2f7ceab9c75563d4877778f91c1b5b8df009d3bbc9c6d8eb99",
+  "private_character_node": "/dev/n71nand-probe",
+  "namespace_capacity_bytes": 64000000000,
+  "logical_block_bytes": 4096,
+  "read_sequence_lbas": [
+    0,
+    1,
+    0,
+    1
+  ],
+  "reads": [
+    {
+      "index": 0,
+      "lba": 0,
+      "tag": 1,
+      "cid": 1,
+      "sqid": 1,
+      "head": 1,
+      "status": "0001",
+      "cqe_valid": 1,
+      "data_arrived": 1,
+      "guard_ok": 1,
+      "changed_words": 512
+    },
+    {
+      "index": 1,
+      "lba": 1,
+      "tag": 2,
+      "cid": 2,
+      "sqid": 1,
+      "head": 2,
+      "status": "0001",
+      "cqe_valid": 1,
+      "data_arrived": 1,
+      "guard_ok": 1,
+      "changed_words": 512
+    },
+    {
+      "index": 2,
+      "lba": 0,
+      "tag": 3,
+      "cid": 3,
+      "sqid": 1,
+      "head": 3,
+      "status": "0001",
+      "cqe_valid": 1,
+      "data_arrived": 1,
+      "guard_ok": 1,
+      "changed_words": 512
+    },
+    {
+      "index": 3,
+      "lba": 1,
+      "tag": 4,
+      "cid": 4,
+      "sqid": 1,
+      "head": 4,
+      "status": "0001",
+      "cqe_valid": 1,
+      "data_arrived": 1,
+      "guard_ok": 1,
+      "changed_words": 512
+    }
+  ],
+  "loader_rc": 0,
+  "helper_rc": 0,
+  "userspace_preads_completed": 4,
+  "userspace_full_sector_pair_equality": true,
+  "user_copies": 4,
+  "bios_admitted": 4,
+  "bios_delivered": 4,
+  "kernel_client_completed": 4,
+  "kernel_client_rc": 0,
+  "rejected_bios": 0,
+  "core_stability_checks": 5,
+  "retained_RAM_samples": 5,
+  "retained_RAM_interval_us": 50000,
+  "retained_RAM_unchanged": true,
+  "DMA_guard_bytes_per_target": 12288,
+  "unique_retained_tags": 4,
+  "ring_or_buffer_reuse": false,
+  "character_registration_removed": true,
+  "private_node_removed": true,
+  "temporary_software_disk_removed": true,
+  "surviving_NAND_block_nodes": 0,
+  "exact_Delete_SQ_CQ_passed": true,
+  "normal_shutdown_rc": 0,
+  "shutdown_CSTS": "0x9",
+  "shutdown_polls": 937,
+  "disable_rc": 0,
+  "disable_CSTS": "0x0",
+  "BME_off": true,
+  "whole_pilot_rc": -3,
+  "controller_stop_observed": true,
+  "legacy_post_disable_qualified": false,
+  "independent_DMA_drain_proven": false,
+  "all_backing_and_original_owners_retained": true,
+  "forced_unload": false,
+  "same_boot_retry": false,
+  "NAND_writes": false,
+  "raw_sector_bytes_or_sector_hashes_exported": false,
+  "userspace_block_disk_opens": false,
+  "mount_or_persistence": false,
+  "power": {
+    "source": "direct Dell USB; finite native500mA lease with unchanged owner guard",
+    "minimum_bounded_reserve_percent": 35,
+    "sample_count": 8,
+    "reported_reserve_range_percent": [
+      40,
+      41
+    ],
+    "RC_FCC_range_percent": [
+      40.08,
+      40.161
+    ],
+    "current_uA_range": [
+      227000,
+      316000
+    ],
+    "temperature_deciC_range": [
+      332,
+      333
+    ],
+    "cell_uV_range": [
+      3965000,
+      3999000
+    ],
+    "VBUS_uV_range": [
+      4750000,
+      4775000
+    ],
+    "postflight_reported_percent": 41,
+    "postflight_remaining_charge_uAh": 510000,
+    "postflight_full_charge_uAh": 1245000,
+    "postflight_health": "Good",
+    "postflight_status": "Charging",
+    "postflight_current_uA": 197000,
+    "postflight_temperature_deciC": 333,
+    "postflight_cell_uV": 3986000,
+    "postflight_VBUS_uV": 4775000,
+    "native_and_owner_charging_bounds_unchanged": true
+  },
+  "limits": [
+    "A bounded four-pread character interface is accepted, not a general block disk.",
+    "Only the initial fixed LBA pair is accepted through userspace; earlier tail reads were a separate kernel-only trial.",
+    "No arbitrary requests, ring wrap/buffer reuse, endurance/error recovery, filesystem or NAND Write acceptance.",
+    "All owners are held; any further hardware trial needs a fresh attended epoch."
+  ]
+}

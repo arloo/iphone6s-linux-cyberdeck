@@ -183,3 +183,6 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 userspace probe fresh boot and low-reserve charging gate](N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.md)
 
 - [N71 userspace probe nodev failure and corrected /dev-node candidate](N71_S8000_USERSPACE_PROBE_NODEV_FAILURE_2026_11_26.md)
+
+- [N71 physical local userspace NAND pread acceptance](N71_S8000_USERSPACE_PREAD_SUCCESS_2026_11_26.md)
+- [N71 sanitized userspace pread acceptance](N71_S8000_USERSPACE_PREAD_ACCEPTANCE_2026_11_26.json)

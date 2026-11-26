@@ -2,7 +2,15 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: final-two-LBA Linux block path accepted — 2026-11-25
+## Current physical checkpoint: local userspace NAND preads accepted — 2026-11-26
+
+The corrected 4247848b7cb2e871dffe887d3c8191c39d486e4a candidate ran once in a fresh authenticated epoch. A local ARM64 helper opened its root-only character node in /dev and completed four actual 4096-byte preads over0,1,0,1, triggering the accepted trusted kernel bios and real NAND commands. All exact CQEs, guarded independent arrivals, private snapshot/kernel-client/user full-sector pair equalities and four user copies passed. No payload bytes or sector hashes left private on-phone memory.
+
+The bridge and character probe each returned rc0, with admitted/delivered/client_completed/requested/copied4, client_rc0, pair equality1 and rejected bios0. Five core stability checks and five retained-RAM-only samples were unchanged. Exact Delete SQ/CQ, normal shutdown/CSTS9, disable/CSTS0 and BME-off passed. Whole-pilot rc-3 retains all DMA, snapshots, targets and original owners because independent DMA drain remains unproved. Postflight confirms one held S3E module/trial and no disk, character registration or private node. Good/Charging remained at41%, +197mA and33.3C.
+
+The named bounded reserve revision was documented before insertion; eight fresh samples passed at40–41% reported and40.080–40.161% RC/FCC on the unchanged finite500mA native/owner guards. The first /run-node attempt is a separate failed epoch; it issued no NVM Read and its negative controller-stop trace is not relabeled as successful. This new result accepts local userspace initiation and data delivery, not general block opens, arbitrary requests, ring/buffer reuse, filesystem mounting, independent DMA retirement or persistent Linux. The current held epoch cannot be retried or forcibly unloaded. [Physical report](N71_S8000_USERSPACE_PREAD_SUCCESS_2026_11_26.md) and [sanitized acceptance](N71_S8000_USERSPACE_PREAD_ACCEPTANCE_2026_11_26.json).
+
+## Earlier physical checkpoint: final-two-LBA Linux block path accepted — 2026-11-25
 
 The exact c62020af8ea8026d9303ddb908c9d8bbcce75a77 candidate completed four actual Linux bios over LBAs15624998,15624999,15624998,15624999 in a separate fresh authenticated epoch. Both private full-sector pair equalities passed, with exact CQEs, independent512-word arrivals, intact12KiB guards, five core stability checks and five unchanged retained-RAM samples. The temporary software disk was removed after four client completions. This extends the initial-LBA block acceptance below; it does not rediscover capacity or qualify all intervening sectors.
 

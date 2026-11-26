@@ -51,3 +51,7 @@ This revises only the reserve admission criterion for the named bounded probe. I
 ## Subsequent physical attempt and node-path correction
 
 The original /run-node candidate has now been attempted once under the bounded reserve revision. It failed to open the character node because /run is mounted nodev; zero NVM Reads/bios/user copies were issued. The held epoch must not be reused. A corrected /dev-node helper and RAM image are built with the storage module unchanged; 1,944 host tests pass, but that corrected image has not booted or passed userspace NAND preads. See the [complete failed-trial/cleanup trace and corrected candidate](N71_S8000_USERSPACE_PROBE_NODEV_FAILURE_2026_11_26.md). The earlier pending-attempt statements above are historical checkpoints.
+
+## Corrected physical acceptance
+
+The corrected /dev-node image has now passed one fresh-epoch local userspace trial: four actual preads, four validated bios and user copies, both private full-sector equalities, exact queue deletion and normal conservative shutdown. Interfaces were removed while all DMA/original owners remain held. This supersedes the earlier preparation-only state, not the failed /run epoch. [Full acceptance and limits](N71_S8000_USERSPACE_PREAD_SUCCESS_2026_11_26.md).

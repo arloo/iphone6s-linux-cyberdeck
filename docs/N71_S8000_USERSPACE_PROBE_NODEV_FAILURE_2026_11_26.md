@@ -14,7 +14,7 @@ The error path did not attempt Delete SQ/CQ. Normal shutdown returned -2 with CS
 
 The setup failure and the negative shutdown trace must not be presented as a successful storage trial. Retry requires a fresh attended RAM epoch. The failure-path controller-stop behavior remains unqualified; this patch only fixes the proven access-path issue.
 
-## Corrected, not physically booted candidate
+## Corrected candidate at initial handoff (historical)
 
 The helper now uses /dev/n71nand-probe on devtmpfs, preserving its root-only 0600 node, no-follow open, type/major/minor/UID checks, private buffers, no retry, and cleanup. Open failures now report errno separately from identity-check failures. The storage module is byte-identical; request admission, hardware command code, ownership and charging thresholds are unchanged.
 
@@ -23,3 +23,7 @@ The corrected ARM64 helper compiles without warnings. All 1,944 host tests pass,
 For the next sole four-pread trial, use the bounded reserve revision (at least35% reported and RC/FCC with agreement and fresh positive electrical samples), strict identity/backup checks, Good health and unchanged native/owner thermal, cell, VBUS and remaining-lease bounds. Do not reuse the currently held epoch. General disk access, arbitrary I/O, ring reuse, DMA retirement, mounting and persistence remain open.
 
 [Sanitized failure record](N71_S8000_USERSPACE_PROBE_NODEV_FAILURE_2026_11_26.json), [corrected image metadata](N71_S8000_USERSPACE_PROBE_DEVNODE_CANDIDATE_2026_11_26.json), [original probe contract and reserve revision](N71_S8000_USERSPACE_PREAD_PROBE_TRIAL_2026_11_26.md).
+
+## Subsequent fresh-epoch result
+
+The corrected candidate later passed its bounded four-pread trial in a separate fresh boot. The failed epoch and its negative controller-stop evidence above remain unchanged. [Subsequent accepted userspace proof](N71_S8000_USERSPACE_PREAD_SUCCESS_2026_11_26.md).
