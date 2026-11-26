@@ -48,15 +48,15 @@ static FILE *fake_fopen(const char *p,const char *mode) {
  f=tmpfile();assert(f);fputs("Character devices:\n240 n71nand_probe\n",f);rewind(f);return f;
 }
 static int fake_lstat(const char *p,struct stat *s) {
- (void)s;assert(!strcmp(p,"/run/n71nand-probe"));
+ (void)s;assert(!strcmp(p,"/dev/n71nand-probe"));
  if(unsafe)return 0;errno=ENOENT;return -1;
 }
 static int fake_mknod(const char *p,mode_t mode,dev_t dev) {
- assert(!strcmp(p,"/run/n71nand-probe")&&mode==(S_IFCHR|0600)&&major(dev)==240&&minor(dev)==0);
+ assert(!strcmp(p,"/dev/n71nand-probe")&&mode==(S_IFCHR|0600)&&major(dev)==240&&minor(dev)==0);
  created++;return 0;
 }
 static int fake_open(const char *p,int flags,...) {
- assert(!strcmp(p,"/run/n71nand-probe"));opened++;
+ assert(!strcmp(p,"/dev/n71nand-probe"));opened++;
  if((flags&O_ACCMODE)==O_RDWR){errno=EACCES;return -1;}
  assert((flags&O_NOFOLLOW)&&(flags&O_CLOEXEC));return 42;
 }
@@ -73,7 +73,7 @@ static ssize_t fake_pread(int fd,void *out,size_t n,off_t off) {
  if(corrupt&&step==2)((unsigned char *)out)[70]^=1;
  return 4096;
 }
-static int fake_unlink(const char *p){assert(!strcmp(p,"/run/n71nand-probe"));unlinked++;return 0;}
+static int fake_unlink(const char *p){assert(!strcmp(p,"/dev/n71nand-probe"));unlinked++;return 0;}
 static int fake_close(int fd){assert(fd==42);closed++;return 0;}
 static uid_t fake_geteuid(void){return 0;}
 #define fopen fake_fopen
@@ -214,6 +214,11 @@ class ProbeTests(unittest.TestCase):
         p=self.compile_run(HELPER)
         self.assertEqual(p.stdout.count('PRIVATE_PREAD_PASS completed=4'),2)
         self.assertNotIn('0x17',p.stdout);self.assertNotIn('sha256',p.stdout)
+    def test_helper_uses_device_filesystem_and_reports_open_errno(self):
+        s=(ROOT/'experimental/storage/n71-nand-private-probe.c').read_text()
+        self.assertIn('const char *path="/dev/n71nand-probe"',s)
+        self.assertNotIn('/run/n71nand-probe',s)
+        self.assertIn('PRIVATE_CHAR_OPEN_FAILED errno=%d',s)
     def test_probe_default_off_pre_hardware_and_block_opens_still_denied(self):
         s=(PORT/'n71_s3e_p0_asserted_reset_rootstart.c').read_text()
         self.assertIn('static bool ans_ro_probe_once;',s)

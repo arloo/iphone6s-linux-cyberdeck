@@ -28,7 +28,7 @@ static unsigned probe_major(void)
 }
 int main(int argc,char **argv)
 {
-    const char *path="/run/n71nand-probe";
+    const char *path="/dev/n71nand-probe";
     unsigned base,major=0,i;
     unsigned char data[4][4096];
     struct stat st;
@@ -61,9 +61,10 @@ int main(int argc,char **argv)
     if (fd>=0) {fputs("WRITE_OPEN_UNEXPECTEDLY_ACCEPTED\n",stderr);goto done;}
     if (errno!=EACCES && errno!=EPERM) {fputs("WRITE_GATE_UNEXPECTED_ERROR\n",stderr);goto done;}
     fd=open(path,O_RDONLY|O_NOFOLLOW|O_CLOEXEC);
-    if (fd<0 || fstat(fd,&st) || !S_ISCHR(st.st_mode) ||
+    if (fd<0) {fprintf(stderr,"PRIVATE_CHAR_OPEN_FAILED errno=%d\n",errno);goto done;}
+    if (fstat(fd,&st) || !S_ISCHR(st.st_mode) ||
         major(st.st_rdev)!=major || minor(st.st_rdev)!=0 || st.st_uid!=0 ||
-        (st.st_mode&0777)!=0600) {fputs("PRIVATE_CHAR_OPEN_FAILED\n",stderr);goto done;}
+        (st.st_mode&0777)!=0600) {fputs("PRIVATE_CHAR_IDENTITY_FAILED\n",stderr);goto done;}
     if (pread(fd,data[0],1,(off_t)base*4096)!=-1 || errno!=EINVAL) {
         fputs("SIZE_REJECTION_FAILED\n",stderr);goto done;
     }

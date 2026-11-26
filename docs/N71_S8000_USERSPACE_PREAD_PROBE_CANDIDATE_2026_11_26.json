@@ -18,7 +18,7 @@
   "storage_autoload": false,
   "helper_autostart": false,
   "physically_booted": true,
-  "hardware_loaded": false,
+  "hardware_loaded": true,
   "userspace_pread_physically_accepted": false,
   "fresh_attended_boot_required": true,
   "source_parent_commit": "24589409d06a8423fb5c41a2fad43fd5a7fa49c3",
@@ -27,6 +27,10 @@
   "block_userspace_opens": false,
   "NAND_writes": false,
   "DMA_release_authorized": false,
-  "current_epoch_unused": true,
-  "power_gate": "N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.json"
+  "current_epoch_unused": false,
+  "power_gate": "N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.json",
+  "userspace_pread_physically_attempted": true,
+  "current_epoch_held": true,
+  "physical_failure": "N71_S8000_USERSPACE_PROBE_NODEV_FAILURE_2026_11_26.json",
+  "corrected_candidate": "N71_S8000_USERSPACE_PROBE_DEVNODE_CANDIDATE_2026_11_26.json"
 }

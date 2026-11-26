@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-26",
+  "target": "N71 / Samsung S8000",
+  "status": "FAIL before the first NVM Read: helper character node was on nodev /run",
+  "source_commit": "b95a9a299bbfa3711cd8f6307b979450a1d388a1",
+  "power_protocol_commit": "2fa870c862005eed7ac34134cdcb4da89325842d",
+  "module_sha256": "7a28e2b600356213a765ea7f93d1b66f034e1f94110c08e60bed92acdf240dcc",
+  "helper_sha256": "bc13a64db86f0d4e199f899b1a1c03fb99610e6abce95ae1c6fa8e1557b8a15e",
+  "image_sha256": "0e9eb25ae57b5747cbd5ad82b6decd2feec061a91ae6efd7ff731612749834b4",
+  "loader_rc": 0,
+  "helper_rc": 1,
+  "helper_summary": "PRIVATE_CHAR_OPEN_FAILED",
+  "reported_reserve_range_percent": [
+    37,
+    38
+  ],
+  "RC_FCC_range_percent": [
+    36.948,
+    37.028
+  ],
+  "native_input_uA": 500000,
+  "VBUS_range_uV": [
+    4750000,
+    4750000
+  ],
+  "power_gate_passed": true,
+  "Identify_command_completed_and_data_arrived": true,
+  "exact_Create_SQ_CQ_passed": true,
+  "NVM_Reads_issued": 0,
+  "NVM_Writes_issued": 0,
+  "bios_admitted": 0,
+  "bios_delivered": 0,
+  "user_copies": 0,
+  "char_registration_removed": true,
+  "temporary_block_disk_removed": true,
+  "client_rc": -110,
+  "queue_Delete_attempted": false,
+  "normal_shutdown_rc": -2,
+  "shutdown_CSTS": "0x7",
+  "disable_rc": -1,
+  "disable_CSTS": "0x7",
+  "BME_off": true,
+  "controller_stop_proven": false,
+  "independent_DMA_drain_proven": false,
+  "whole_pilot_rc": -3,
+  "all_backing_and_original_owners_retained": true,
+  "forced_unload": false,
+  "same_boot_retry": false,
+  "raw_sector_bytes_or_sector_hashes_exported": false,
+  "mount_diagnosis": {
+    "run": "tmpfs rw,nosuid,nodev",
+    "dev": "devtmpfs rw,nosuid",
+    "root_shell_CAP_SYS_RAWIO": true,
+    "duplicate_null_node_in_run_open": "DENIED",
+    "duplicate_null_node_in_dev_open": "PASS",
+    "diagnostic_NAND_access": false
+  },
+  "correction": "Use /dev/n71nand-probe instead of /run/n71nand-probe; retain root-only 0600 node, exact type/major/minor/ownership checks and no-retry policy. Add errno for open errors. Storage module unchanged. Fresh epoch required."
+}
