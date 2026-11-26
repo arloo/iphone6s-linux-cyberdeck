@@ -6,10 +6,11 @@
 #define N71_READ_SERIES_COUNT 4U
 #define N71_READ_SERIES_DMA_PAGES 8U
 #define N71_READ_SERIES_PAGES 12U
-/* Only two fixed pairs are admitted; no arbitrary runtime LBA selection. */
+/* One explicit consecutive pair per epoch, within the accepted namespace.
+ * Legacy wrappers still bind base0; runtime separately gates new selection. */
 static inline int n71_read_pair_base_valid(unsigned int base)
 {
-    return base==0U || base==N71_RO_PHYSICAL_NSZE-2U;
+    return base<=N71_RO_PHYSICAL_NSZE-2U;
 }
 static inline unsigned int n71_read_pair_lba(unsigned int base,unsigned int step)
 {

@@ -18,7 +18,7 @@ int main(void) {
  for(b=0;b<5;b++)for(step=0;step<6;step++)
  for(active=0;active<3;active++)for(failed=0;failed<2;failed++) {
   unsigned long long off=4096ULL*(bases[b]+(step&1U));
-  int ok=b<2&&step<4&&active==1&&!failed;
+  int ok=b<3&&step<4&&active==1&&!failed;
   assert(!!n71_ro_probe_request_valid(active,failed,step,bases[b],off,4096)==ok);
   for(k=0;k<sizeof(badbytes)/sizeof(badbytes[0]);k++)
    assert(!n71_ro_probe_request_valid(active,failed,step,bases[b],off,badbytes[k]));

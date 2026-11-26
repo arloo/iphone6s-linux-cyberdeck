@@ -3,7 +3,7 @@
 #define N71_S3E_RO_BLOCK_CORE_H
 #include "n71_s3e_read_series_core.h"
 /* A qualification bridge, NOT an unrestricted block driver. The kernel
- * client may submit exactly 0,1,0,1 using four unique bios/CPU buffers.
+ * client may submit exactly base,base+1,base,base+1 using four unique bios/CPU buffers.
  * Rejected requests never consume a command, tag or DMA ownership slot. */
 struct n71_ro_block_flow {
     unsigned int active,closed,failed,pending,admitted,delivered;
@@ -19,6 +19,12 @@ static inline int n71_ro_block_mode_valid(unsigned int enabled,
 {
     return enabled ? flags==32U && identify && queues && delete_queues &&
         queue_flags==0U && !single && !series : flags==~0U;
+}
+static inline int n71_ro_block_pair_mode_valid(unsigned int selected,
+        unsigned int base,unsigned int block,unsigned int tail)
+{
+    return selected ? block==1U && !tail && n71_read_pair_base_valid(base) :
+        base==~0U;
 }
 static inline int n71_ro_block_pair_admissible(const struct n71_ro_block_flow *f,
         const struct n71_ro_block_request *r,unsigned int base)

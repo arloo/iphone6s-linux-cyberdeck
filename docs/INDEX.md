@@ -190,3 +190,5 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 CPU-only retained sector layout observer](N71_S8000_RETAINED_LAYOUT_CPU_OBSERVER_2026_11_26.md)
 
 - [N71 native primary GPT header from retained CPU targets (no new NAND I/O)](N71_S8000_RETAINED_GPT_HEADER_OBSERVATION_2026_11_26.json)
+
+- [N71 GPT entry-prefix bounded-pair candidate (built; no physical attempt)](N71_S8000_GPT_PREFIX_PAIR_TRIAL_2026_11_26.md)

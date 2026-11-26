@@ -1,0 +1,38 @@
+{
+  "image_sha256": "810eba7f532a6d52273bc86e743ebe0e9246680af98b33853db350a5fe832cf7",
+  "image_bytes": 28322348,
+  "base_image_sha256": "93a36694efb9cb2f7ceab9c75563d4877778f91c1b5b8df009d3bbc9c6d8eb99",
+  "module_sha256": "7e6e0e57d8b7f66319176e747374751e3495f011f37bfbc92c8942f7e584e1ff",
+  "helper_sha256": "563af0b6f805e081431b6181d8981e82e0d2b48e0c1e7d99c107015b692b21fe",
+  "changed_entries": [
+    "usr/bin/n71-nand-private-probe",
+    "usr/lib/cyberdeck/n71-runtime.sha256",
+    "usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko"
+  ],
+  "all_other_rootfs_entries_identical": true,
+  "entire_boot_kernel_prefix_identical": true,
+  "runtime_hash_count_verified": 11,
+  "gzip_CPIO_roundtrip_verified": true,
+  "storage_autoload": false,
+  "helper_autostart": false,
+  "physically_booted": false,
+  "hardware_loaded": false,
+  "GPT_prefix_physically_accepted": false,
+  "fresh_attended_boot_required": true,
+  "planned_pair_base": 1,
+  "planned_lbas": [
+    1,
+    2,
+    1,
+    2
+  ],
+  "helper_mode": "--layout",
+  "source_parent_commit": "255078eccbc2775df7296ddf4ef6dd3e7c0d7a9c",
+  "host_test_count_required": 1960,
+  "partition_array_complete": false,
+  "partition_entries_physically_read": false,
+  "minimum_bounded_reserve_percent": 35,
+  "NAND_writes": false,
+  "general_block_service": false,
+  "host_test_count_passed": 1960
+}

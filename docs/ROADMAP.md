@@ -1,5 +1,7 @@
 # Hardware-first roadmap — reviewed 2026-11-16
 
+Next candidate: an explicitly selected bounded pair now supports the GPT header/first-entry-page sequence1,2,1,2. The helper validates primary-header CRC and visible partition ranges/type hints, checking the array CRC only when the entire array fits one page. The exact-kernel module/helper and private RAM image are built; a fresh attended physical trial remains pending. [Contract and partial-array limits](N71_S8000_GPT_PREFIX_PAIR_TRIAL_2026_11_26.md).
+
 Layout checkpoint (26 November): CPU-only inspection of the accepted retained LBA0/LBA1 targets found a valid native4KiB primary GPT header (signature, CRC and bounded geometry), with no new NAND I/O. Read count stays4; partition entries/array CRC, backup GPT and filesystem superblocks remain unqualified. Next read and validate the partition-entry structure before selecting filesystem sectors. [Physical layout flags](N71_S8000_RETAINED_GPT_HEADER_OBSERVATION_2026_11_26.json).
 
 Userspace probe acceptance (26 November): the corrected /dev-node ARM64 helper has completed four actual private NAND preads through the trusted Linux bio path, with all user copies and full-sector pair comparisons passing. Exact queue deletion and conservative retained-owner shutdown passed in a fresh epoch. General block service, arbitrary requests, ring/buffer lifetime/error handling, independent DMA retirement and persistence remain open. [Physical acceptance](N71_S8000_USERSPACE_PREAD_SUCCESS_2026_11_26.md).

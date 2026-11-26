@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
-/* One local, bounded char-probe client. No payload or sector hashes leave
- * process memory. This does not mount, write or scan the phone's NAND. */
+/* One local, bounded char probe. Only parsed range/type/count summaries
+ * may leave private memory in explicit layout mode; no raw sectors, CRC
+ * values, hashes, unique GUIDs or names. No mount or NAND Write. */
 #define _GNU_SOURCE
 #define _FILE_OFFSET_BITS 64
 #include <errno.h>
@@ -14,6 +15,7 @@
 #include <sys/sysmacros.h>
 #include <time.h>
 #include <unistd.h>
+#include "n71-gpt-prefix-core.h"
 static unsigned probe_major(void)
 {
     unsigned major=0,n;
@@ -26,6 +28,23 @@ static unsigned probe_major(void)
         }
     fclose(f);return major;
 }
+static int select_pair(int argc,char **argv,unsigned *base,int *layout)
+{
+ char *end;unsigned long long n;const char *s;
+ *layout=0;
+ if(argc==2) {
+  if(!strcmp(argv[1],"--initial")){*base=0;return 0;}
+  if(!strcmp(argv[1],"--tail")){*base=15624998U;return 0;}
+  if(!strcmp(argv[1],"--layout")){*base=1;*layout=1;return 0;}
+ } else if(argc==3&&!strcmp(argv[1],"--pair")) {
+  if(!argv[2][0])return -1;
+  for(s=argv[2];*s;s++)if(*s<'0'||*s>'9')return -1;
+  errno=0;n=strtoull(argv[2],&end,10);
+  if(errno||*end||n>15624998ULL)return -1;
+  *base=(unsigned)n;return 0;
+ }
+ return -1;
+}
 int main(int argc,char **argv)
 {
     const char *path="/dev/n71nand-probe";
@@ -34,15 +53,14 @@ int main(int argc,char **argv)
     struct stat st;
     const struct rlimit no_core={0,0};
     struct timespec delay={0,100000000};
-    int fd=-1,rc=1,created=0;
-    if (argc!=2 || (strcmp(argv[1],"--initial") && strcmp(argv[1],"--tail"))) {
-        fputs("Usage: n71-nand-private-probe --initial|--tail\n",stderr);return 2;
+    int fd=-1,rc=1,created=0,layout_mode=0;
+    if (select_pair(argc,argv,&base,&layout_mode)) {
+        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--pair BASE\n",stderr);return 2;
     }
     if (geteuid()!=0) {fputs("ROOT_REQUIRED\n",stderr);return 2;}
     if (setrlimit(RLIMIT_CORE,&no_core) || prctl(PR_SET_DUMPABLE,0,0,0,0)) {
         fputs("PRIVATE_MEMORY_GUARD_FAILED\n",stderr);return 2;
     }
-    base=!strcmp(argv[1],"--tail")?15624998U:0U;
     if (!lstat(path,&st) || errno!=ENOENT) {
         fputs("EXISTING_OR_UNSAFE_NODE_REFUSED\n",stderr);return 2;
     }
@@ -80,6 +98,19 @@ int main(int argc,char **argv)
         fputs("PRIVATE_PAIR_COMPARISON_FAILED\n",stderr);goto done;
     }
     puts("PRIVATE_PREAD_PASS completed=4 pair_equality=1 writes=0 payload_and_hashes_exported=0");
+    if (layout_mode) {
+        struct n71_gpt_prefix_result g;
+        int grc=n71_gpt_prefix_parse(data[0],data[1],4096,&g);
+        if (grc) {fprintf(stderr,"GPT_PREFIX_FAILED rc=%d\n",grc);goto done;}
+        printf("GPT_PREFIX_PASS declared_entries=%u checked_entries=%u used_entries=%u apfs_type_hints=%u array_complete=%u array_crc_checked=%u array_crc_ok=%u\n",
+            g.declared,g.checked,g.used,g.apfs_type_count,g.array_complete,g.array_crc_checked,g.array_crc_ok);
+        /* Parsed coordinates are owner-private diagnostic metadata. Never
+         * publish per-device ranges, names, GUIDs or CRC values to Git. */
+        for(i=0;i<g.used;i++)printf("PRIVATE_GPT_RANGE slot=%u type=%s first_lba=%llu last_lba=%llu\n",
+            g.ranges[i].slot,g.ranges[i].apfs_type?"APFS_HINT":"OTHER",
+            g.ranges[i].first,g.ranges[i].last);
+        explicit_bzero(&g,sizeof(g));
+    }
     rc=0;
 done:
     /* Volatile RAM node only; buffer bytes never written to any file. */

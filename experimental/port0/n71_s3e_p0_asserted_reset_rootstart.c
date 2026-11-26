@@ -130,12 +130,19 @@ static unsigned int ans_read_series_flags = ~0U;
 static bool ans_ro_probe_once;
 module_param(ans_ro_probe_once, bool, 0400);
 MODULE_PARM_DESC(ans_ro_probe_once, "explicit root-only four-pread character probe backed by trusted Linux bios; no writes, mmap, general block opens or DMA release");
+static bool ans_ro_block_pair_once;
+static unsigned int ans_ro_block_pair_base=~0U;
+module_param(ans_ro_block_pair_once,bool,0400);
+module_param(ans_ro_block_pair_base,uint,0400);
+MODULE_PARM_DESC(ans_ro_block_pair_once,"explicit bounded consecutive-pair selection; block-only, four fresh retained tags/buffers, no general disk or reuse");
+MODULE_PARM_DESC(ans_ro_block_pair_base,"first native LBA of explicit pair; 0..15624998, default unselected; requires pair_once");
 static bool ans_ro_block_tail_once;
 module_param(ans_ro_block_tail_once, bool, 0400);
 MODULE_PARM_DESC(ans_ro_block_tail_once, "explicit last-two-LBA pair qualification; requires block-only mode; four fresh buffers, no reuse or writes");
 static inline unsigned int n71_series_base(void)
 {
-    return ans_ro_block_tail_once ? 15624998U : 0U;
+    return ans_ro_block_pair_once ? ans_ro_block_pair_base :
+        ans_ro_block_tail_once ? 15624998U : 0U;
 }
 static bool ans_ro_block_once;
 static unsigned int ans_ro_block_flags = ~0U;
@@ -1070,6 +1077,8 @@ static int __init n71_port0_init(void)
         return -EPERM;
     if (ans_io_queue_delete_once && !ans_io_queue_once) return -EPERM;
     if (!n71_ro_probe_mode_valid(ans_ro_probe_once,ans_ro_block_once)) return -EPERM;
+    if (!n71_ro_block_pair_mode_valid(ans_ro_block_pair_once,ans_ro_block_pair_base,
+            ans_ro_block_once,ans_ro_block_tail_once)) return -EPERM;
     if (ans_ro_block_tail_once && !ans_ro_block_once) return -EPERM;
     if (!n71_ro_block_mode_valid(ans_ro_block_once,ans_ro_block_flags,
             ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,

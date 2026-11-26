@@ -32,13 +32,13 @@ class TailPairTests(unittest.TestCase):
         s=MODEL.replace('#include "n71_s3e_ro_block_core.h"','#include "n71_s3e_ro_block_core.h"'+macros)
         s=s.replace('8ULL*(step&1)','8ULL*(15624998U+(step&1))')
         self.compile_run(s)
-    def test_only_two_pair_bases_and_reject_before_mutation(self):
+    def test_namespace_pair_bounds_and_reject_before_mutation(self):
         self.compile_run(r"""
 #include <assert.h>
 #include <string.h>
 #include "n71_s3e_ro_block_core.h"
 int main(void) {
- unsigned bases[]={1,2,15624997,15624999,15625000,~0U},i;
+ unsigned bases[]={15624999,15625000,~0U},i;
  struct n71_ro_block_flow f={.active=1},old=f;
  struct n71_ro_block_request r={0,1,4096,1,0,1,1};
  unsigned char b[64],oldb[64];
