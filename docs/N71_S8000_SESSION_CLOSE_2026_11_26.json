@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-26",
+  "target": "N71/S8000",
+  "last_storage_acceptance_commit": "4230476925c01d88d50b65ad996c378c3d5185aa",
+  "new_superblock_NAND_trial_performed": false,
+  "next_superblock_trial_deferred_reason": "requires fresh owner-attended physical DFU/RAM boot; current owner retained",
+  "poweroff_capability_query": {
+    "date": "2026-11-26",
+    "target": "N71/S8000",
+    "source_commit": "2b5ff05a58c7a1d82baa884212b9e9714f2c6562",
+    "source_sha256": "ff0f63480940442a353c9701c0d968f7b79bfcc510ced3f563e6ff1e424d8316",
+    "module_sha256": "31e6e9eaba0c220c97912e83d2a5d7e8fe60b5d57b7bd016b657c424beac1a96",
+    "kernel": "7.3.0-rc1-n71-batt2-g68aadac820d0-dirty",
+    "default_armed": false,
+    "CPU_only": true,
+    "invokes_poweroff_or_hardware": false,
+    "warning_free_build": true,
+    "physically_observed": true,
+    "power_off_handler_registered": false,
+    "new_NAND_IO": false,
+    "original_S3E_owner_unchanged_refcount": 2,
+    "shutdown_invoked_by_query": false
+  },
+  "power_before_native_restore": {
+    "percent": 47,
+    "status": "Charging",
+    "current_uA": 289000,
+    "temperature_tenths_C": 341,
+    "health": "Good"
+  },
+  "native_charge_restore_input": "00",
+  "native_charge_restore_rc": 0,
+  "native_charger_normally_removed": true,
+  "normal_poweroff_command_returned_zero": true,
+  "display_blank_command_preceded_poweroff": true,
+  "physical_electrical_poweroff_supported": false,
+  "poweroff_expected_kernel_action": "halt fallback; kernel has no registered hardware power-off handler",
+  "observed_SSH_after_request": [
+    {
+      "sample": 1,
+      "SSH_TCP_reachable": true
+    },
+    {
+      "sample": 2,
+      "SSH_TCP_reachable": true
+    },
+    {
+      "sample": 3,
+      "SSH_TCP_reachable": true
+    }
+  ],
+  "phone_SSH_unreachable_after_request": true,
+  "storage_owner_before_shutdown": "ref2 Live; all backing retained",
+  "storage_owner_unloaded_or_DMA_released": false,
+  "NAND_IO_in_closure": false,
+  "NAND_writes_or_mount_or_persistence": false,
+  "closure_script_status_marker_issue": "private placeholder expansion altered expected textual worker-start marker and repeated the same display/sync/ordinary poweroff sequence inline; host marker assertion failed after poweroff had already returned; no storage action or further poweroff retry was issued",
+  "Dell_shutdown": "authorized by owner; to be invoked only after this record is committed, pushed and synchronized",
+  "ordinary_PID1_poweroff_did_not_halt": true,
+  "PID1": "BusyBox sh /init; no SIGUSR2 handler installed",
+  "direct_kernel_poweroff_worker_acknowledged": true,
+  "kernel_poweroff_command": "poweroff -f (sync enabled; bypass non-init PID1 shell)",
+  "display_brightness_zero_verified_before_kernel_request": true,
+  "observed_SSH_after_direct_kernel_request": [
+    {
+      "sample": 1,
+      "SSH_TCP_reachable": true
+    },
+    {
+      "sample": 2,
+      "SSH_TCP_reachable": false
+    },
+    {
+      "sample": 3,
+      "SSH_TCP_reachable": false
+    },
+    {
+      "sample": 4,
+      "SSH_TCP_reachable": false
+    }
+  ],
+  "kernel_halt_inferred_from_request_and_loss_of_service": true,
+  "Dell_CanPowerOff_query": "yes"
+}

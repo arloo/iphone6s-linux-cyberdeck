@@ -214,3 +214,6 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 retained APFS observer exact candidate](N71_S8000_RETAINED_APFS_CHECKPOINT_CANDIDATE_2026_11_26.json)
 - [N71 first retained APFS checkpoint-map physical acceptance](N71_S8000_RETAINED_APFS_CHECKPOINT_SUCCESS_2026_11_26.md)
 - [N71 sanitized retained APFS checkpoint-map measurements](N71_S8000_RETAINED_APFS_CHECKPOINT_OBSERVATION_2026_11_26.json)
+
+- [N71 session closure, CPU-only hardware power-off query and halt limitation](N71_S8000_SESSION_CLOSE_2026_11_26.md)
+- [N71 sanitized closure measurements](N71_S8000_SESSION_CLOSE_2026_11_26.json)

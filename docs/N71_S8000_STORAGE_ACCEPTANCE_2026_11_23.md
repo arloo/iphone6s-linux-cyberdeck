@@ -2,6 +2,10 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
+## Session closure — 2026-11-26
+
+No further NAND trial was performed. The corresponding checkpoint-superblock trial is deferred to a fresh attended physical DFU/RAM boot. Final47%/Charging telemetry preceded verified native input00/rc0 rollback and brightness0. A CPU-only exact-kernel query reports no hardware power-off handler. Ordinary poweroff was ignored by the RAM PID1 shell; a subsequent explicit kernel power-off request was followed by three unreachable SSH probes. This supports Linux halt inference only, not electrical phone-off. All storage backing/owners stayed retained until the halt request; no DMA release, NAND Write, mount or persistence occurred. [Closure evidence and kernel limitation](N71_S8000_SESSION_CLOSE_2026_11_26.md).
+
 ## Current physical checkpoint: retained first APFS checkpoint map validated — 2026-11-26
 
 Sourcec862b1f3734e5eab0cddd4a2bfb9bc8e61fe6ec6 was built warning-free for the exact kernel and passed1992 host tests, then ran once against the same attested APFS pair epoch. ELF sections/offsets and live symbols independently agree; the exact owner ABI/hash and all twelve runtime hashes passed. Two CPU copies50ms apart of all four16KiB retained targets, both4KiB pairs, every12KiB guard and the complete closed owner state are unchanged. New NAND Reads/NVMe commands/owner-buffer writes/MMIO access remain zero; the original Read count stays four.
