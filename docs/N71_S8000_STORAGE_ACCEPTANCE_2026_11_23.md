@@ -12,6 +12,10 @@ Exact Delete SQ/CQ, shutdownCSTS0x9/rc0 (1835 polls), disableCSTS0x0/rc0 and BME
 
 The predeclared source-backed15%/150000uAh observer admitted eight positive samples at20–21%/19.953–20.031% RC/FCC, mean+256mA,33.1C and4.775V VBUS, with more than6957 seconds left on the native500mA/7200s lease. Final postflight was21%, Good/Charging,+185mA and33.2C. Native two-hour activation is observed; physical two-hour expiry remains untested. A next bounded APFS metadata pair is selected privately but needs a fresh epoch. [Physical report](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md), [sanitized acceptance](N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json) and [power contract](N71_S8000_TWO_HOUR_CHARGE_PROFILE_2026_11_26.md).
 
+## Next preparation: APFS block-zero, no new hardware claim
+
+The accepted complete-GPT private partition selection now drives a built exact-kernel/static ARM64 four-pread APFS candidate. Its original NXSB/Fletcher64/geometry parser and actual helper pass ten new tests; the full1,984-test suite, HBPP/manifest/evidence/privacy audits and warning-free builds pass. The verified private image changes only inert module/helper/runtime hashes and preserves the accepted two-hour charging/kernel/DTBs/other CPIO records. It has not booted or issued an APFS Read; the current full-GPT owner stays held. [Trial and exact scope](N71_S8000_APFS_SUPERBLOCK_PAIR_TRIAL_2026_11_26.md), [candidate hashes](N71_S8000_APFS_SUPERBLOCK_PAIR_CANDIDATE_2026_11_26.json).
+
 ## Earlier physical checkpoint: actual GPT entry-prefix preads accepted — 2026-11-26
 
 Candidate306284da0670ac9c299689e91fc496a9f73967f4 ran once in a new authenticated, unused RAM epoch after the predeclared3fe80d4e7426850e44169e8fa01b098c52e54848 power revision. Exactly four actual4096-byte NAND Reads over1,2,1,2 completed through trusted Linux bios and the ARM64 local userspace helper. Tags/CIDs/heads1..4, exact status0001, guarded independent arrivals, stability and both full-sector user comparisons passed. This extends sector/layout selection; capacity/first-Read milestones were not rerun as discovery.

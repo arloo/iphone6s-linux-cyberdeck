@@ -1,0 +1,77 @@
+{
+  "image_sha256": "5df57f342ffde0b12ddc8fd1a029d1b27cc4b9fc0a0fc11391abd8e63e9e47de",
+  "image_bytes": 28324775,
+  "base_image_sha256": "3a36407912f6b3dd5ebf69d0b87f7a397c9a05e5883ecf8662cf925bffd873dc",
+  "base_physical_acceptance_commit": "015c7495d8f1f3bd34ae7eb2f626802e947d9544",
+  "module_sha256": "614de1abd5f733dccdb549a6923c308d51bcca763068d7e2f5d0c6df5252d6de",
+  "helper_sha256": "0fb9eef2a468e54628ceba48079fb542aba2023f9f7751ef1ad949735ec6f0eb",
+  "native_charger_sha256": "23e166ee1309dba0fbfa75d9a0bfd76e000e3e39dcc0cf0a5a5cecc65deafc7f",
+  "startup_sha256": "b819bd094f6d28f74a26822e1eec814e3db1d011bee40f58531e0e907cc35dc3",
+  "profile_sha256": "d85fb6f6cc1544add80f77d639ee5798f8bcf906d19e58d89dc5aa4f855f6101",
+  "changed_entries": [
+    "usr/bin/n71-nand-private-probe",
+    "usr/lib/cyberdeck/n71-runtime.sha256",
+    "usr/lib/cyberdeck/n71-s3e-io-queue-live-phase.ko"
+  ],
+  "added_entries": [],
+  "all_other_rootfs_entries_identical": true,
+  "entire_boot_kernel_prefix_identical": true,
+  "charging_profile_identical_to_accepted_full_GPT_image": true,
+  "runtime_hash_count_verified": 12,
+  "gzip_CPIO_roundtrip_verified": true,
+  "storage_autoload": false,
+  "helper_autostart": false,
+  "physically_booted": false,
+  "hardware_loaded": false,
+  "APFS_superblock_physically_accepted": false,
+  "fresh_attended_boot_required": true,
+  "selected_pair_bound_to_private_complete_GPT": true,
+  "planned_relative_lbas": [
+    0,
+    1,
+    0,
+    1
+  ],
+  "helper_mode": "--apfs FIRST LAST",
+  "module_name": "n71_s3e_p0_asserted_reset_rootstart",
+  "request_budget": 4,
+  "charging": {
+    "explicit_optin": true,
+    "input_uA": 500000,
+    "lease_seconds": 7200,
+    "startup_minimum_percent": 12,
+    "startup_minimum_cell_uV": 3350000,
+    "native_battery_VBUS_thermal_input_rollback_unchanged": true,
+    "automatic_renewal": false,
+    "physical_two_hour_expiry_accepted": false,
+    "physical_two_hour_activation_accepted": true
+  },
+  "host_tests_passed": 1984,
+  "source_parent_commit": "015c7495d8f1f3bd34ae7eb2f626802e947d9544",
+  "host_test_count_passed": 1984,
+  "module_build_warning_free": true,
+  "helper_build_warning_free": true,
+  "actual_APFS_reads": 0,
+  "NAND_writes": false,
+  "mount_or_persistence": false,
+  "raw_sector_bytes_CRC_values_sector_hashes_UUIDs_names_keys_exported": false,
+  "planned_validation": [
+    "both full-sector repeated pairs",
+    "NXSB signature",
+    "Fletcher64 checksum across complete 4096-byte object",
+    "known plain ephemeral container-superblock object header",
+    "single-device v2 container bounded by private GPT partition",
+    "contiguous checkpoint ranges and non-overlap",
+    "optional physical object-map reference bound",
+    "volume-slot bounds without treating virtual/ephemeral OIDs as addresses"
+  ],
+  "unsupported_cases": [
+    "APFS block size other than4096",
+    "Fusion or unknown incompatible container version/features",
+    "checkpoint extent-tree layouts"
+  ],
+  "source_references": [
+    "https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf",
+    "https://github.com/libyal/libfsapfs/blob/main/documentation/Apple%20File%20System%20(APFS).asciidoc"
+  ]
+}

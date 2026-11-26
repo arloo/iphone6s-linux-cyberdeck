@@ -203,3 +203,6 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 
 - [N71 complete primary GPT physical acceptance](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md)
 - [N71 sanitized complete GPT array measurements](N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json)
+
+- [N71 APFS block-zero superblock bounded-pair candidate (built; unbooted)](N71_S8000_APFS_SUPERBLOCK_PAIR_TRIAL_2026_11_26.md)
+- [N71 sanitized APFS candidate image metadata](N71_S8000_APFS_SUPERBLOCK_PAIR_CANDIDATE_2026_11_26.json)

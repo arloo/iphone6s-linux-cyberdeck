@@ -16,6 +16,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "n71-gpt-full-core.h"
+#include "n71-apfs-superblock-core.h"
 static unsigned probe_major(void)
 {
     unsigned major=0,n;
@@ -46,17 +47,35 @@ static int select_pair(int argc,char **argv,unsigned *base,int *layout)
  }
  return -1;
 }
+/* A separate strict selector keeps all accepted legacy argument modes intact.
+ * Host must bind both native coordinates to the privately validated GPT. */
+static int select_apfs(int argc,char **argv,unsigned *base,
+ unsigned long long *partition_blocks)
+{
+ unsigned long long first,last;char *end;const char *s;unsigned i;
+ if(argc!=4||strcmp(argv[1],"--apfs"))return -1;
+ for(i=2;i<4;i++) {
+  if(!argv[i][0])return -1;
+  for(s=argv[i];*s;s++)if(*s<'0'||*s>'9')return -1;
+ }
+ errno=0;first=strtoull(argv[2],&end,10);if(errno||*end)return -1;
+ errno=0;last=strtoull(argv[3],&end,10);if(errno||*end)return -1;
+ if(first<6ULL||first>15624998ULL||last<=first||last>=15625000ULL)return -1;
+ *base=(unsigned)first;*partition_blocks=last-first+1ULL;return 0;
+}
 int main(int argc,char **argv)
 {
     const char *path="/dev/n71nand-probe";
     unsigned base,major=0,i,count;
+    unsigned long long partition_blocks=0;
     unsigned char data[5][4096];
     struct stat st;
     const struct rlimit no_core={0,0};
     struct timespec delay={0,100000000};
     int fd=-1,rc=1,created=0,layout_mode=0;
-    if (select_pair(argc,argv,&base,&layout_mode)) {
-        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--gpt-full|--pair BASE\n",stderr);return 2;
+    if (!select_apfs(argc,argv,&base,&partition_blocks)) layout_mode=3;
+    else if (select_pair(argc,argv,&base,&layout_mode)) {
+        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--gpt-full|--pair BASE|--apfs FIRST LAST\n",stderr);return 2;
     }
     count=layout_mode==2?5U:4U;
     if (geteuid()!=0) {fputs("ROOT_REQUIRED\n",stderr);return 2;}
@@ -125,6 +144,19 @@ int main(int argc,char **argv)
             g.ranges[i].slot,g.ranges[i].apfs_type?"APFS_HINT":"OTHER",
             g.ranges[i].first,g.ranges[i].last);
         explicit_bzero(&g,sizeof(g));
+    }
+    if(layout_mode==3) {
+        struct n71_apfs_superblock_result a;
+        int arc=n71_apfs_superblock_parse(data[0],4096,partition_blocks,&a);
+        if(arc){explicit_bzero(&a,sizeof(a));fprintf(stderr,"APFS_SUPERBLOCK_FAILED rc=%d\n",arc);goto done;}
+        printf("APFS_SUPERBLOCK_PASS nxsb=%u checksum_ok=%u object_header_ok=%u native_block_size=%u container_range_ok=%u checkpoint_ranges_ok=%u omap_present=%u omap_reference_ok=%u max_volume_slots=%u used_volume_slots=%u latest_checkpoint_selected=0 filesystem_mounted=0\n",
+            a.magic_ok,a.checksum_ok,a.object_header_ok,a.block_size,a.geometry_ok,
+            a.checkpoint_ranges_ok,a.omap_present,a.omap_reference_ok,a.max_volume_slots,a.used_volume_slots);
+        /* Geometry and physical references are owner-private. They are not
+         * unique UUIDs, raw checksum values or virtual/ephemeral object IDs. */
+        printf("PRIVATE_APFS_REFS container_blocks=%llu checkpoint_desc_base=%llu checkpoint_desc_blocks=%u checkpoint_data_base=%llu checkpoint_data_blocks=%u omap_block=%llu\n",
+            a.container_blocks,a.desc_base,a.desc_blocks,a.data_base,a.data_blocks,a.omap_block);
+        explicit_bzero(&a,sizeof(a));
     }
     rc=0;
 done:
