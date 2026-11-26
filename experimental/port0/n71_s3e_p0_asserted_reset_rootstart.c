@@ -28,8 +28,10 @@
  * creation and before deletion. The mutually exclusive read-series mode
  * submits four retained single-sector Reads for LBA0/LBA1 repeatability.
  * A separate default-off block-bridge mode tests four trusted kernel bios
- * through a temporary read-only gendisk. Userspace opens and all writes
- * remain denied; no unrestricted block-device service is available.
+ * through a temporary read-only gendisk. Block-device opens and all writes
+ * remain denied. An additional explicit root-only character probe may
+ * trigger four bios and copy validated CPU targets into local user memory;
+ * no unrestricted block-device service is available.
  */
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -40,6 +42,10 @@
 #include <linux/completion.h>
 #include <linux/kthread.h>
 #include <linux/spinlock.h>
+#include <linux/fs.h>
+#include <linux/capability.h>
+#include <linux/uaccess.h>
+#include <linux/mutex.h>
 #include "n71_s3e_ro_block_core.h"
 #include <linux/sizes.h>
 #include "../port1/n71-dart-all-stream-owned-roots-trial.h"
@@ -121,6 +127,9 @@ static bool ans_io_queue_once;
 static bool ans_lba0_read_once;
 static bool ans_read_series_once;
 static unsigned int ans_read_series_flags = ~0U;
+static bool ans_ro_probe_once;
+module_param(ans_ro_probe_once, bool, 0400);
+MODULE_PARM_DESC(ans_ro_probe_once, "explicit root-only four-pread character probe backed by trusted Linux bios; no writes, mmap, general block opens or DMA release");
 static bool ans_ro_block_tail_once;
 module_param(ans_ro_block_tail_once, bool, 0400);
 MODULE_PARM_DESC(ans_ro_block_tail_once, "explicit last-two-LBA pair qualification; requires block-only mode; four fresh buffers, no reuse or writes");
@@ -1060,6 +1069,7 @@ static int __init n71_port0_init(void)
     if (ans_phase_trace_ro && (!ans_identify_once || ans_queue_retire_probe))
         return -EPERM;
     if (ans_io_queue_delete_once && !ans_io_queue_once) return -EPERM;
+    if (!n71_ro_probe_mode_valid(ans_ro_probe_once,ans_ro_block_once)) return -EPERM;
     if (ans_ro_block_tail_once && !ans_ro_block_once) return -EPERM;
     if (!n71_ro_block_mode_valid(ans_ro_block_once,ans_ro_block_flags,
             ans_identify_once,ans_io_queue_once,ans_io_queue_delete_once,

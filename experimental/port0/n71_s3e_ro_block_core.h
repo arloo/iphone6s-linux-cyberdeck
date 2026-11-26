@@ -67,4 +67,17 @@ static inline int n71_ro_block_flow_complete(const struct n71_ro_block_flow *f)
     return f && f->closed && !f->active && !f->pending && !f->failed &&
         f->admitted==4U && f->delivered==4U;
 }
+/* CPU-only private probe admission; it cannot publish hardware commands. */
+static inline int n71_ro_probe_mode_valid(unsigned int enabled,unsigned int block)
+{
+    return !enabled || block==1U;
+}
+static inline int n71_ro_probe_request_valid(unsigned int active,
+        unsigned int failed,unsigned int step,unsigned int base,
+        unsigned long long offset,unsigned long long bytes)
+{
+    return active==1U && !failed && step<4U &&
+        n71_read_pair_base_valid(base) && bytes==4096ULL &&
+        offset==4096ULL*n71_read_pair_lba(base,step);
+}
 #endif

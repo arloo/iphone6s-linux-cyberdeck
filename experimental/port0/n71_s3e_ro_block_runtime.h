@@ -16,6 +16,7 @@ static struct {
     int major,client_rc;
     bool prepared,registered,removed,pairs_equal,passed;
 } n71_ro_block_memory;
+#include "n71_s3e_ro_probe_runtime.h"
 static void n71_ro_block_submit_bio(struct bio *bio)
 {
     struct n71_ro_block_request r={
@@ -93,6 +94,7 @@ static int n71_ro_block_prepare(void *ctx)
         n71_read_series_memory.quarantined) return -EPERM;
     spin_lock_init(&n71_ro_block_memory.lock);
     init_completion(&n71_ro_block_memory.request_ready);
+    n71_ro_probe_prepare();
     rc=n71_ro_io_dma_foreign_ranges(ctx,foreign,&count);
     if (rc) goto fail;
     if (count+6U>ARRAY_SIZE(foreign)) {rc=-E2BIG;goto fail;}
@@ -154,6 +156,8 @@ static int n71_ro_block_client(void *unused)
     int rc=0;
     (void)unused;
     for (i=0;i<4U;i++) {
+        rc=n71_ro_probe_wait(i);
+        if (rc) break;
         if (kthread_should_stop() || READ_ONCE(n71_ro_block_memory.flow.closed)) {
             rc=-ECANCELED;break;
         }
@@ -163,6 +167,13 @@ static int n71_ro_block_client(void *unused)
             rc=-EOVERFLOW;break;
         }
         n71_ro_block_memory.client_completed++;
+        /* The last userspace reply also requires both full-sector pairs. */
+        if (ans_ro_probe_once && i==3U &&
+            (memcmp(n71_ro_block_memory.target[0],n71_ro_block_memory.target[2],4096) ||
+             memcmp(n71_ro_block_memory.target[1],n71_ro_block_memory.target[3],4096))) {
+            rc=-EUCLEAN;break;
+        }
+        n71_ro_probe_reply(0);
     }
     if (!rc && i==4U) {
         n71_ro_block_memory.pairs_equal=
@@ -170,6 +181,7 @@ static int n71_ro_block_client(void *unused)
             !memcmp(n71_ro_block_memory.target[1],n71_ro_block_memory.target[3],4096);
         if (!n71_ro_block_memory.pairs_equal) rc=-EUCLEAN;
     }
+    rc=n71_ro_probe_finish(rc);
     WRITE_ONCE(n71_ro_block_memory.client_rc,rc);
     /* Keep task alive until its owner joins it; no dangling task pointer. */
     while (!kthread_should_stop()) schedule_timeout_interruptible(HZ);
@@ -245,15 +257,19 @@ static int n71_ro_block_once(void *ctx)
     pr_info("n71-s3e-p0: RO_BLOCK_PAIR base_lba=%u pair_count=2 requests=4 tail_selected=%u\n",
         n71_series_base(),ans_ro_block_tail_once);
     pr_info("n71-s3e-p0: RO_BLOCK_REGISTERED name=n71nand_ro capacity_bytes=64000000000 logical_block_bytes=4096 read_only=1 partition_scan=DISABLED userspace_open=DENIED request_budget=4\n");
+    rc=n71_ro_probe_start();
+    if (rc) goto close;
     n71_ro_block_memory.client=kthread_run(n71_ro_block_client,NULL,"n71-ro-client");
     if (IS_ERR(n71_ro_block_memory.client)) {
         rc=PTR_ERR(n71_ro_block_memory.client);n71_ro_block_memory.client=NULL;
     } else rc=n71_read_series_once(ctx);
+close:
     spin_lock_irqsave(&n71_ro_block_memory.lock,irq);
     pending=n71_ro_block_memory.pending_bio;n71_ro_block_memory.pending_bio=NULL;
     n71_ro_block_close(&n71_ro_block_memory.flow,!!rc);
     spin_unlock_irqrestore(&n71_ro_block_memory.lock,irq);
     if (pending) bio_io_error(pending);
+    n71_ro_probe_close(!!rc);
     if (n71_ro_block_memory.client) {
         client_rc=kthread_stop(n71_ro_block_memory.client);
         n71_ro_block_memory.client=NULL;
@@ -264,11 +280,14 @@ static int n71_ro_block_once(void *ctx)
     if (rc) n71_read_series_memory.series_ok=false;
     n71_ro_block_release_software();
     n71_ro_block_memory.passed=!rc && n71_ro_block_memory.removed;
-    pr_info("n71-s3e-p0: RO_BLOCK_ONCE rc=%d registered=%u removed=%u bios_admitted=%u bios_delivered=%u client_completed=%u client_rc=%d private_pair_equality=%u rejected=%u writes_available=NO userspace_access=NO all_DMA_and_target_frames_retained=YES dma_release_authorized=NO payload_and_hashes_redacted=YES\n",
+    pr_info("n71-s3e-p0: RO_BLOCK_ONCE rc=%d registered=%u removed=%u bios_admitted=%u bios_delivered=%u client_completed=%u client_rc=%d private_pair_equality=%u rejected=%u writes_available=NO userspace_block_access=NO all_DMA_and_target_frames_retained=YES dma_release_authorized=NO payload_and_hashes_redacted=YES\n",
         rc,n71_ro_block_memory.registered,n71_ro_block_memory.removed,
         n71_ro_block_memory.flow.admitted,n71_ro_block_memory.flow.delivered,
         n71_ro_block_memory.client_completed,client_rc,n71_ro_block_memory.pairs_equal,
         n71_ro_block_memory.rejected);
+    if (ans_ro_probe_once)
+        pr_info("n71-s3e-p0: RO_PROBE_ONCE rc=%d requested=%u copied=%u char_removed=%u sector_payload_logged=NO writes=NO DMA_release=NO\n",
+            rc,n71_ro_probe.requested,n71_ro_probe.copied,n71_ro_probe.removed);
     return rc;
 }
 #endif

@@ -39,3 +39,8 @@ build/n71-bt-l2cap-echo-aarch64: tools/n71-bt-l2cap-echo.c
 build/n71-nbd-client-aarch64: experimental/storage/n71-nbd-client.c
 	mkdir -p build
 	$(CC) $(CFLAGS) -Werror -o $@ $<
+
+# Root-only, RAM-node, four-pread hardware probe; never auto-run.
+build/n71-nand-private-probe-aarch64: experimental/storage/n71-nand-private-probe.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -Werror -o $@ $<

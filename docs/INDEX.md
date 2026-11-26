@@ -177,3 +177,5 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 last-two-LBA Linux block path (physically accepted, bounded)](N71_S8000_RO_BLOCK_TAIL_PAIR_TRIAL_2026_11_25.md)
 
 - [N71 final-sector block physical acceptance](N71_S8000_RO_BLOCK_TAIL_PAIR_ACCEPTANCE_2026_11_25.json)
+
+- [N71 bounded userspace pread probe (built/tested; no physical attempt)](N71_S8000_USERSPACE_PREAD_PROBE_TRIAL_2026_11_26.md)
