@@ -4,7 +4,7 @@
 
 The accepted initial and final two-LBA Linux bio trials remain the hardware baseline at 24589409d06a8423fb5c41a2fad43fd5a7fa49c3. This candidate asks whether an actual local userspace program can initiate four real NAND Reads and privately receive their validated results. It does not repeat capacity discovery or claim another first physical NAND Read.
 
-The implementation and private RAM image are built and host-tested. **No new candidate boot, module insertion or userspace NAND pread has been physically attempted.** The phone stays in iOS charging from its initial 21% reserve. iOS telemetry says charging/external connected; ExternalChargeCapable=false is also recorded, so no unsupported source-capability conclusion is drawn from those flags alone.
+The implementation and private RAM image are built and host-tested. At the initial preparation checkpoint no candidate boot, module insertion or userspace NAND pread had been attempted. The phone was in iOS charging from its initial 21% reserve. iOS telemetry says charging/external connected; ExternalChargeCapable=false is also recorded, so no unsupported source-capability conclusion is drawn from those flags alone.
 
 ## Explicit interface and ownership
 
@@ -35,3 +35,7 @@ Use one fresh owner-attended RAM boot only after adequate reserve is recovered i
 Launch the one bounded helper over authenticated control, then insert the exact module once with ans_ro_probe_once=1 and the matching initial/tail selection. Its 30-second registration wait and the kernel's eight-second per-request waits are finite; lack of readiness must fail closed. Capture only fixed summaries and private logs. Require four exact hardware Reads, four bio completions and client_rc0, four successful private preads with pair equality, and RO_PROBE_ONCE rc0/requested4/copied4/char_removed1. Exact queue Delete and conservative controller stop/quarantine must also pass. No surviving disk or character registration, retry, forced unload, Write, mount or persistent installation is accepted.
 
 General read-only block service, arbitrary requests, ring wrap/reuse, long-duration/error recovery and independent DMA retirement remain separate work. This candidate has not physically passed those boundaries or its own userspace pread boundary.
+
+## Fresh boot follow-up
+
+The exact candidate has now booted and passed strict direct USB/SSH, board/kernel and all binary/runtime checks. At only 30% reserve the storage gate remains closed; no S3E insertion or userspace NAND pread has occurred. A separately qualified finite charge-only recovery is active with all native/owner guards retained. [Physical boot and power gate](N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.md). The final preparation-only wording above does not supersede this later boot result or qualify userspace I/O.

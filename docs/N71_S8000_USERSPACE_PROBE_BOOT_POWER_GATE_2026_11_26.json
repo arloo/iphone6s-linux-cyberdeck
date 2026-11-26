@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-26",
+  "target": "N71 / Samsung S8000",
+  "source_commit": "b95a9a299bbfa3711cd8f6307b979450a1d388a1",
+  "image_sha256": "0e9eb25ae57b5747cbd5ad82b6decd2feec061a91ae6efd7ff731612749834b4",
+  "module_sha256": "7a28e2b600356213a765ea7f93d1b66f034e1f94110c08e60bed92acdf240dcc",
+  "helper_sha256": "bc13a64db86f0d4e199f899b1a1c03fb99610e6abce95ae1c6fa8e1557b8a15e",
+  "fresh_attended_RAM_boot_authenticated": true,
+  "strict_direct_USB_SSH": true,
+  "runtime_hashes_verified": 11,
+  "initial_battery": {
+    "capacity_percent": 30,
+    "health": "Good",
+    "status": "Discharging",
+    "current_uA": -175000,
+    "temperature_deciC": 331,
+    "cell_uV": 3732000,
+    "remaining_charge_uAh": 367000,
+    "full_charge_uAh": 1245000
+  },
+  "automatic_charger_skipped_below_percent": 35,
+  "S3E_module_inserted": false,
+  "NVM_command_attempted": false,
+  "userspace_pread_physically_attempted": false,
+  "source": {
+    "type": "direct Dell USB",
+    "advertised_bMaxPower_mA": 500
+  },
+  "recovery_pilot": {
+    "input_limit_mA": 500,
+    "native_lease_seconds": 30,
+    "positive_active_samples": 6,
+    "net_current_uA_range": [
+      256000,
+      333000
+    ],
+    "healthy_automatic_baseline_restore": true
+  },
+  "finite_recovery": {
+    "input_limit_mA": 500,
+    "native_maximum_seconds": 3600,
+    "automatic_renewal": false,
+    "automatic_storage_start": false,
+    "owner_stop_temperature_deciC": 375,
+    "cell_range_uV": [
+      3600000,
+      4100000
+    ],
+    "VBUS_range_uV": [
+      4750000,
+      5500000
+    ],
+    "native_monitor_max_age_seconds": 6,
+    "target_percent": 55,
+    "target_requires_remaining_full_counter_agreement": true,
+    "consecutive_target_samples": 3
+  },
+  "latest_observation": {
+    "capacity_percent": 30,
+    "health": "Good",
+    "status": "Charging",
+    "current_uA": 332000,
+    "temperature_deciC": 329,
+    "cell_uV": 3940000,
+    "remaining_charge_uAh": 365000,
+    "full_charge_uAh": 1245000,
+    "VBUS_uV": 4775000,
+    "S3E_modules": 0,
+    "storage_attempt_marker": false
+  },
+  "storage_gate": "Hold. Require at least 50% reported and RC/FCC reserve, consistent fresh qualified electrical/thermal/lease proof, source/module/helper identity and unused epoch before one attended attempt."
+}

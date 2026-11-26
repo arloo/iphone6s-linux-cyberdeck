@@ -17,7 +17,7 @@
   "gzip_CPIO_roundtrip_verified": true,
   "storage_autoload": false,
   "helper_autostart": false,
-  "physically_booted": false,
+  "physically_booted": true,
   "hardware_loaded": false,
   "userspace_pread_physically_accepted": false,
   "fresh_attended_boot_required": true,
@@ -26,5 +26,7 @@
   "character_probe_request_budget": 4,
   "block_userspace_opens": false,
   "NAND_writes": false,
-  "DMA_release_authorized": false
+  "DMA_release_authorized": false,
+  "current_epoch_unused": true,
+  "power_gate": "N71_S8000_USERSPACE_PROBE_BOOT_POWER_GATE_2026_11_26.json"
 }
