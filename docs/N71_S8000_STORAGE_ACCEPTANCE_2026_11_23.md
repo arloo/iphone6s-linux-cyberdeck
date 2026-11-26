@@ -2,7 +2,17 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: complete primary GPT entry array accepted — 2026-11-26
+## Current physical checkpoint: APFS container block-zero superblock accepted — 2026-11-26
+
+Source105a3f20e7a0f877aac5977923a5baefcba19a0c ran once in a new exact direct-USB/key-only authenticated epoch. Four actual4096-byte NAND Reads at private partition-relative0,1,0,1 passed exact CQEs/independent512-word data/12KiB guards/stability, both private full-sector pair comparisons, four trusted bios and four ARM64 user copies. The selected partition was bound privately to the accepted complete GPT; no capacity/GPT rediscovery was claimed.
+
+The initial NXSB anchor passes complete Fletcher64, known object header, single-device-v2/container geometry, non-overlapping contiguous checkpoint areas and a bounded physical object-map reference. It holds seven virtual-volume references; their objects/names/readability/encryption are not read or accepted. Actual physical coordinates/references, UUIDs, raw sectors/checksums/hashes and virtual/ephemeral/transaction IDs are not published. Latest checkpoint/object-map traversal/mount/persistence remain open.
+
+Exact Delete SQ/CQ, shutdownCSTS0x9/rc0 after550 polls, disableCSTS0x0/rc0 and BME off passed. Interfaces were removed and five later RAM samples stayed unchanged. Whole-pilot rc-3 remains conservative; the ordinary S3E owner is ref1 Live/held, with no retry/unload/backing release and unproven independent DMA retirement. Adjacent already-read CPU data remains retained and unparsed for possible separately qualified CPU-only reuse; the descriptor area is not fully scanned.
+
+Eight fresh positive samples passed at29–30%/29.072–29.150% RC/FCC, mean+276.5mA,33.6C and4.750–4.775V VBUS, with over7104 seconds left on the unchanged native500mA/7200s profile. Final postflight was31%, Good/Charging,+241mA and33.6C. Physical two-hour expiry remains untested. [Physical report](N71_S8000_APFS_SUPERBLOCK_SUCCESS_2026_11_26.md), [sanitized acceptance](N71_S8000_APFS_SUPERBLOCK_ACCEPTANCE_2026_11_26.json) and [predeclared contract](N71_S8000_APFS_SUPERBLOCK_PAIR_TRIAL_2026_11_26.md).
+
+## Earlier physical checkpoint: complete primary GPT entry array accepted — 2026-11-26
 
 Source020f31bd1f1cd312f84fb0f72ec2f05663735fdd ran once in a new direct-USB/key-only authenticated epoch with exact image/component/runtime hashes and encrypted-backup metadata verified. Five actual4096-byte NAND Reads1,2,3,4,5 passed via five trusted bios and local ARM64 user copies. Exact tags/CIDs/heads1..5/status0001, independent512-word arrivals/12KiB guards, six core stability checks and five later retained-RAM samples passed.
 
@@ -12,7 +22,7 @@ Exact Delete SQ/CQ, shutdownCSTS0x9/rc0 (1835 polls), disableCSTS0x0/rc0 and BME
 
 The predeclared source-backed15%/150000uAh observer admitted eight positive samples at20–21%/19.953–20.031% RC/FCC, mean+256mA,33.1C and4.775V VBUS, with more than6957 seconds left on the native500mA/7200s lease. Final postflight was21%, Good/Charging,+185mA and33.2C. Native two-hour activation is observed; physical two-hour expiry remains untested. A next bounded APFS metadata pair is selected privately but needs a fresh epoch. [Physical report](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md), [sanitized acceptance](N71_S8000_GPT_FULL_ARRAY_ACCEPTANCE_2026_11_26.json) and [power contract](N71_S8000_TWO_HOUR_CHARGE_PROFILE_2026_11_26.md).
 
-## Next preparation: APFS block-zero, no new hardware claim
+## Historical preparation: APFS candidate, later physically accepted above
 
 The accepted complete-GPT private partition selection now drives a built exact-kernel/static ARM64 four-pread APFS candidate. Its original NXSB/Fletcher64/geometry parser and actual helper pass ten new tests; the full1,984-test suite, HBPP/manifest/evidence/privacy audits and warning-free builds pass. The verified private image changes only inert module/helper/runtime hashes and preserves the accepted two-hour charging/kernel/DTBs/other CPIO records. It has not booted or issued an APFS Read; the current full-GPT owner stays held. [Trial and exact scope](N71_S8000_APFS_SUPERBLOCK_PAIR_TRIAL_2026_11_26.md), [candidate hashes](N71_S8000_APFS_SUPERBLOCK_PAIR_CANDIDATE_2026_11_26.json).
 

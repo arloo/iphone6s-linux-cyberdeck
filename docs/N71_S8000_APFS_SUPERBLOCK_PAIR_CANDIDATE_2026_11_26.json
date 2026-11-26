@@ -21,9 +21,9 @@
   "gzip_CPIO_roundtrip_verified": true,
   "storage_autoload": false,
   "helper_autostart": false,
-  "physically_booted": false,
-  "hardware_loaded": false,
-  "APFS_superblock_physically_accepted": false,
+  "physically_booted": true,
+  "hardware_loaded": true,
+  "APFS_superblock_physically_accepted": true,
   "fresh_attended_boot_required": true,
   "selected_pair_bound_to_private_complete_GPT": true,
   "planned_relative_lbas": [
@@ -51,7 +51,7 @@
   "host_test_count_passed": 1984,
   "module_build_warning_free": true,
   "helper_build_warning_free": true,
-  "actual_APFS_reads": 0,
+  "actual_APFS_reads": 4,
   "NAND_writes": false,
   "mount_or_persistence": false,
   "raw_sector_bytes_CRC_values_sector_hashes_UUIDs_names_keys_exported": false,
@@ -73,5 +73,13 @@
   "source_references": [
     "https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf",
     "https://github.com/libyal/libfsapfs/blob/main/documentation/Apple%20File%20System%20(APFS).asciidoc"
-  ]
+  ],
+  "source_commit": "105a3f20e7a0f877aac5977923a5baefcba19a0c",
+  "power_protocol_commit": "105a3f20e7a0f877aac5977923a5baefcba19a0c",
+  "distinct_native_sectors_read": 2,
+  "physical_acceptance_report": "N71_S8000_APFS_SUPERBLOCK_SUCCESS_2026_11_26.md",
+  "physical_acceptance_json": "N71_S8000_APFS_SUPERBLOCK_ACCEPTANCE_2026_11_26.json",
+  "latest_checkpoint_selected": false,
+  "volume_objects_read": false,
+  "next_NAND_hardware_attempt_requires_fresh_epoch": true
 }

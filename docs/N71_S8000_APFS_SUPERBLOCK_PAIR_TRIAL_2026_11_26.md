@@ -2,7 +2,7 @@
 
 ## Starting evidence and named question
 
-The complete primary GPT was physically accepted at `015c7495d8f1f3bd34ae7eb2f626802e947d9544`: live native4KiB header, all128 entries/full16KiB array CRC, one used APFS-type partition and valid ranges/overlaps. The next two native sectors were selected inside that partition using owner-private coordinates. This candidate asks whether the first sector is a valid APFS container block-zero superblock. It does not repeat capacity, first-Read or GPT milestones. **It is built/host-tested and privately packaged, not booted or physically accepted.**
+The complete primary GPT was physically accepted at `015c7495d8f1f3bd34ae7eb2f626802e947d9544`: live native4KiB header, all128 entries/full16KiB array CRC, one used APFS-type partition and valid ranges/overlaps. The next two native sectors were selected inside that partition using owner-private coordinates. This candidate asks whether the first sector is a valid APFS container block-zero superblock. It does not repeat capacity, first-Read or GPT milestones. At preparation it was built/host-tested and privately packaged; it has now passed its single fresh-epoch [physical trial](N71_S8000_APFS_SUPERBLOCK_SUCCESS_2026_11_26.md).
 
 ## Reuse the bounded four-Read transport
 
@@ -39,3 +39,7 @@ The private RAM image replaces only the inert storage module/helper and their ru
 Before insertion verify direct USB500mA topology, strict key-only SSH/fresh boot, N71/S8000/kernel and exact candidate/source/component/runtime hashes, completed encrypted-backup metadata and unused epoch. Storage/helper remain inert at boot. Reuse the accepted source-backed power gate: reported and RC/FCC at least15%, Remaining Charge at least150000uAh, agreement within2 points, Good health, cell3.6..<4.1V,10..<35C, eight fresh positive-current samples with nondecreasing RC and an immediate positive sample. Require fresh native500mA/7200s monitoring, VBUS4.75–5.5V and at least120 seconds of lease remaining. The native electrical/thermal/rollback guards and finite deadline are unchanged; no renewal is part of this image transition.
 
 Run the exact private four-pread plan once. Separate transport acceptance from APFS_SUPERBLOCK_PASS. Require expected exact CQEs/data/guards/pair comparisons/user copies, independently parsed APFS flags, exact queue deletion/normal stop, interface removal and retained owners. Keep raw logs/coordinates private. A metadata failure does not relabel successfully delivered sectors as validated APFS and never authorizes a hardware retry in the held epoch.
+
+## Physical outcome
+
+Four actual private pair preads/user copies and all transport/guard/stability/equality checks passed. APFS_SUPERBLOCK_PASS reports NXSB/Fletcher64/object/geometry/checkpoint/physical-object-map bounds valid,100 maximum slots and seven virtual-volume references. Latest checkpoint and filesystem mount remain0. Exact Delete SQ/CQ and shutdown/disable passed; all owners stay held and no hardware retry is authorized. [Measured acceptance](N71_S8000_APFS_SUPERBLOCK_ACCEPTANCE_2026_11_26.json).

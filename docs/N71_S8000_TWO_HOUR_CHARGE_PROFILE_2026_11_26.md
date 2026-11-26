@@ -27,3 +27,7 @@ Charging admission is not permission to run storage. Before the fresh single fiv
 ## Same-epoch full-GPT activation/positive-power observation
 
 The exact final image passed all twelve runtime hashes and started the native500mA/7200s lease. Eight fresh samples before the single successful full-GPT trial were20–21%, all positive with mean+256mA,33.1C and VBUS4.775V; more than6957 seconds remained. Postflight was21%, Good/Charging,+185mA,33.2C and cell3.892V. No native lease renewal or replacement occurred. This observes activation/early monitoring, not an entire two-hour duration/expiry. [Measured storage/power acceptance](N71_S8000_GPT_FULL_ARRAY_SUCCESS_2026_11_26.md).
+
+## Subsequent fresh APFS epoch
+
+The unchanged native500mA/7200s image component activated again in the new APFS epoch. Eight fresh positive samples measured29–30%, mean+276.5mA,33.6C and4.750–4.775V VBUS before the single accepted read-only APFS trial. Postflight was31%, Good/Charging,+241mA and33.6C. There was no native-module replacement/renewal in that epoch, and physical two-hour expiry remains untested. [Measured APFS result](N71_S8000_APFS_SUPERBLOCK_SUCCESS_2026_11_26.md).
