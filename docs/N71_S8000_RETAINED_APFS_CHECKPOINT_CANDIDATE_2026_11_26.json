@@ -1,6 +1,6 @@
 {
   "date": "2026-11-26",
-  "status": "built and host-tested; physical CPU-only observation pending",
+  "status": "physically accepted CPU-only retained first checkpoint-map observation",
   "source_parent_commit": "57440dbbecbdea9f4b010bedea93b6f818252558",
   "owner_module_sha256": "614de1abd5f733dccdb549a6923c308d51bcca763068d7e2f5d0c6df5252d6de",
   "observer_module_sha256": "a75ee008297c6519a154c8153799b1fd02456e008da5da7975b91155201750c8",
@@ -29,5 +29,14 @@
   "complete_descriptor_scan": false,
   "mount_or_persistence": false,
   "runtime_addresses_and_partition_geometry_public": false,
-  "reference": "https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf"
+  "reference": "https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf",
+  "source_commit": "c862b1f3734e5eab0cddd4a2bfb9bc8e61fe6ec6",
+  "physically_observed": true,
+  "owner_refcount_before": 1,
+  "owner_refcount_after": 2,
+  "checkpoint_map_valid": true,
+  "mapping_count": 8,
+  "transaction_newer_than_block_zero_anchor": true,
+  "acceptance_report": "N71_S8000_RETAINED_APFS_CHECKPOINT_SUCCESS_2026_11_26.md",
+  "acceptance_json": "N71_S8000_RETAINED_APFS_CHECKPOINT_OBSERVATION_2026_11_26.json"
 }

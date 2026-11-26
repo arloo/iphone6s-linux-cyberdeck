@@ -1,0 +1,119 @@
+{
+  "date": "2026-11-26",
+  "target": "N71/S8000",
+  "source_commit": "c862b1f3734e5eab0cddd4a2bfb9bc8e61fe6ec6",
+  "observer_module_sha256": "a75ee008297c6519a154c8153799b1fd02456e008da5da7975b91155201750c8",
+  "owner_module_sha256": "614de1abd5f733dccdb549a6923c308d51bcca763068d7e2f5d0c6df5252d6de",
+  "same_boot": true,
+  "observation": "already-retained first APFS descriptor; CPU only",
+  "new_NAND_reads": 0,
+  "new_NVMe_commands": 0,
+  "owner_refcnt_before": 1,
+  "owner_refcnt_after": 2,
+  "extra_owner_reference_retained": true,
+  "owner_state_and_four_full_targets_unchanged": true,
+  "CPU_samples": 2,
+  "sample_interval_ms": 50,
+  "original_DMA_and_all_backing_retained": true,
+  "interfaces_absent": true,
+  "full_descriptor_scan": false,
+  "latest_checkpoint_selected": false,
+  "mount_or_persistence": false,
+  "raw_bytes_UUIDs_names_keys_checksums_sector_hashes_and_IDs_exported": false,
+  "host_tests_passed": 1992,
+  "power_after": {
+    "uptime_seconds": 3172.04,
+    "percent": 44,
+    "status": "Discharging",
+    "current_uA": -191000,
+    "temperature_tenths_C": 339,
+    "health": "Good",
+    "cell_uV": 3949000
+  },
+  "measured_flags": {
+    "CPU_COPY_PASS": {
+      "target_count": 4,
+      "pairs_equal": 1,
+      "guards_intact": 1,
+      "owner_state_unchanged": 1,
+      "samples": 2,
+      "interval_ms": 50,
+      "hardware_commands": 0,
+      "owner_buffer_writes": 0,
+      "DMA_release": "NO"
+    },
+    "CHECKPOINT_FLAGS": {
+      "anchor_valid": 1,
+      "all_zero": 0,
+      "all_ff": 0,
+      "checksum_ok": 1,
+      "kind": 2,
+      "object_header_ok": 1,
+      "inside_descriptor_area": 1,
+      "descriptor_shape_valid": 1,
+      "same_container_uuid": 0,
+      "candidate_geometry_ok": 0,
+      "candidate_ring_ok": 0,
+      "latest_checkpoint_selected": 0,
+      "complete_scan": 0
+    },
+    "MAPPING_FLAGS": {
+      "count": 8,
+      "last": 1,
+      "flags_ok": 1,
+      "bounds_ok": 1,
+      "ephemeral_types": 1,
+      "inside_anchor_data": 1,
+      "newer_than_anchor": 1,
+      "equal_anchor": 0,
+      "object_ids_and_references_exported": "NO"
+    },
+    "RESULT": {
+      "rc": 0,
+      "owner_reference_acquired": 1,
+      "CPU_only": "YES",
+      "owner_reference_retained": "YES",
+      "no_owner_call_or_MMIO": "YES",
+      "no_mount": "YES"
+    }
+  },
+  "known_descriptor_type": "physical checkpoint map",
+  "mapping_count": 8,
+  "mapping_last_flag": true,
+  "mapping_transaction_newer_than_block_zero_anchor": true,
+  "all_mapping_extents_within_container_and_anchor_data_area": true,
+  "NXSB_only_fields_in_map_result": "not applicable; zero flags are not failed UUID/geometry/ring checks",
+  "descriptor_transaction_complete": false,
+  "referenced_objects_read": false,
+  "extra_owner_reference_release": false,
+  "transient_immediate_postload_sample": {
+    "status": "Discharging",
+    "current_uA": -191000
+  },
+  "later_power_window": {
+    "samples": 6,
+    "all_status": "Charging",
+    "all_health": "Good",
+    "reported_percent": 44,
+    "current_uA": [
+      151000,
+      187000,
+      187000,
+      132000,
+      193000,
+      226000
+    ],
+    "mean_current_uA": 179333.33333333334,
+    "temperature_tenths_C": 339,
+    "native_VBUS_uV": 4775000,
+    "native_input_uA": 500000,
+    "lease_renewed_or_native_module_replaced": false
+  },
+  "limits": [
+    "Only the already-retained first descriptor is classified, not the complete area",
+    "CHECKPOINT_MAP_LAST does not prove that the corresponding checkpoint superblock/data objects were read",
+    "Newer than the initial anchor does not establish newest checkpoint",
+    "Independent DMA retirement and general block service remain unqualified",
+    "No mount, persistence, NAND write, owner release or same-epoch hardware retry"
+  ]
+}

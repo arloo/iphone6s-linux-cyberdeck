@@ -209,3 +209,8 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 
 - [N71 APFS container block-zero physical acceptance](N71_S8000_APFS_SUPERBLOCK_SUCCESS_2026_11_26.md)
 - [N71 sanitized APFS superblock measurements](N71_S8000_APFS_SUPERBLOCK_ACCEPTANCE_2026_11_26.json)
+
+- [N71 retained APFS descriptor CPU-only source/observation contract](N71_S8000_RETAINED_APFS_CHECKPOINT_TRIAL_2026_11_26.md)
+- [N71 retained APFS observer exact candidate](N71_S8000_RETAINED_APFS_CHECKPOINT_CANDIDATE_2026_11_26.json)
+- [N71 first retained APFS checkpoint-map physical acceptance](N71_S8000_RETAINED_APFS_CHECKPOINT_SUCCESS_2026_11_26.md)
+- [N71 sanitized retained APFS checkpoint-map measurements](N71_S8000_RETAINED_APFS_CHECKPOINT_OBSERVATION_2026_11_26.json)

@@ -2,7 +2,15 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: APFS container block-zero superblock accepted — 2026-11-26
+## Current physical checkpoint: retained first APFS checkpoint map validated — 2026-11-26
+
+Sourcec862b1f3734e5eab0cddd4a2bfb9bc8e61fe6ec6 was built warning-free for the exact kernel and passed1992 host tests, then ran once against the same attested APFS pair epoch. ELF sections/offsets and live symbols independently agree; the exact owner ABI/hash and all twelve runtime hashes passed. Two CPU copies50ms apart of all four16KiB retained targets, both4KiB pairs, every12KiB guard and the complete closed owner state are unchanged. New NAND Reads/NVMe commands/owner-buffer writes/MMIO access remain zero; the original Read count stays four.
+
+The retained first descriptor passes full Fletcher64, physical checkpoint-map object header, descriptor membership, known flags, count and mapped extent/type checks. It contains eight ephemeral mappings, all inside the container/anchor data area, with LAST set and a transaction newer than the initial block-zero anchor. No numeric IDs, coordinates, raw sectors/checksums/hashes, UUIDs, names or keys are exported. Its corresponding checkpoint superblock/data objects remain unread; this is not complete/newest-checkpoint acceptance.
+
+One extra ordinary owner reference stays retained: S3E is ref2 Live with all backing held and no disk/probe/character interface. No reset/unload/retry/release/mount/persistence occurs. Preflight44%/Charging was followed by a brief postload negative-current sample, then six Good/Charging samples at44%, mean+179.33mA,33.9C and VBUS4.775V on unchanged native500mA/7200s charging. Physical full lease expiry remains untested. [CPU-only physical report](N71_S8000_RETAINED_APFS_CHECKPOINT_SUCCESS_2026_11_26.md), [sanitized flags](N71_S8000_RETAINED_APFS_CHECKPOINT_OBSERVATION_2026_11_26.json) and [predeclared contract](N71_S8000_RETAINED_APFS_CHECKPOINT_TRIAL_2026_11_26.md).
+
+## Earlier physical checkpoint: APFS container block-zero superblock accepted — 2026-11-26
 
 Source105a3f20e7a0f877aac5977923a5baefcba19a0c ran once in a new exact direct-USB/key-only authenticated epoch. Four actual4096-byte NAND Reads at private partition-relative0,1,0,1 passed exact CQEs/independent512-word data/12KiB guards/stability, both private full-sector pair comparisons, four trusted bios and four ARM64 user copies. The selected partition was bound privately to the accepted complete GPT; no capacity/GPT rediscovery was claimed.
 
