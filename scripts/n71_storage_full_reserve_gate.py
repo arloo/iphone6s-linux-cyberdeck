@@ -25,8 +25,8 @@ def qualify(samples: list[dict]) -> dict:
         if s.get('health')!='Good' or s.get('udc')!='configured':raise ValueError("health_or_USB")
         if s.get('status') not in ('Charging','Discharging','Full','Not charging'):raise ValueError("unknown_gauge_status")
         rc,fcc=s['charge_now'],s['charge_full']
-        if not 90<=s['capacity']<=100 or rc<1000000 or fcc<rc:raise ValueError("insufficient_full_reserve")
-        if 100*rc<90*fcc or abs(s['capacity']*fcc-100*rc)>2*fcc:raise ValueError("gauge_disagreement")
+        if not 50<=s['capacity']<=100 or rc<1000000 or fcc<rc:raise ValueError("insufficient_full_reserve")
+        if 100*rc<50*fcc or abs(s['capacity']*fcc-100*rc)>2*fcc:raise ValueError("gauge_disagreement")
         if not 3600000<=s['voltage_now']<4100000:raise ValueError("cell_voltage")
         if not 100<=s['temp']<350:raise ValueError("battery_temperature")
         if abs(s['current_now'])>500000:raise ValueError("idle_current")

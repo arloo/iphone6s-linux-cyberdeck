@@ -34,3 +34,12 @@ class ReserveGateTests(unittest.TestCase):
         s=fixture()
         for q in s:q['capacity']=90;q['charge_now']=1000000;q['charge_full']=1111000;q['voltage_now']=3600000;q['temp']=100;q['current_now']=-500000
         r=G.qualify(s);self.assertGreaterEqual(r['minimum_reserve_windows'],25);self.assertLessEqual(r['planning_current_uA']*r['planning_duration_s']/3600,r['planning_charge_uAh'])
+
+    def test_FCC_learning_between_windows_does_not_hide_the_same_large_absolute_reserve(self):
+        first=fixture();second=fixture()
+        for q in first:q['capacity']=97;q['charge_now']=1080000;q['charge_full']=1117000
+        for q in second:q['capacity']=87;q['charge_now']=1096000;q['charge_full']=1261000
+        self.assertGreaterEqual(G.qualify(first)['minimum_reserve_windows'],25)
+        self.assertGreaterEqual(G.qualify(second)['minimum_reserve_windows'],25)
+        for q in second:q['capacity']=49;q['charge_now']=1000000;q['charge_full']=2000000
+        with self.assertRaises(ValueError):G.qualify(second)

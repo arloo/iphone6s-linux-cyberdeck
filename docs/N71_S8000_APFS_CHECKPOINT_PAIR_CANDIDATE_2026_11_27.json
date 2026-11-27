@@ -79,5 +79,5 @@
   "USB_failure_diagnostics_distinguish_absent_identity_and_unqualified_DFU": true,
   "storage_helper_source_commit": "eb7f8aae60f21e32185b93b9db3da9b004c35d65",
   "alternative_full_reserve_power_protocol": "N71_S8000_FULL_RESERVE_STORAGE_GATE_2026_11_27.md",
-  "full_reserve_gate_focused_tests_passed": 4
+  "full_reserve_gate_focused_tests_passed": 5
 }
