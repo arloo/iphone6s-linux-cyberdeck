@@ -22,9 +22,9 @@
   "gzip_CPIO_roundtrip_verified": true,
   "storage_autoload": false,
   "helper_autostart": false,
-  "physically_booted": false,
-  "hardware_loaded": false,
-  "checkpoint_descriptor_pair_physically_accepted": false,
+  "physically_booted": true,
+  "hardware_loaded": true,
+  "checkpoint_descriptor_pair_physically_accepted": true,
   "fresh_attended_boot_required": true,
   "planned_relative_lbas": [
     1,
@@ -79,5 +79,12 @@
   "USB_failure_diagnostics_distinguish_absent_identity_and_unqualified_DFU": true,
   "storage_helper_source_commit": "eb7f8aae60f21e32185b93b9db3da9b004c35d65",
   "alternative_full_reserve_power_protocol": "N71_S8000_FULL_RESERVE_STORAGE_GATE_2026_11_27.md",
-  "full_reserve_gate_focused_tests_passed": 5
+  "full_reserve_gate_focused_tests_passed": 5,
+  "physical_acceptance_report": "N71_S8000_APFS_CHECKPOINT_PAIR_SUCCESS_2026_11_27.md",
+  "physical_acceptance_json": "N71_S8000_APFS_CHECKPOINT_PAIR_ACCEPTANCE_2026_11_27.json",
+  "physical_helper_source_commit": "eb7f8aae60f21e32185b93b9db3da9b004c35d65",
+  "physical_power_protocol_commit": "028b46e1cf77e993d16e0c59e1eabdfcc729caea",
+  "physical_mapping_count": 5,
+  "physical_volume_slot_count": 7,
+  "same_epoch_requires_no_hardware_retry": true
 }

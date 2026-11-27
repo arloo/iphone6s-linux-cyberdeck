@@ -1,0 +1,29 @@
+# N71/S8000 APFS checkpoint map and matching superblock accepted — 27 November 2026
+
+## Physical result
+
+The exact private checkpoint-pair image booted in a new owner-attended N71/S8000 epoch. Direct configured 500 mA USB, fresh boot/board/kernel, strict key-only SSH and all twelve runtime plus expected component hashes passed. The new host key was accepted only over the independently verified point-to-point Apple USB link and after exact runtime verification. The local image hash matched the candidate. The root-owned host Pongo log was not readable by the agent; the attended launcher performs its own size/hash/upload-ACK checks, and actual runtime components were independently verified. No S3E owner/attempt/probe was present before this trial.
+
+The helper source is `eb7f8aae60f21e32185b93b9db3da9b004c35d65` and the predeclared reserve protocol is 028b46e1cf77e993d16e0c59e1eabdfcc729caea. The storage binary is byte-identical to the previously accepted APFS transport. Exactly four real 4,096-byte NAND Reads completed at privately selected partition-relative **1,2,1,2**, through four trusted Linux bios and four local ARM64 user copies. All tags/CIDs/SQ heads 1..4, SQID 1/status 0001, 512-word independent data arrivals, 12 KiB guards, five core stability checks and both full-sector pair comparisons passed. Loader and helper returned 0; no buffer/ring reuse or NAND Write occurred.
+
+## New APFS evidence
+
+The first sector is a checksummed physical checkpoint map; the adjacent sector is a checksummed supported NXSB container superblock. Their object headers and transaction match. The NXSB descriptor ring covers exactly this ordered two-slot group, with LAST set on its sole map. Data-ring bounds/cursors and all **five ephemeral mapping extents** pass, including active-window membership, unique (volume, ephemeral-object) keys and physical non-overlap. Required container spaceman and nonzero reaper references resolve to correctly typed map entries; the physical container object-map reference is bounded. The NXSB contains **seven virtual-volume references**, with 100 maximum slots.
+
+The earlier CPU-observed map had eight entries; iOS ran before this new epoch, and the current pair has five. The count difference is not a claim about deleted/readable volumes. The prior anchor/map milestones remain historical evidence; only the jointly read current map/NXSB pair is accepted here.
+
+Parsed physical next-read references remain in private evidence. No raw sector bytes/checksum values/sector hashes, UUIDs, names, keys or numeric object/transaction IDs were exported or published. Public evidence uses flags/counts and relative labels. **Block-zero UUID comparison, complete descriptor-area scan/newest-checkpoint selection, mapped data objects, object-map/volume/tree traversal, encryption access, general block service and filesystem mount/persistence remain unqualified.** The private descriptor area exceeds one accepted nonwrapping I/O queue cycle; further transport work must qualify bounded progression/wrap before a full scan rather than declaring this one pair the latest checkpoint.
+
+## Power branch and actual closure
+
+At full initial charge, the exact native charger applied 500 mA at 89.67 s and stopped after a 4.225 V battery-guard sample at 91.77 s, restoring input 00/rc0. It was not rearmed. A dedicated host reserve branch was declared/tested before NAND I/O; its initial 90% floor refused a later preflight after FCC learning changed reported/derived percentage while absolute RC stayed high. No hardware marker/load/Read existed at that refusal. The revised branch uses at least 1,000,000 uAh actual gauge reserve plus a secondary 50% sanity floor, stable electrical/gauge measurements and an explicit planning model; the regular positive-charge 15% branch remains intact. [Protocol and correction](N71_S8000_FULL_RESERVE_STORAGE_GATE_2026_11_27.md).
+
+The final fresh rolling eight-sample/immediate gate measured 87% reported, at least 86.122% RC/FCC and 1,086,000 uAh RC, 32.8 C, cell 3.981–4.031 V, configured USB and no more than 263 mA measured idle discharge. The 1 A / 120 s planning model is33,334uAh with 32 full model windows in the reserve; this is not physical peak-current or endurance qualification. Final postflight remained 87%, Good/Discharging, -366 mA, 32.8 C and 3.945 V, with the same 1,086,000 uAh RC. Native guards remain unchanged and full 7,200 s expiry is untested.
+
+Exact Delete SQ then CQ returned 0 with validated completions. Normal shutdown returned 0/CSTS0x9 after 934 polls; disable returned 0/CSTS0x0 and BME off. Five later retained-RAM samples 50 ms apart were unchanged. Bio/client/probe counters all completed 4 with client_rc 0 and zero rejections; the temporary disk, character registration and private node were removed.
+
+The legacy whole-pilot result remains conservative rc-3. Independent DMA drain is not proven: every original HMB/DART/NVMMU, DMA data/SGL/snapshot/CPU target and owner remains retained, with one ref1 Live S3E module. No same-epoch hardware retry, forced unload, backing release, mount or persistence followed.
+
+## Source and validation
+
+The RAM helper/parser candidate passed all 2,004 host tests, warning-free static AArch64 build, exact CPIO/kernel/DTB/module preservation, twelve runtime hashes and archive roundtrip before boot. Five additional focused reserve-gate tests cover electrical/schema/stability/energy failures and the learned-FCC regression. Manifest/evidence and Git privacy checks pass. Source/helper/storage/native hashes and measured flags are in the [sanitized acceptance](N71_S8000_APFS_CHECKPOINT_PAIR_ACCEPTANCE_2026_11_27.json); [candidate/trial](N71_S8000_APFS_CHECKPOINT_PAIR_TRIAL_2026_11_27.md) and [canonical ledger](N71_S8000_STORAGE_ACCEPTANCE_2026_11_23.md) retain the complete boundaries.

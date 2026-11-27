@@ -40,4 +40,4 @@ An owner launch stopped before Pongo/image upload because no successful iOS char
 
 ## Current state
 
-Built, host-tested, packaged and ready for an owner-attended fresh RAM boot. No new boot, NAND command, descriptor-pair physical acceptance, latest selection or mount has occurred during preparation. The phone remained in iOS charging while this candidate was prepared.
+At preparation the candidate was built/host-tested/packaged and the phone stayed in charging iOS. It has now booted and passed its one fresh-epoch four-Read physical trial. A valid matching map/NXSB descriptor group with five mappings and seven virtual-volume references is accepted; latest selection, mapped data objects and mount remain open. [Physical report](N71_S8000_APFS_CHECKPOINT_PAIR_SUCCESS_2026_11_27.md), [measured flags](N71_S8000_APFS_CHECKPOINT_PAIR_ACCEPTANCE_2026_11_27.json).
