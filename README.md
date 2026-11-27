@@ -43,7 +43,7 @@ A pocket Linux cyberdeck built around an iPhone 6s: native touchscreen operation
 
 A [complete documentation index](docs/INDEX.md) links current guides and the retained detailed experiment catalog.
 
-Next storage trial prepared: [one SQ/CQ wrap with seventeen distinct Read buffers](docs/N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md). A fresh attended RAM boot is required; physical wrap/full-scan acceptance remains pending.
+Physical storage progress: [seventeen exact Reads across one SQ/CQ wrap](docs/N71_S8000_CQ_WRAP_SUCCESS_2026_11_27.md) are accepted. The next gate is bounded multiblock Read qualification before a complete checkpoint scan; general storage, DMA release and mounting remain open.
 
 ## Start here
 

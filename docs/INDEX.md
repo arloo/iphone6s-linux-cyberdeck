@@ -5,7 +5,9 @@ Reviewed 2026-11-17. Current guides lead; dated experiment reports preserve the 
 
 ## Current guides
 
-- [Prepared first SQ/CQ wrap: bounded 17-Read candidate, fresh boot required — 2026-11-27](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md)
+- [Physical first SQ/CQ wrap: seventeen exact Reads — 2026-11-27](N71_S8000_CQ_WRAP_SUCCESS_2026_11_27.md)
+- [Sanitized seventeen-Read acceptance](N71_S8000_CQ_WRAP_ACCEPTANCE_2026_11_27.json)
+- [Predeclared bounded SQ/CQ wrap protocol](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md)
 
 - [Physical four-Read repeatability: same-LBA equality, guarded buffers and bounded observation — 2026-11-24](N71_S8000_READ_SERIES_TRIAL_2026_11_24.md)
 - [Sanitized four-Read acceptance](N71_S8000_READ_SERIES_ACCEPTANCE_2026_11_24.json)

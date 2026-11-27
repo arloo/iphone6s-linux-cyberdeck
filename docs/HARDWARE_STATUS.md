@@ -28,7 +28,7 @@ Bluetooth security level 2 requires encryption; it does not prove MITM-authentic
 
 Evidence: [Wi-Fi](N71_NATIVE_WIFI_PHYSICAL_PASS_2026_11_16.json), [Bluetooth](N71_BLUETOOTH_PHYSICAL_PASS_2026_11_16.json), [Bluetooth runtime](N71_BLUETOOTH_RUNTIME_2026_11_16.md), [touch](N71_Z2_AUTOINIT_PHYSICAL_MULTITOUCH_PASS_2026_11_11.md), [engineering assessment](PROJECT_STATE_2026_11_16.md). The [older hardware snapshot](history/HARDWARE_STATUS_BEFORE_2026_11_16_REFRESH.md) is historical only.
 
-Next storage trial prepared: [one SQ/CQ wrap with seventeen distinct Read buffers](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md). A fresh attended RAM boot is required; physical wrap/full-scan acceptance remains pending.
+Physical storage progress: [seventeen exact Reads across one SQ/CQ wrap](N71_S8000_CQ_WRAP_SUCCESS_2026_11_27.md) are accepted. The next gate is bounded multiblock Read qualification before a complete checkpoint scan; general storage, DMA release and mounting remain open.
 
 ## Current-session UI and recovery follow-up
 

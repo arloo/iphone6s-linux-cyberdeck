@@ -2,17 +2,21 @@
 
 This page is the repository-side storage milestone ledger. **Git source, tests, the physical measurement archive and GitHub issues must agree**; no compile-time result is a physical NAND success. The owner-private original Apple kernelcache, raw NAND/user metadata and hardware identifiers stay outside Git. This checkpoint follows main commit `85c489166199ae8002d3655417f69646278d538b` and is updated with each subsequent evidence-backed change.
 
-## Current physical checkpoint: matching APFS checkpoint descriptor group — 2026-11-27
+## Current physical checkpoint: seventeen Reads across the first SQ/CQ wrap — 2026-11-27
+
+Runtime source `e615632558f22786c51e7404b2bc2f714c856e7c` ran once in a fresh exact-image/direct-USB/key-only epoch. All 17 exact CQEs, guarded 4 KiB arrivals, snapshots, 18 core stability checks, 17 Linux bios and 17 private user copies pass. Each 16-entry queue wraps once; old slot-zero CQ/SQ images pass and command 17 has phase0/status0/CID17/SQID1/head1. Every known-sector repeat matches. No data/tag reuse or APFS validation is inferred.
+
+Exact SQ/CQ deletion, normal shutdown rc0/CSTS9 after 1,801 polls, disable rc0/CSTS0, BME-off and five later 50 ms-spaced retained-RAM samples across all 17 Reads pass. Original ownership stays ref1/Live with all backing held and interfaces removed. Legacy rc-3/post-disable qualification false and its HMB predicate set match the prior accepted four-Read epoch. Independent DMA retirement, backing release and same-epoch retry remain forbidden. [Physical report](N71_S8000_CQ_WRAP_SUCCESS_2026_11_27.md); [sanitized acceptance](N71_S8000_CQ_WRAP_ACCEPTANCE_2026_11_27.json).
+
+The declared 300-second reserve protocol passed fresh and immediate windows after startup 500 mA battery-guard rollback. A separate post-NAND 300 mA/7,200 s activation has seven 4.875 V monitors and healthy 82% samples, but mixed battery current averages -15.375 mA. Sustained positive charging/full lease expiry are not qualified. The full descriptor area exceeds the 127-fresh-tag budget; the next transport gate is bounded multiblock Read qualification before complete scan/UUID binding/newest-complete-group selection. No next image, Write, mount or persistence follows automatically. Private raw evidence was collected before a brief Dell remote connection interruption; the connection returned before this documentation update. No hardware retry followed.
+
+## Earlier physical checkpoint: matching APFS checkpoint descriptor group — 2026-11-27
 
 One fresh N71/S8000 epoch ran the exact checkpoint-pair image, helper sourceeb7f8aae60f21e32185b93b9db3da9b004c35d65 and reserve protocol028b46e1cf77e993d16e0c59e1eabdfcc729caea. Four actual private1,2,1,2 Reads pass all exact CQEs/512-word data/12KiB guards/stability, repeated-sector comparisons, four bios and four user copies. Both APFS object checksums/headers, a shared transaction, ordered complete two-slot descriptor group and five unique/nonoverlapping ephemeral mappings inside the active data ring pass, including correctly typed spaceman/reaper links. A physical object-map reference and seven virtual-volume references are bounded/countable, not read/mounted.
 
 Exact queue deletion, normal shutdownCSTS9/rc0 after934 polls, disableCSTS0/rc0, BME-off and five50ms-separated retained-RAM samples pass. Interfaces are removed; original ownership/backing stays held with ref1 Live S3E and conservative whole-pilot rc-3. No retry, unload, DMA release, NAND Write, mount or persistence follows. Full newest-checkpoint selection, mapped data objects, object-map/volume/tree contents, encryption access and general service remain open. The descriptor area needs more than one nonwrapping queue cycle; future transport must qualify bounded progression/wrap before a full scan.
 
 The native charger guard stopped at4.225V/full charge and restored input00/rc0. It was not rearmed. The predeclared, host-tested reserve branch passed an immediate fresh window at87% reported, at least86.122% RC/FCC and1,086,000uAh RC,32.8C and3.981–4.031V; final87% Good/Discharging/-366mA,32.8C and3.945V. Initial percentage-only reserve refusal after FCC learning occurred before any hardware marker/command and is documented separately. [Physical report](N71_S8000_APFS_CHECKPOINT_PAIR_SUCCESS_2026_11_27.md), [sanitized measured acceptance](N71_S8000_APFS_CHECKPOINT_PAIR_ACCEPTANCE_2026_11_27.json), [power branch](N71_S8000_FULL_RESERVE_STORAGE_GATE_2026_11_27.md), [trial](N71_S8000_APFS_CHECKPOINT_PAIR_TRIAL_2026_11_27.md).
-
-## Prepared next trial — first SQ/CQ wrap, not physically executed
-
-The separately named [17-Read CQ-wrap candidate](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md) is prepared to qualify one queue wrap and the first phase-zero completion, using seventeen distinct buffers/tags over the already accepted adjacent pair. It requires a fresh attended epoch and its own 300-second reserve model. The current physical acceptance above remains unchanged; no full checkpoint scan, mount or DMA release is accepted.
 
 ## Session closure — 2026-11-26
 
