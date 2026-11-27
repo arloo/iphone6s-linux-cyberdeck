@@ -50,8 +50,8 @@
   },
   "launch_ios_minimum_percent": 15,
   "launch_same_board_encrypted_backup_and_charging_required": true,
-  "launcher_sha256": "1b3ec0395b126eb23fa70120ab854f73167978bf244d8e6444a8b5ff85700b24",
-  "ios_guard_sha256": "d89617a4093089ea683c4ecd97f6896d25af75f1df3febe95c87eb6c3a1c5aec",
+  "launcher_sha256": "f97d0eb913ba4e2424101b0992ccb2a3d7002578f356e8e293309689717f6e07",
+  "ios_guard_sha256": "41e81bb11d7d152d70a1aa78f732b4fc0fecff242728f0f4233b5444e37b7daa",
   "source_parent_commit": "f57f43b87387e132032e1c77a37625c9c569b16d",
   "latest_checkpoint_selected": false,
   "checkpoint_data_objects_read": false,
@@ -75,5 +75,7 @@
   "DMA_or_owner_release": false,
   "source_references": [
     "https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf"
-  ]
+  ],
+  "USB_failure_diagnostics_distinguish_absent_identity_and_unqualified_DFU": true,
+  "storage_helper_source_commit": "eb7f8aae60f21e32185b93b9db3da9b004c35d65"
 }

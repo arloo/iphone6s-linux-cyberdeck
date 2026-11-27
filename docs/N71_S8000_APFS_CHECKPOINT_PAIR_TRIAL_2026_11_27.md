@@ -32,6 +32,10 @@ After boot verify direct USB 500 mA topology, strict pinned key-only SSH, fresh 
 
 Bind module pair base and helper --checkpoint FIRST LAST RELATIVE_MAP to the private plan. Save exact commands/identity/power privately before the one insertion. Separate four-Read transport/pair/bio/user-copy acceptance from APFS_CHECKPOINT_PAIR_PASS. Save raw logs privately, require normal queue deletion/shutdown/disable/BME-off and interface removal, retain all original owners/backing and later RAM stability witnesses. Independent DMA retirement remains unproven. No retry, forced unload, DMA release, mount or persistence follows any result.
 
+## Launcher diagnostic clarification
+
+An owner launch stopped before Pongo/image upload because no successful iOS charge proof existed. Read-only host inspection found no Apple USB device currently enumerated; recent kernel records showed DFU enumeration. The guard now distinguishes absent USB, mismatched iOS identity, already-running Linux and DFU/Pongo without prior charge qualification. A fresh run starts with the intended charging iPhone visible in iOS; the launcher verifies charge before guiding physical DFU. Existing minimum charge/identity/backup checks remain intact. RAM image, kernel, storage/helper binaries and their prior2004-test evidence are unchanged; this is a host diagnostic correction, not a new NAND attempt.
+
 ## Current state
 
 Built, host-tested, packaged and ready for an owner-attended fresh RAM boot. No new boot, NAND command, descriptor-pair physical acceptance, latest selection or mount has occurred during preparation. The phone remained in iOS charging while this candidate was prepared.
