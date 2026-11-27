@@ -224,3 +224,6 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 - [N71 matching APFS map/NXSB descriptor physical success](N71_S8000_APFS_CHECKPOINT_PAIR_SUCCESS_2026_11_27.md)
 - [N71 sanitized matching descriptor-pair measurements](N71_S8000_APFS_CHECKPOINT_PAIR_ACCEPTANCE_2026_11_27.json)
 - [N71 large-reserve storage power branch and gauge-learning correction](N71_S8000_FULL_RESERVE_STORAGE_GATE_2026_11_27.md)
+
+- [N71 separate guarded300mA session support after checkpoint acceptance](N71_S8000_300MA_SESSION_SUPPORT_2026_11_27.md)
+- [N71 sanitized300mA pilot, expiry and session samples](N71_S8000_300MA_SESSION_SUPPORT_2026_11_27.json)

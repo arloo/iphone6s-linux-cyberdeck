@@ -181,12 +181,14 @@
     "initial_90_percent_gate_refused_before_any_hardware_attempt_after_FCC_learning": true,
     "revised_gate_primary_minimum_RC_uAh": 1000000,
     "revised_gate_secondary_percent_floor": 50,
-    "regular_positive_charge_15_percent_branch_unchanged": true
+    "regular_positive_charge_15_percent_branch_unchanged": true,
+    "native_rearm_during_storage_trial": false
   },
   "limits": [
     "One paired checkpoint descriptor group, not newest-checkpoint selection",
     "Block-zero UUID was not compared with this candidate",
     "Checkpoint data objects, object-map and volume/tree contents remain unread",
     "Independent DMA retirement, general service, ring/buffer reuse, mount and persistence remain unqualified"
-  ]
+  ],
+  "subsequent_separate_charger_support_report": "N71_S8000_300MA_SESSION_SUPPORT_2026_11_27.md"
 }
