@@ -20,6 +20,11 @@ static struct {
     unsigned int issued,completed,cq_polls[N71_READ_SERIES_COUNT],data_polls[N71_READ_SERIES_COUNT],status[N71_READ_SERIES_COUNT],changed[N71_READ_SERIES_COUNT];
     u64 seed[N71_READ_SERIES_COUNT];
     struct n71_s3e_admin_cqe_fields cqe[N71_READ_SERIES_COUNT];
+#if N71_CQ_WRAP_PLAN
+    struct nvme_completion cq_image[N71_READ_SERIES_COUNT];
+    bool cq_image_valid[N71_READ_SERIES_COUNT];
+    unsigned int sq_wraps,cq_wraps,reused_slot_checks;
+#endif
 } n71_read_series_memory;
 static int n71_read_series_claim(u64 pa,
         const struct n71_s3e_ro_foreign_range *foreign,
@@ -45,8 +50,13 @@ static int n71_read_series_prepare(void *ctx)
     bool cpu[N71_READ_SERIES_DMA_PAGES]={0},cpu_tcb=false;
     unsigned int count,i,j;
     int rc=-EPERM;
+#if N71_CQ_WRAP_PLAN
+    BUILD_BUG_ON(N71_READ_SERIES_COUNT!=17U || N71_RO_Q_ENTRIES!=16U);
+    BUILD_BUG_ON(N71_READ_SERIES_COUNT>=N71_RO_TCB_COUNT);
+#else
     BUILD_BUG_ON(N71_READ_SERIES_COUNT!=(N71_GPT_FULL_PLAN ? 5U : 4U));
     BUILD_BUG_ON(N71_READ_SERIES_COUNT>=N71_RO_Q_ENTRIES);
+#endif
     if (!n71_series_enabled() || n71_read_series_memory.staged ||
         n71_read_series_memory.prepared || !n71_io_pre_bme(ctx) ||
         !n71_io_queue_memory.prepared ||
@@ -147,7 +157,9 @@ static int n71_read_series_prepare(void *ctx)
     rc=n71_lba0_invalidate_pre_bme(ctx); /* same owned pre-BME flush contract */
     if (rc) goto out;
     n71_read_series_memory.prepared=true;
-#if N71_GPT_FULL_PLAN
+#if N71_CQ_WRAP_PLAN
+    pr_info("n71-s3e-p0: CQ_WRAP_PREPARED count=17 queue_entries=16 unique_tags=17 fresh_DMA_pages=34 CPU_snapshots=17 data_buffer_reuse=NO cc_off=1 bme_off=1 tag0_unchanged=YES addresses_redacted=YES\n");
+#elif N71_GPT_FULL_PLAN
     pr_info("n71-s3e-p0: GPT_FULL_PREPARED count=5 plan=1,2,3,4,5 tags=1,2,3,4,5 fresh_DMA_pages=10 CPU_snapshots=5 cc_off=1 bme_off=1 tag0_unchanged=YES addresses_redacted=YES\n");
 #else
     pr_info("n71-s3e-p0: READ_SERIES_PREPARED count=4 plan=0,1,0,1 tags=1,2,3,4 fresh_DMA_pages=8 CPU_snapshots=4 cc_off=1 bme_off=1 tag0_unchanged=YES addresses_redacted=YES\n");
@@ -179,6 +191,22 @@ static int n71_read_series_qualified(void *ctx,unsigned int step)
     return step<N71_READ_SERIES_COUNT && step==n71_read_series_memory.issued &&
         step==n71_read_series_memory.completed && n71_read_series_running(ctx);
 }
+#if N71_CQ_WRAP_PLAN
+/* Completion is a command-level witness, never global DMA-drain authority. */
+static bool n71_wrap_prior_slot_completed(unsigned int step)
+{
+    unsigned int old;
+    if(step<N71_RO_Q_ENTRIES || step>=N71_READ_SERIES_COUNT)return false;
+    old=step-N71_RO_Q_ENTRIES;
+    return n71_read_series_memory.completed==step &&
+        n71_read_series_memory.seen[old] && n71_read_series_memory.valid[old] &&
+        n71_read_series_memory.acked[old] && n71_read_series_memory.data_arrived[old] &&
+        n71_read_series_memory.guard_ok[old] && n71_read_series_memory.snapshot_valid[old] &&
+        n71_read_series_memory.cq_image_valid[old] &&
+        n71_read_series_cqe_valid(n71_read_series_memory.status[step-1U],
+                                    &n71_read_series_memory.cqe[step-1U],step-1U);
+}
+#endif
 static int n71_read_series_submit(void *ctx,unsigned int step,
         const unsigned char *command)
 {
@@ -190,13 +218,37 @@ static int n71_read_series_submit(void *ctx,unsigned int step,
         !n71_read_pair_command_valid(command,step,&n71_io_layout,
              n71_admin_memory.nsze,n71_admin_memory.lba_bytes,n71_series_flags(),n71_series_base()))
         return -EPERM;
+#if N71_CQ_WRAP_PLAN
+    sq=(u8 *)n71_ro_io_dma_memory.page[0]+n71_read_queue_slot(step)*64U;
+    cq=(struct nvme_completion *)n71_ro_io_dma_memory.page[1]+n71_read_queue_slot(step);
+#else
     sq=(u8 *)n71_ro_io_dma_memory.page[0]+step*64U;
     cq=(struct nvme_completion *)n71_ro_io_dma_memory.page[1]+step;
+#endif
     dma_sync_single_for_cpu(d,n71_ro_io_dma_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
+#if N71_CQ_WRAP_PLAN
+    if(step>=N71_RO_Q_ENTRIES)
+        foreign=!n71_wrap_prior_slot_completed(step) ||
+            memcmp(cq,&n71_read_series_memory.cq_image[step-N71_RO_Q_ENTRIES],sizeof(*cq));
+    else
+#endif
     foreign=!!memchr_inv(cq,0,sizeof(*cq));
     dma_sync_single_for_device(d,n71_ro_io_dma_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
     if (foreign) return -EPROTO;
     dma_sync_single_for_cpu(d,n71_ro_io_dma_memory.dma[0],PAGE_SIZE,DMA_BIDIRECTIONAL);
+#if N71_CQ_WRAP_PLAN
+    if(step>=N71_RO_Q_ENTRIES) {
+        unsigned char prior[64];
+        if(!n71_wrap_prior_slot_completed(step) ||
+            n71_read_pair_command(prior,step-N71_RO_Q_ENTRIES,&n71_io_layout,
+                n71_admin_memory.nsze,n71_admin_memory.lba_bytes,n71_series_flags(),n71_series_base()) ||
+            memcmp(sq,prior,sizeof(prior))) {
+            dma_sync_single_for_device(d,n71_ro_io_dma_memory.dma[0],PAGE_SIZE,DMA_BIDIRECTIONAL);
+            return -EPROTO;
+        }
+        n71_read_series_memory.reused_slot_checks++;
+    } else
+#endif
     if (memchr_inv(sq,0,64)) {
         dma_sync_single_for_device(d,n71_ro_io_dma_memory.dma[0],PAGE_SIZE,DMA_BIDIRECTIONAL);
         return -EPROTO;
@@ -204,7 +256,12 @@ static int n71_read_series_submit(void *ctx,unsigned int step,
     memcpy(sq,command,64);
     dma_sync_single_for_device(d,n71_ro_io_dma_memory.dma[0],PAGE_SIZE,DMA_BIDIRECTIONAL);
     dma_wmb();n71_read_series_memory.issued++; /* before the only possible DMA */
+#if N71_CQ_WRAP_PLAN
+    n71_admin_write(0x1008,n71_read_queue_next(step));
+    if(!n71_read_queue_next(step))n71_read_series_memory.sq_wraps++;
+#else
     n71_admin_write(0x1008,step+1U);
+#endif
     return 0;
 }
 static int n71_read_series_wait_cqe(void *ctx,unsigned int step,
@@ -215,11 +272,19 @@ static int n71_read_series_wait_cqe(void *ctx,unsigned int step,
     unsigned int i,status=0;
     bool seen=false;
     if (step>=N71_READ_SERIES_COUNT) return -EPERM;
+#if N71_CQ_WRAP_PLAN
+    slot=(struct nvme_completion *)n71_ro_io_dma_memory.page[1]+n71_read_queue_slot(step);
+#else
     slot=(struct nvme_completion *)n71_ro_io_dma_memory.page[1]+step;
+#endif
     for (i=0;i<5000;i++) {
         dma_sync_single_for_cpu(d,n71_ro_io_dma_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
         status=le16_to_cpu(READ_ONCE(slot->status));
+#if N71_CQ_WRAP_PLAN
+        if ((status&1U)==n71_read_cq_phase(step)) {dma_rmb();memcpy(&copy,slot,sizeof(copy));seen=true;}
+#else
         if (status&1) {dma_rmb();memcpy(&copy,slot,sizeof(copy));seen=true;}
+#endif
         dma_sync_single_for_device(d,n71_ro_io_dma_memory.dma[1],PAGE_SIZE,DMA_BIDIRECTIONAL);
         n71_read_series_memory.cq_polls[step]++;
         if (seen || n71_admin_csts(ctx)!=1) break;
@@ -230,6 +295,10 @@ static int n71_read_series_wait_cqe(void *ctx,unsigned int step,
     *v=(struct n71_s3e_admin_cqe_fields){le16_to_cpu(copy.status),
         le16_to_cpu(copy.command_id),le16_to_cpu(copy.sq_id),le16_to_cpu(copy.sq_head)};
     n71_read_series_memory.cqe[step]=*v;n71_read_series_memory.seen[step]=true;
+#if N71_CQ_WRAP_PLAN
+    memcpy(&n71_read_series_memory.cq_image[step],&copy,sizeof(copy));
+    n71_read_series_memory.cq_image_valid[step]=true;
+#endif
     return n71_admin_csts(ctx)==1 ? 0 : -EIO;
 }
 static int n71_read_series_ack(void *ctx,unsigned int step)
@@ -240,7 +309,12 @@ static int n71_read_series_ack(void *ctx,unsigned int step)
                                     &n71_read_series_memory.cqe[step],step))
         return -EPROTO;
     n71_read_series_memory.valid[step]=true;
+#if N71_CQ_WRAP_PLAN
+    n71_admin_write(0x100c,n71_read_queue_next(step));
+    if(!n71_read_queue_next(step))n71_read_series_memory.cq_wraps++;
+#else
     n71_admin_write(0x100c,step+1U);
+#endif
     n71_read_series_memory.acked[step]=true;return 0;
 }
 static int n71_read_series_wait_data(void *ctx,unsigned int step)
@@ -281,7 +355,7 @@ static int n71_read_series_snapshot(void *ctx,unsigned int step)
     n71_read_series_memory.snapshot_valid[step]=true;
     n71_read_series_memory.completed=step+1U;
     pr_info("n71-s3e-p0: READ_SERIES_STEP index=%u lba=%u tag=%u cid=%u sqid=1 head=%u status=%04x cqe_valid=1 data_arrived=1 guard_ok=1 changed_words=%u snapshot_private=YES payload_redacted=YES\n",
-        step,n71_read_pair_lba(n71_series_base(),step),step+1U,step+1U,step+1U,
+        step,n71_read_pair_lba(n71_series_base(),step),step+1U,step+1U,n71_read_queue_next(step),
         n71_read_series_memory.status[step],n71_read_series_memory.changed[step]);
     return 0;
 }
@@ -322,6 +396,18 @@ static int n71_read_series_compare(void *ctx)
             n71_read_series_memory.page[N71_READ_SERIES_DMA_PAGES],pages);
         return n71_read_series_memory.gpt_crc_ok ? 0 : -EUCLEAN;
     }
+#elif N71_CQ_WRAP_PLAN
+    {
+        unsigned int i;
+        n71_read_series_memory.lba0_equal=n71_read_series_memory.lba1_equal=true;
+        for(i=2;i<N71_READ_SERIES_COUNT;i++) {
+            bool same=!memcmp(n71_read_series_memory.page[N71_READ_SERIES_DMA_PAGES+(i&1U)],
+                              n71_read_series_memory.page[N71_READ_SERIES_DMA_PAGES+i],N71_RO_BLOCK_BYTES);
+            if(i&1U)n71_read_series_memory.lba1_equal &= same;
+            else n71_read_series_memory.lba0_equal &= same;
+        }
+        return n71_read_series_memory.lba0_equal && n71_read_series_memory.lba1_equal ? 0 : -EUCLEAN;
+    }
 #else
     n71_read_series_memory.lba0_equal=!memcmp(n71_read_series_memory.page[8],
                                 n71_read_series_memory.page[10],N71_RO_BLOCK_BYTES);
@@ -358,6 +444,11 @@ static int n71_read_series_once(void *ctx)
     n71_read_series_memory.attempted=true;
     rc=n71_read_pair_core(&ops,ctx,&n71_io_layout,n71_admin_memory.nsze,
             n71_admin_memory.lba_bytes,n71_series_flags(),&r,n71_series_base());
+#if N71_CQ_WRAP_PLAN
+    if(!rc && (n71_read_series_memory.sq_wraps!=1U || n71_read_series_memory.cq_wraps!=1U ||
+       n71_read_series_memory.reused_slot_checks!=1U ||
+       !n71_read_series_memory.valid[16] || n71_read_series_memory.status[16]))rc=-EPROTO;
+#endif
     n71_read_series_memory.series_ok=!rc;
     for (i=0;i<n71_read_series_memory.issued && i<N71_READ_SERIES_COUNT;i++)
         pr_info("n71-s3e-p0: READ_SERIES_STATUS index=%u lba=%u tag=%u cqe_seen=%u status=%04x cqe_valid=%u cq_acked=%u data_arrived=%u guard_ok=%u changed_words=%u cq_polls=%u data_polls=%u payload_redacted=YES\n",
@@ -370,7 +461,12 @@ static int n71_read_series_once(void *ctx)
         rc,n71_read_series_memory.issued,r.accepted,r.snapshotted,r.stability_checks,
         n71_read_series_memory.lba0_equal,n71_read_series_memory.lba1_equal,
         !n71_read_series_memory.stability_failed,N71_READ_SERIES_COUNT,n71_series_flags());
-#if N71_GPT_FULL_PLAN
+#if N71_CQ_WRAP_PLAN
+    pr_info("n71-s3e-p0: CQ_WRAP_ONCE rc=%d issued=%u accepted=%u snapshots=%u stability_checks=%u sq_wraps=%u cq_wraps=%u prior_slot_images_validated=%u phase0_completion_valid=%u unique_tags=17 all_pair_repeats_equal=%u no_data_buffer_reuse=YES writes=NO DMA_release=NO\n",
+        rc,n71_read_series_memory.issued,r.accepted,r.snapshotted,r.stability_checks,
+        n71_read_series_memory.sq_wraps,n71_read_series_memory.cq_wraps,n71_read_series_memory.reused_slot_checks,
+        n71_read_series_memory.valid[16] && !n71_read_series_memory.status[16],r.pairs_valid);
+#elif N71_GPT_FULL_PLAN
     pr_info("n71-s3e-p0: GPT_FULL_ONCE rc=%d issued=%u accepted=%u snapshots=%u stability_checks=%u header_and_array_crc_ok=%u unique_tags=5 pair_equality_tested=NO no_buffer_reuse=YES writes=NO DMA_release=NO\n",
         rc,n71_read_series_memory.issued,r.accepted,r.snapshotted,r.stability_checks,n71_read_series_memory.gpt_crc_ok);
 #endif

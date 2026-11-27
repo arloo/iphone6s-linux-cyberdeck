@@ -22,6 +22,8 @@ The [temporary read-only kernel block bridge](N71_S8000_RO_BLOCK_BRIDGE_TRIAL_20
 
 Active target: **N71 / Samsung S8000**. N71m / S8003 remains deferred until compatible hardware is available.
 
+Next storage trial prepared: [one SQ/CQ wrap with seventeen distinct Read buffers](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md). A fresh attended RAM boot is required; physical wrap/full-scan acceptance remains pending.
+
 ## Achieved on physical N71
 
 - RAM boot, framebuffer UI and USB recovery access.

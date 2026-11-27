@@ -185,6 +185,11 @@ static int n71_ro_block_client(void *unused)
             n71_ro_block_memory.gpt_crc_ok=n71_gpt_full_crc_valid(n71_ro_block_memory.target[0],pages);
             if(!n71_ro_block_memory.gpt_crc_ok){rc=-EUCLEAN;break;}
         }
+#elif N71_CQ_WRAP_PLAN
+        if(ans_ro_probe_once && i>=2U &&
+           memcmp(n71_ro_block_memory.target[i&1U],n71_ro_block_memory.target[i],4096)) {
+            rc=-EUCLEAN;break;
+        }
 #else
         /* The last userspace reply also requires both full-sector pairs. */
         if (ans_ro_probe_once && i==3U &&
@@ -198,6 +203,12 @@ static int n71_ro_block_client(void *unused)
     if (!rc && i==N71_READ_SERIES_COUNT) {
 #if N71_GPT_FULL_PLAN
         if(!n71_ro_block_content_valid())rc=-EUCLEAN;
+#elif N71_CQ_WRAP_PLAN
+        n71_ro_block_memory.pairs_equal=true;
+        for(i=2;i<N71_READ_SERIES_COUNT;i++)
+            if(memcmp(n71_ro_block_memory.target[i&1U],n71_ro_block_memory.target[i],4096))
+                n71_ro_block_memory.pairs_equal=false;
+        if(!n71_ro_block_memory.pairs_equal)rc=-EUCLEAN;
 #else
         n71_ro_block_memory.pairs_equal=
             !memcmp(n71_ro_block_memory.target[0],n71_ro_block_memory.target[2],4096) &&

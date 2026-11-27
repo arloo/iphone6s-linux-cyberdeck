@@ -127,6 +127,11 @@ static bool ans_io_queue_once;
 static bool ans_lba0_read_once;
 static bool ans_read_series_once;
 static unsigned int ans_read_series_flags = ~0U;
+#if N71_CQ_WRAP_PLAN
+static bool ans_ro_cq_wrap_once;
+module_param(ans_ro_cq_wrap_once,bool,0400);
+MODULE_PARM_DESC(ans_ro_cq_wrap_once,"explicit 17-Read known-pair qualification, one SQ/CQ wrap, fresh retained buffers/tags; no retry/write/DMA release");
+#endif
 #if N71_GPT_FULL_PLAN
 static bool ans_ro_gpt_full_once;
 module_param(ans_ro_gpt_full_once,bool,0400);
@@ -1073,6 +1078,11 @@ static int __init n71_port0_init(void)
         pr_info("n71-s3e-p0: UNARMED inert, no PMGR access\n");
         return 0;
     }
+#if N71_CQ_WRAP_PLAN
+    if (!n71_cq_wrap_mode_valid(ans_ro_cq_wrap_once,ans_ro_block_once,
+            ans_ro_probe_once,ans_ro_block_pair_once,ans_ro_block_pair_base,
+            ans_ro_block_tail_once,ans_read_series_once,ans_lba0_read_once)) return -EPERM;
+#endif
 #if N71_GPT_FULL_PLAN
     if (!n71_gpt_full_mode_valid(ans_ro_gpt_full_once,ans_ro_block_once,
             ans_ro_probe_once,ans_ro_block_pair_once,ans_ro_block_pair_base,

@@ -9,7 +9,27 @@
 #if N71_GPT_FULL_PLAN != 0 && N71_GPT_FULL_PLAN != 1
 #error Unsupported read qualification plan
 #endif
-#define N71_READ_SERIES_COUNT (N71_GPT_FULL_PLAN ? 5U : 4U)
+#ifndef N71_CQ_WRAP_PLAN
+#define N71_CQ_WRAP_PLAN 0
+#endif
+#if (N71_CQ_WRAP_PLAN != 0 && N71_CQ_WRAP_PLAN != 1) || (N71_CQ_WRAP_PLAN && N71_GPT_FULL_PLAN)
+#error Unsupported or mixed CQ wrap qualification plan
+#endif
+#define N71_READ_SERIES_COUNT (N71_CQ_WRAP_PLAN ? 17U : N71_GPT_FULL_PLAN ? 5U : 4U)
+/* Original bounded arithmetic following standard NVMe queue semantics.
+ * Slots/doorbells wrap; tags, CIDs and data/SGL/snapshot frames do not. */
+static inline unsigned int n71_read_queue_slot(unsigned int step)
+{
+    return step % N71_RO_Q_ENTRIES;
+}
+static inline unsigned int n71_read_queue_next(unsigned int step)
+{
+    return (step+1U) % N71_RO_Q_ENTRIES;
+}
+static inline unsigned int n71_read_cq_phase(unsigned int step)
+{
+    return 1U ^ ((step/N71_RO_Q_ENTRIES)&1U);
+}
 #define N71_READ_SERIES_DMA_PAGES (2U*N71_READ_SERIES_COUNT)
 #define N71_READ_SERIES_PAGES (3U*N71_READ_SERIES_COUNT)
 /* One explicit consecutive pair per epoch, within the accepted namespace.
@@ -86,9 +106,16 @@ static inline int n71_read_series_command_valid(const unsigned char *b,
 static inline int n71_read_series_cqe_valid(unsigned int observed,
         const struct n71_s3e_admin_cqe_fields *v,unsigned int step)
 {
-    return step<N71_READ_SERIES_COUNT && v && observed==1U &&
+    return step<N71_READ_SERIES_COUNT && v && observed==n71_read_cq_phase(step) &&
         v->status==observed && v->command_id==step+1U &&
-        v->sq_id==1U && v->sq_head==step+1U;
+        v->sq_id==1U && v->sq_head==n71_read_queue_next(step);
+}
+static inline int n71_cq_wrap_mode_valid(unsigned int enabled,unsigned int block,
+        unsigned int probe,unsigned int pair,unsigned int base,unsigned int tail,
+        unsigned int series,unsigned int single)
+{
+    return enabled==1U && block==1U && probe==1U && pair==1U &&
+        n71_read_pair_base_valid(base) && !tail && !series && !single;
 }
 struct n71_read_series_frames {
     unsigned long long data[N71_READ_SERIES_COUNT],sgl[N71_READ_SERIES_COUNT];
@@ -167,8 +194,9 @@ struct n71_read_series_ops {
 struct n71_read_series_result {
     unsigned int submitted,accepted,snapshotted,stability_checks,pairs_valid;
 };
-/* Compile-time bounded single-sector Reads, fresh SQ/CQ slots and distinct
- * tag/data/SGL pairs. No ring wrap, buffer reuse, write or export. */
+/* Compile-time bounded single-sector Reads with distinct tags/data/SGL frames.
+ * Only the separately selected 17-Read mode wraps SQ/CQ slots once; it never
+ * reuses a data/SGL/target/snapshot frame or authorizes DMA release. */
 static inline int n71_read_pair_core(const struct n71_read_series_ops *o,
         void *ctx,const struct n71_s3e_ro_io_layout *layout,
         unsigned long long nsze,unsigned int lba_bytes,unsigned int flags,

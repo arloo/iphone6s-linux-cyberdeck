@@ -15,3 +15,4 @@ obj-m += n71_s3e_p0_local_window_compare.o
 obj-m += n71_s3e_root_local_4020_ro.o
 obj-m += n71_s8000_port1_0210_ro.o
 obj-m += n71_s3e_gpt_full_once.o
+obj-m += n71_s3e_cq_wrap_once.o

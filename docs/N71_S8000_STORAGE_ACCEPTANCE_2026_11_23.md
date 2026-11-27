@@ -10,6 +10,10 @@ Exact queue deletion, normal shutdownCSTS9/rc0 after934 polls, disableCSTS0/rc0,
 
 The native charger guard stopped at4.225V/full charge and restored input00/rc0. It was not rearmed. The predeclared, host-tested reserve branch passed an immediate fresh window at87% reported, at least86.122% RC/FCC and1,086,000uAh RC,32.8C and3.981–4.031V; final87% Good/Discharging/-366mA,32.8C and3.945V. Initial percentage-only reserve refusal after FCC learning occurred before any hardware marker/command and is documented separately. [Physical report](N71_S8000_APFS_CHECKPOINT_PAIR_SUCCESS_2026_11_27.md), [sanitized measured acceptance](N71_S8000_APFS_CHECKPOINT_PAIR_ACCEPTANCE_2026_11_27.json), [power branch](N71_S8000_FULL_RESERVE_STORAGE_GATE_2026_11_27.md), [trial](N71_S8000_APFS_CHECKPOINT_PAIR_TRIAL_2026_11_27.md).
 
+## Prepared next trial — first SQ/CQ wrap, not physically executed
+
+The separately named [17-Read CQ-wrap candidate](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md) is prepared to qualify one queue wrap and the first phase-zero completion, using seventeen distinct buffers/tags over the already accepted adjacent pair. It requires a fresh attended epoch and its own 300-second reserve model. The current physical acceptance above remains unchanged; no full checkpoint scan, mount or DMA release is accepted.
+
 ## Session closure — 2026-11-26
 
 No further NAND trial was performed. The corresponding checkpoint-superblock trial is deferred to a fresh attended physical DFU/RAM boot. Final47%/Charging telemetry preceded verified native input00/rc0 rollback and brightness0. A CPU-only exact-kernel query reports no hardware power-off handler. Ordinary poweroff was ignored by the RAM PID1 shell; a subsequent explicit kernel power-off request was followed by three unreachable SSH probes. This supports Linux halt inference only, not electrical phone-off. All storage backing/owners stayed retained until the halt request; no DMA release, NAND Write, mount or persistence occurred. [Closure evidence and kernel limitation](N71_S8000_SESSION_CLOSE_2026_11_26.md).

@@ -83,17 +83,24 @@ int main(int argc,char **argv)
     const char *path="/dev/n71nand-probe";
     unsigned base,major=0,i,count;
     unsigned long long partition_blocks=0,relative=0;
-    unsigned char data[5][4096];
+    unsigned char data[17][4096];
     struct stat st;
     const struct rlimit no_core={0,0};
     struct timespec delay={0,100000000};
     int fd=-1,rc=1,created=0,layout_mode=0;
-    if (!select_checkpoint(argc,argv,&base,&partition_blocks,&relative)) layout_mode=4;
+    if(argc==5 && !strcmp(argv[1],"--cq-wrap")) {
+        char *wrap[5]={argv[0],"--checkpoint",argv[2],argv[3],argv[4]};
+        if(select_checkpoint(5,wrap,&base,&partition_blocks,&relative)) {
+            fputs("CQ_WRAP_ARGUMENTS_REFUSED\n",stderr);return 2;
+        }
+        layout_mode=5;
+    }
+    else if (!select_checkpoint(argc,argv,&base,&partition_blocks,&relative)) layout_mode=4;
     else if (!select_apfs(argc,argv,&base,&partition_blocks)) layout_mode=3;
     else if (select_pair(argc,argv,&base,&layout_mode)) {
-        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--gpt-full|--pair BASE|--apfs FIRST LAST|--checkpoint FIRST LAST RELATIVE_MAP\n",stderr);return 2;
+        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--gpt-full|--pair BASE|--apfs FIRST LAST|--checkpoint FIRST LAST RELATIVE_MAP|--cq-wrap FIRST LAST RELATIVE_PAIR\n",stderr);return 2;
     }
-    count=layout_mode==2?5U:4U;
+    count=layout_mode==2?5U:layout_mode==5?17U:4U;
     if (geteuid()!=0) {fputs("ROOT_REQUIRED\n",stderr);return 2;}
     if (setrlimit(RLIMIT_CORE,&no_core) || prctl(PR_SET_DUMPABLE,0,0,0,0)) {
         fputs("PRIVATE_MEMORY_GUARD_FAILED\n",stderr);return 2;
@@ -135,7 +142,12 @@ int main(int argc,char **argv)
         if (memcmp(data[0],data[2],4096) || memcmp(data[1],data[3],4096)) {
             fputs("PRIVATE_PAIR_COMPARISON_FAILED\n",stderr);goto done;
         }
-        puts("PRIVATE_PREAD_PASS completed=4 pair_equality=1 writes=0 payload_and_hashes_exported=0");
+        if(layout_mode==5) {
+            for(i=2;i<count;i++)if(memcmp(data[i&1U],data[i],4096)) {
+                fputs("PRIVATE_PAIR_COMPARISON_FAILED\n",stderr);goto done;
+            }
+        }
+        printf("PRIVATE_PREAD_PASS completed=%u pair_equality=1 writes=0 payload_and_hashes_exported=0\n",count);
     }
     if(layout_mode==2) {
         struct n71_gpt_full_result g;
@@ -191,6 +203,8 @@ int main(int argc,char **argv)
             p.spaceman_block,p.spaceman_blocks,p.reaper_block,p.reaper_blocks);
         explicit_bzero(&c,sizeof(c));explicit_bzero(&p,sizeof(p));
     }
+    if(layout_mode==5)
+        puts("CQ_WRAP_PREAD_PASS completed=17 distinct_sectors=2 all_repeated_sectors_equal=1 descriptor_validation_performed=0 latest_checkpoint_selected=0 filesystem_mounted=0");
     rc=0;
 done:
     /* Volatile RAM node only; buffer bytes never written to any file. */

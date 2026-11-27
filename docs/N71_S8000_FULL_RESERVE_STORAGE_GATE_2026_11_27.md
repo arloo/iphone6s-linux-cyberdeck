@@ -21,3 +21,7 @@ Five new independent tests cover the reserve/units calculation, each electrical/
 ## Gauge learning correction before the hardware attempt
 
 A later unused-epoch window was refused by the initial90% criterion: FCC changed from1,117,000 to1,261,000uAh while measured RC stayed above1,096,000uAh, yielding87% reported/derived with stable health, cell and temperature. No attempt marker, S3E load or NAND command existed. The gate now treats absolute RC of at least1,000,000uAh and the explicit reserve/energy model as primary; reported/derived50% is a secondary sanity floor for this noncharging branch. Per-window FCC/RC stability and agreement checks remain required. A regression test accepts the two separately stable learned-FCC windows and still rejects a below-floor sample. This is not a claim that the gauge's absolute calibration or physical endurance is qualified. The regular positive-charge15% branch is unchanged.
+
+## Separately named 17-Read budget
+
+The default `four-read` protocol retains its original 120-second/25-window model. The [prepared CQ-wrap trial](N71_S8000_CQ_WRAP_TRIAL_2026_11_27.md) must explicitly select `cq-wrap-17`: 1 A for 300 seconds, 83,334 uAh rounded upward, at least ten reserve windows. Electrical, gauge, absolute-reserve and timing limits are unchanged; unsupported plan names refuse. This is preparation evidence, not endurance qualification or permission to rearm the native charger.

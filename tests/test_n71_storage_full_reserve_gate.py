@@ -43,3 +43,28 @@ class ReserveGateTests(unittest.TestCase):
         self.assertGreaterEqual(G.qualify(second)['minimum_reserve_windows'],25)
         for q in second:q['capacity']=49;q['charge_now']=1000000;q['charge_full']=2000000
         with self.assertRaises(ValueError):G.qualify(second)
+
+    def test_seventeen_read_protocol_has_its_own_five_minute_energy_model(self):
+        r=G.qualify(fixture(),plan="cq-wrap-17")
+        self.assertEqual(r["trial_plan"],"cq-wrap-17")
+        self.assertEqual(r["planning_duration_s"],300)
+        self.assertEqual(r["planning_charge_uAh"],83334)
+        self.assertEqual(r["required_reserve_windows"],10)
+        self.assertEqual(r["minimum_reserve_windows"],1049000//83334)
+        self.assertGreaterEqual(r["minimum_reserve_windows"],10)
+        self.assertFalse(r["charger_rearm_authorized"] or r["physical_endurance_qualified"])
+
+    def test_protocol_selection_cannot_shorten_or_invent_the_energy_model(self):
+        for p in [None,True,17,"", "17", "cq-wrap", "four-read-1s", 0, []]:
+            with self.subTest(plan=p),self.assertRaises(ValueError):G.qualify(fixture(),plan=p)
+        r=G.qualify(fixture())
+        self.assertEqual((r["planning_duration_s"],r["required_reserve_windows"]),(120,25))
+
+    def test_wrap_protocol_retains_absolute_reserve_and_electrical_gauge_limits(self):
+        for k,v in [("charge_now",999999),("capacity",49),("current_now",-500001),("voltage_now",4100000),("temp",350),("udc","not attached"),("health","Unknown")]:
+            s=fixture();s[4][k]=v
+            with self.subTest(k=k),self.assertRaises(ValueError):G.qualify(s,plan="cq-wrap-17")
+        s=fixture()
+        for q in s:q.update(capacity=80,charge_now=1000000,charge_full=1250000)
+        r=G.qualify(s,plan="cq-wrap-17")
+        self.assertEqual(r["minimum_reserve_windows"],11)
