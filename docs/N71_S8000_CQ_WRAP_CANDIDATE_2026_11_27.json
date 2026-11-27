@@ -54,5 +54,12 @@
   "power_protocol_tests": 8,
   "new_wrap_host_tests": 7,
   "current_epoch_new_NAND_IO": false,
-  "DMA_release_authorized": false
+  "DMA_release_authorized": false,
+  "host_only_existing_DFU_launcher_correction": true,
+  "recent_DFU_maximum_power_observation_age_s": 900,
+  "recent_DFU_identity_and_same_port_required": true,
+  "recent_DFU_native_rollback_inferred": false,
+  "recent_DFU_gate_tests": 6,
+  "followup_full_host_tests": 2025,
+  "image_rebuilt_for_launcher_correction": false
 }
