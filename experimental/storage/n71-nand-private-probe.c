@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include "n71-gpt-full-core.h"
 #include "n71-apfs-superblock-core.h"
+#include "n71-apfs-checkpoint-pair-core.h"
 static unsigned probe_major(void)
 {
     unsigned major=0,n;
@@ -63,19 +64,34 @@ static int select_apfs(int argc,char **argv,unsigned *base,
  if(first<6ULL||first>15624998ULL||last<=first||last>=15625000ULL)return -1;
  *base=(unsigned)first;*partition_blocks=last-first+1ULL;return 0;
 }
+/* First/last remain GPT-native bounds; relative names the first descriptor.
+ * Host binds it to the accepted private container selection before insertion. */
+static int select_checkpoint(int argc,char **argv,unsigned *base,
+ unsigned long long *partition_blocks,unsigned long long *relative)
+{
+ char *a[5],*end;const char *s;unsigned first;unsigned long long n;
+ if(argc!=5||strcmp(argv[1],"--checkpoint"))return -1;
+ a[0]=argv[0];a[1]="--apfs";a[2]=argv[2];a[3]=argv[3];a[4]=NULL;
+ if(select_apfs(4,a,&first,partition_blocks)||!argv[4][0])return -1;
+ for(s=argv[4];*s;s++)if(*s<'0'||*s>'9')return -1;
+ errno=0;n=strtoull(argv[4],&end,10);
+ if(errno||*end||!n||n>=*partition_blocks-1ULL)return -1;
+ *base=first+(unsigned)n;*relative=n;return 0;
+}
 int main(int argc,char **argv)
 {
     const char *path="/dev/n71nand-probe";
     unsigned base,major=0,i,count;
-    unsigned long long partition_blocks=0;
+    unsigned long long partition_blocks=0,relative=0;
     unsigned char data[5][4096];
     struct stat st;
     const struct rlimit no_core={0,0};
     struct timespec delay={0,100000000};
     int fd=-1,rc=1,created=0,layout_mode=0;
-    if (!select_apfs(argc,argv,&base,&partition_blocks)) layout_mode=3;
+    if (!select_checkpoint(argc,argv,&base,&partition_blocks,&relative)) layout_mode=4;
+    else if (!select_apfs(argc,argv,&base,&partition_blocks)) layout_mode=3;
     else if (select_pair(argc,argv,&base,&layout_mode)) {
-        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--gpt-full|--pair BASE|--apfs FIRST LAST\n",stderr);return 2;
+        fputs("Usage: n71-nand-private-probe --initial|--tail|--layout|--gpt-full|--pair BASE|--apfs FIRST LAST|--checkpoint FIRST LAST RELATIVE_MAP\n",stderr);return 2;
     }
     count=layout_mode==2?5U:4U;
     if (geteuid()!=0) {fputs("ROOT_REQUIRED\n",stderr);return 2;}
@@ -157,6 +173,23 @@ int main(int argc,char **argv)
         printf("PRIVATE_APFS_REFS container_blocks=%llu checkpoint_desc_base=%llu checkpoint_desc_blocks=%u checkpoint_data_base=%llu checkpoint_data_blocks=%u omap_block=%llu\n",
             a.container_blocks,a.desc_base,a.desc_blocks,a.data_base,a.data_blocks,a.omap_block);
         explicit_bzero(&a,sizeof(a));
+    }
+    if(layout_mode==4) {
+        struct n71_apfs_checkpoint_pair_result c;
+        struct n71_apfs_checkpoint_pair_refs p;
+        int crc=n71_apfs_checkpoint_pair_parse(data[0],data[1],4096,
+                                              partition_blocks,relative,&c,&p);
+        if(crc){explicit_bzero(&c,sizeof(c));explicit_bzero(&p,sizeof(p));fprintf(stderr,"APFS_CHECKPOINT_PAIR_FAILED rc=%d\n",crc);goto done;}
+        printf("APFS_CHECKPOINT_PAIR_PASS nxsb_valid=%u checksum_pair_ok=%u object_headers_ok=%u same_transaction=%u descriptor_ring_ok=%u descriptor_pair_complete=%u data_ring_ok=%u mapping_count=%u mapping_extents_in_data_window=%u mapping_keys_unique=%u mapping_extents_nonoverlap=%u spaceman_mapping_present=%u reaper_mapping_present=%u omap_reference_present=%u volume_slot_count=%u max_volume_slots=%u block_zero_UUID_compared=0 complete_scan=0 latest_checkpoint_selected=0 checkpoint_data_objects_read=0 filesystem_mounted=0\n",
+            c.nxsb_valid,c.checksum_pair_ok,c.object_headers_ok,c.same_transaction,
+            c.descriptor_ring_ok,c.descriptor_pair_complete,c.data_ring_ok,c.mapping_count,
+            c.mapping_extents_in_data_window,c.mapping_keys_unique,c.mapping_extents_nonoverlap,
+            c.spaceman_mapping_present,c.reaper_mapping_present,c.omap_reference_present,
+            c.volume_slot_count,c.max_volume_slots);
+        printf("PRIVATE_CHECKPOINT_REFS container_blocks=%llu checkpoint_desc_base=%llu checkpoint_desc_blocks=%u checkpoint_data_base=%llu checkpoint_data_blocks=%u omap_block=%llu spaceman_block=%llu spaceman_blocks=%u reaper_block=%llu reaper_blocks=%u\n",
+            p.container_blocks,p.desc_base,p.desc_blocks,p.data_base,p.data_blocks,p.omap_block,
+            p.spaceman_block,p.spaceman_blocks,p.reaper_block,p.reaper_blocks);
+        explicit_bzero(&c,sizeof(c));explicit_bzero(&p,sizeof(p));
     }
     rc=0;
 done:

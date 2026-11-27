@@ -217,3 +217,6 @@ Each entry is a source/reference or a dated experiment, not a claim that every h
 
 - [N71 session closure, CPU-only hardware power-off query and halt limitation](N71_S8000_SESSION_CLOSE_2026_11_26.md)
 - [N71 sanitized closure measurements](N71_S8000_SESSION_CLOSE_2026_11_26.json)
+
+- [N71 adjacent APFS checkpoint-map/NXSB pair candidate and physical contract](N71_S8000_APFS_CHECKPOINT_PAIR_TRIAL_2026_11_27.md)
+- [N71 sanitized checkpoint-descriptor pair image hashes](N71_S8000_APFS_CHECKPOINT_PAIR_CANDIDATE_2026_11_27.json)
